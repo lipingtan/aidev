@@ -348,7 +348,7 @@
 
 | 集成类型 | 触发方式 | 叙事表现 | 技术实现 |
 |----------|----------|----------|----------|
-| **触发器叙事** | 玩家进入区域/交互物品 | 对话、过场、旁白 | Area3D + signal → DialogueManager |
+| **触发器叙事** | 玩家进入区域/交互物品 | 对话、过场、旁白 | 区域检测 + 信号 → DialogueManager |
 | **环境叙事** | 玩家观察环境 | 场景细节、可检查物品、环境音 | InteractableObject + inspect_text |
 | **物品叙事** | 获得/使用物品 | 物品描述、日记、信件 | ItemData.lore_text + LoreUI |
 | **NPC 行为叙事** | NPC 日常行为 | NPC 按时间表活动、对话变化 | AISchedule + context_dialogue |

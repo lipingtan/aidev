@@ -2,7 +2,8 @@
 
 ## 概述
 
-本文档定义了 Godot 项目中 3D 和 2D 资产的完整生命周期管理，包括导入流程、质量标准、注册追踪和优化规范。
+本文档定义了游戏项目中 3D 和 2D 资产的完整生命周期管理，包括导入流程、质量标准、注册追踪和优化规范。
+本文件为引擎无关的通用版本，具体引擎的导入配置和 API 参见对应引擎目录。
 
 ---
 
@@ -14,9 +15,9 @@
 |------|------|----------|----------|----------|
 | 1 | **需求定义** | 设计文档中明确需要该资产 | 确定资产规格（多边形预算、材质需求、动画需求） | 资产需求卡已填写 |
 | 2 | **获取/创建** | 需求卡已确认 | 购买素材包 / 外包制作 / AI 辅助生成 | 原始文件到位（assets_source/） |
-| 3 | **格式转换** | 原始文件已获取 | 转换为 Godot 支持格式（.glb/.gltf） | 文件可被 Godot 导入器识别 |
+| 3 | **格式转换** | 原始文件已获取 | 转换为引擎支持格式（.glb/.gltf） | 文件可被引擎导入器识别 |
 | 4 | **导入配置** | 格式转换完成 | 设置导入参数、材质映射、LOD、动画分离 | 编辑器中显示正确，无材质丢失 |
-| 5 | **适配集成** | 导入配置完成 | 添加碰撞、脚本挂载点、交互区域、导航 | 创建为 PackedScene，可实例化 |
+| 5 | **适配集成** | 导入配置完成 | 添加碰撞、脚本挂载点、交互区域、导航 | 创建为可实例化场景 |
 | 6 | **质量验证** | 适配集成完成 | 性能测试、视觉检查、功能验证 | 通过所有质量检查项 |
 | 7 | **发布就绪** | 质量验证通过 | 注册到资产注册表、标记版本 | 注册表状态为 "ready" |
 
@@ -84,7 +85,7 @@
 | 3 | **批量生成** | 提示词已确认 | AI 批量生成、人工筛选最佳变体 | 每个资产有 1 个确认的变体 |
 | 4 | **后处理** | 变体已选定 | 去背景、统一尺寸、色彩校正、边缘处理 | 所有资产视觉风格统一 |
 | 5 | **切图打包** | 后处理完成 | 精灵表切割、动画定义、图集打包 | SpriteFrames/Atlas 资源已创建 |
-| 6 | **导入验证** | 切图打包完成 | 导入 Godot、预览动画、检查显示效果 | 显示正确、动画流畅 |
+| 6 | **导入验证** | 切图打包完成 | 导入引擎、预览动画、检查显示效果 | 显示正确、动画流畅 |
 | 7 | **发布就绪** | 导入验证通过 | 注册到资产注册表、标记版本 | 注册表状态为 "ready" |
 
 ### 2.2 质量评估标准
@@ -167,14 +168,14 @@
 
 ## 四、兼容性检查清单
 
-### 4.1 Godot 版本兼容性
+### 4.1 引擎版本兼容性
 
 ```markdown
-## Godot 版本兼容性检查
-- [ ] 目标 Godot 版本：4.x（具体版本：___）
+## 引擎版本兼容性检查
+- [ ] 目标引擎版本：___
 - [ ] 导入格式支持：.glb(✓) .gltf(✓) .fbx(✓) .obj(✓)
 - [ ] Shader 语法兼容（无废弃 API 调用）
-- [ ] 插件版本兼容（gd_ecs、dlc_manager）
+- [ ] 插件版本兼容
 - [ ] 导出模板版本匹配
 ```
 
@@ -183,24 +184,22 @@
 ```markdown
 ## 材质兼容性检查
 - [ ] PBR 通道映射正确：
-  - [ ] Albedo/BaseColor → albedo_texture
-  - [ ] Normal → normal_texture
-  - [ ] Roughness → roughness_texture
-  - [ ] Metallic → metallic_texture
-  - [ ] AO → ao_texture
-  - [ ] Emission → emission_texture
-- [ ] 材质类型匹配渲染管线：
-  - [ ] Forward+: StandardMaterial3D / ShaderMaterial
-  - [ ] Compatibility: 避免 SSR/SSAO 依赖
-- [ ] 透明材质正确配置（alpha_scissor / alpha_blend）
-- [ ] 双面材质标记（cull_mode = disabled）
+  - [ ] Albedo/BaseColor
+  - [ ] Normal
+  - [ ] Roughness
+  - [ ] Metallic
+  - [ ] AO
+  - [ ] Emission
+- [ ] 材质类型匹配渲染管线
+- [ ] 透明材质正确配置
+- [ ] 双面材质标记
 ```
 
 ### 4.3 骨骼兼容性
 
 ```markdown
 ## 骨骼兼容性检查
-- [ ] 骨骼命名规范（Godot 可识别的命名）
+- [ ] 骨骼命名规范（引擎可识别的命名）
 - [ ] 骨骼层级正确（Root → Hips → Spine → ...）
 - [ ] 骨骼数量在预算内（角色 ≤80 骨骼）
 - [ ] 动画重定向兼容（如使用通用骨骼）
@@ -226,7 +225,7 @@
 
 > 详细策略见下文 **第五节**。此处为 **阶段 1（需求 / 架构）** 必须填写的摘要表，写入 `design/architecture.md` 或 `design/performance-budget.md`。
 
-| 档位 ID | 目标平台 | 渲染后端（Godot） | 目标 FPS | 纹理档 | 典型 Max Size（角色/环境） |
+| 档位 ID | 目标平台 | 渲染后端 | 目标 FPS | 纹理档 | 典型 Max Size（角色/环境） |
 |---------|----------|-------------------|----------|--------|---------------------------|
 | `desktop_high` | PC 中端 GPU 及以上 | Forward+ | 60 | `tier_desktop` | 2048 / 4096 |
 | `mobile_high` | 移动中端 SoC 及以上 | `mobile`（Forward Mobile，默认） | 60 | `tier_mobile` | 1024 / 2048 |
@@ -246,8 +245,8 @@
 ### 5.2 QualityProfile 单例（工程约束）
 
 - **默认定稿与数值**：`performance-budget.md`。
-- **实现与 API**：`godot/quality-settings-spec.md`；**参考脚本**：`projects/demo_game/autoload/quality_settings.gd`。
-- 全局单例名 **`QualitySettings`**，职责见该 spec；此处不重复。
+- **实现与 API**：参见引擎特定规范目录（如 `godot/quality-settings-spec.md`）。
+- 全局单例职责见对应引擎 spec；此处不重复。
 
 ### 5.3 纹理分档实现策略（三选一或组合）
 
@@ -261,8 +260,8 @@
 
 ### 5.4 材质与 Shader
 
-- **主材质**：预留 **移动端简化版** Shader（减少采样次数、禁用视差/复杂屏幕空间依赖）；由 QualityProfile 或 `shader_variant` 切换。
-- **移动档渲染**：`mobile_high` 默认 **Forward Mobile**（`rendering_method="mobile"`）；若某导出预设使用 `gl_compatibility`，须在 Phase 2 单独验证 **关键流程**，见 `execution-protocol.md` Phase 2。
+- **主材质**：预留移动端简化版 Shader（减少采样次数、禁用复杂屏幕空间依赖）；由画质档或 shader 变体切换。
+- **移动档渲染**：默认使用移动端渲染后端；若某导出预设使用兼容模式，须在 Phase 2 单独验证关键流程，见 `execution-protocol.md` Phase 2。
 
 ### 5.5 资产需求卡补充字段（3D）
 
@@ -381,7 +380,7 @@ wide angle, detailed background, game asset
 | Mobile (iOS) | ASTC | 所有类型 | Medium |
 | Web | Basis Universal | 所有类型 | Medium |
 
-**Godot 导入设置：**
+**引擎导入设置（示例）：**
 ```
 纹理导入配置：
 ├── Compress Mode: VRAM Compressed（3D纹理）/ Lossless（像素风格）
@@ -432,12 +431,12 @@ wide angle, detailed background, game asset
 | 脚本/资源 | ≤50MB | ≤20MB | 延迟加载 |
 | **总计** | **≤1.5GB** | **≤400MB** | - |
 
-**内存监控指标：**
-```gdscript
-# 运行时内存监控
-var texture_memory: int = Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)
-var video_memory: int = Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)
-var static_memory: int = Performance.get_monitor(Performance.MEMORY_STATIC)
+**内存监控指标（示例）：**
+```
+# 运行时内存监控关注项
+- 纹理显存占用
+- 视频内存总占用
+- 静态内存占用
 ```
 
 ### 7.5 资产加载策略

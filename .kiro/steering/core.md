@@ -68,6 +68,10 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 |----------|----------|
 | **写代码前：多平台画质与性能定稿** | `AIDOC/global-info/knowledge/steering/pre-development-defaults.md` |
 | **启动全新游戏项目** | `AIDOC/global-info/knowledge/steering/project-bootstrap.md` |
+| **开发具体功能/模块的完整流程** | `AIDOC/global-info/knowledge/steering/feature-development-flow.md` |
+| **任务拆解与三要素格式** | `AIDOC/global-info/knowledge/steering/task-representation.md` |
+| **游戏类型蓝图（标准功能清单）** | `AIDOC/global-info/knowledge/steering/game-type-blueprints.md` |
+| **体验基准参考（手感参数范围）** | `AIDOC/global-info/knowledge/steering/experience-benchmarks.md` |
 | 执行开发工作流（双轨并行） | `AIDOC/global-info/knowledge/steering/development-workflow.md` |
 | 每步执行时的依赖检查和产出验证 | `AIDOC/global-info/knowledge/steering/execution-protocol.md` |
 | 叙事/剧情策划工作流 | `AIDOC/global-info/knowledge/steering/narrative-workflow.md` |
