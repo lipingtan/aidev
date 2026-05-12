@@ -28,6 +28,26 @@
 
 **禁止**将任何产出文件生成到 `.kiro/specs/` 目录下。
 
+## 工具使用规范
+
+### 文件写入规则（重要）
+
+**禁止**使用 PowerShell 的 `Set-Content`、`Out-File`、`-replace | Set-Content` 写入包含中文的文件。
+PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容乱码损坏。
+
+| 操作 | 正确工具 | 禁止方式 |
+|------|----------|----------|
+| 创建/写入文件 | `fs_write` 工具 | PowerShell Set-Content |
+| 修改文件内容 | `str_replace` 工具 | PowerShell -replace \| Set-Content |
+| 追加文件内容 | `fs_append` 工具 | PowerShell Add-Content |
+| 创建目录 | PowerShell `New-Item -ItemType Directory` | — |
+| 移动/重命名文件 | PowerShell `Move-Item` / `Rename-Item` | — |
+| 读取文件验证 | PowerShell `Get-Content -Encoding UTF8` | — |
+
+**规则**：PowerShell 只用于目录操作、文件移动/重命名、读取验证。所有文件内容写入必须通过 `fs_write` / `str_replace` / `fs_append`。
+
+---
+
 ## 知识库索引
 
 执行任务前，根据任务类型读取对应的规范文件：
