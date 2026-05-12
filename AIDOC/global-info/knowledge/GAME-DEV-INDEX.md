@@ -26,6 +26,16 @@
 | `templates/action/*.md` | 同上 |
 | `templates/nsfw/*.md` | NSFW 管线 + 合规挂钩 |
 
+## 合规与发行（`compliance/`）
+
+| 路径 | 用途 |
+|------|------|
+| `compliance/content-guidelines.md` | 内容红线、角色档案合规元数据、AI 生成前检查 |
+| `compliance/platform-policies.md` | Steam / DLsite / itch.io 等上架与分区常见要求（**非法律意见**） |
+| `compliance/multi-version-strategy.md` | All-Ages / R-18、Base + Adult DLC、导出与打包矩阵 |
+
+与 `.cursor/rules/core.mdc`「合规与发行」表一致；`steering/*.md` 里写的 `compliance/xxx.md` 均相对于本目录 **`AIDOC/global-info/knowledge/`**。
+
 ## 占位文件策略
 
 | 路径 | 策略 |

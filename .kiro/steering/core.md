@@ -129,6 +129,14 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 设计/实现 H-Scene 系统 | `AIDOC/global-info/knowledge/templates/nsfw/h-scene-system.md` |
 | 设计/实现 CG Gallery / 回想系统 | `AIDOC/global-info/knowledge/templates/nsfw/cg-gallery.md` |
 
+### 合规与发行
+
+| 任务类型 | 必读文件 |
+|----------|----------|
+| 确认内容红线 / AI 生成 NSFW 内容前 | `AIDOC/global-info/knowledge/compliance/content-guidelines.md` |
+| 平台上架（Steam/DLsite/itch.io）前 | `AIDOC/global-info/knowledge/compliance/platform-policies.md` |
+| 规划 All-Ages vs R-18 双版本 / 打包配置 | `AIDOC/global-info/knowledge/compliance/multi-version-strategy.md` |
+
 ### 动作系统模板
 
 | 任务类型 | 必读文件 |
