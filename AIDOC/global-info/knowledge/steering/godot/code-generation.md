@@ -1,4 +1,4 @@
-# AI 代码生成规范（完整版）
+﻿# AI 代码生成规范（完整版）
 
 > 本文件定义 AI 为 Godot 4.x 项目生成 GDScript/Shader 代码时必须遵循的完整规范。
 > `.kiro/steering/core.md` 中的"AI 代码生成规则"是本文件的摘要版。

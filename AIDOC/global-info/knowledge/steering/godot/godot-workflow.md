@@ -1,4 +1,4 @@
-# Godot 开发工作流补充规范
+﻿# Godot 开发工作流补充规范
 
 > 本文件是 `development-workflow.md`（通用版）的 Godot 引擎特定补充。
 > 使用时需同时参考通用工作流规范。
@@ -22,7 +22,7 @@
 
 | 产出物 | 格式 | 验收标准 |
 |--------|------|----------|
-| 目录骨架 | 文件系统 | `godot_projects/{游戏名}/` 完整创建 |
+| 目录骨架 | 文件系统 | `projects/{游戏名}/` 完整创建 |
 | Godot 工程 | project.godot | 可在 Godot 编辑器中打开，渲染管线/物理引擎已配置 |
 | 插件初始化 | addons/ | gd_ecs、dlc_manager 目录已创建 |
 
@@ -68,9 +68,12 @@
 - [ ] `project.godot` 存在且配置正确
 - [ ] 渲染管线已配置（Forward+ / Compatibility）
 - [ ] 物理引擎已配置（Godot Physics / Jolt）
-- [ ] Autoload 脚本已注册（GameManager、EventBus）
+- [ ] Autoload 脚本已注册且顺序正确
 - [ ] 输入映射已根据游戏类型预配置
-- [ ] Godot 工程目录骨架完整（scenes/scripts/resources/assets/addons/autoload）
+- [ ] base_component.gd 和 base_system.gd 已生成
+- [ ] 工程可在 Godot 编辑器中正常打开（无报错）
+- [ ] main_menu.tscn 存在（即使是空场景）
+- [ ] .gitignore 包含 Godot 特定忽略项（.godot/、*.import）
 
 ### 3.2 Phase 2 验收补充
 
@@ -89,7 +92,7 @@
 ## 四、Godot 工程目录结构
 
 ```
-godot_projects/{游戏名}/
+projects/{游戏名}/
 ├── project.godot
 ├── scenes/
 │   ├── levels/

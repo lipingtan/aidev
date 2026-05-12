@@ -1,4 +1,4 @@
-# Godot 引擎特定规范
+﻿# Godot 引擎特定规范
 
 > 本文件包含与 Godot 引擎绑定的特定配置和约束。
 > 通用游戏开发规范请参见其他 steering 文件。
@@ -40,12 +40,12 @@
 所有函数参数、返回值、成员变量必须有类型标注：
 
 ```gdscript
-# ✅ 正确
+# 正确
 var max_hp: float = 100.0
 func calculate_damage(base: float, multiplier: float) -> float:
     return base * multiplier
 
-# ❌ 错误
+# 错误
 var max_hp = 100.0
 func calculate_damage(base, multiplier):
     return base * multiplier
@@ -126,7 +126,7 @@ signal died()
 ## 五、Godot 工程目录规范
 
 ```
-godot_projects/{游戏名}/
+projects/{游戏名}/
 ├── project.godot
 ├── scenes/                     # 场景文件
 │   ├── levels/
@@ -164,14 +164,14 @@ godot_projects/{游戏名}/
 
 ## 七、禁止事项
 
-- ❌ `var x = value` 不带类型标注
-- ❌ 单文件超过 200 行
-- ❌ 使用英文注释
-- ❌ 硬编码魔法数字
-- ❌ 在 `_process` 中执行可用信号驱动的逻辑
-- ❌ 循环依赖
-- ❌ 深层继承（>3 层）
-- ❌ 直接修改其他节点的私有变量
+- `var x = value` 不带类型标注
+- 单文件超过 200 行
+- 使用英文注释
+- 硬编码魔法数字
+- 在 `_process` 中执行可用信号驱动的逻辑
+- 循环依赖
+- 深层继承（>3 层）
+- 直接修改其他节点的私有变量
 
 ---
 
