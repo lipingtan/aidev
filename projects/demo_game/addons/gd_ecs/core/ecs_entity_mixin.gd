@@ -38,8 +38,10 @@ func add_component(component: EcsComponent) -> void:
 		return
 	_components[comp_name] = component
 	component_added.emit(comp_name)
-	if EcsWorld:
-		EcsWorld._on_entity_component_changed(host_node)
+	# 通知 EcsWorld 更新查询缓存（通过宿主节点获取 Autoload）
+	var world: Node = _get_ecs_world()
+	if world:
+		world._on_entity_component_changed(host_node)
 
 
 ## 移除 Component
@@ -49,8 +51,9 @@ func remove_component(component_name: StringName) -> EcsComponent:
 	var component: EcsComponent = _components[component_name]
 	_components.erase(component_name)
 	component_removed.emit(component_name)
-	if EcsWorld:
-		EcsWorld._on_entity_component_changed(host_node)
+	var world: Node = _get_ecs_world()
+	if world:
+		world._on_entity_component_changed(host_node)
 	return component
 
 
@@ -93,3 +96,10 @@ func deserialize_components(data: Dictionary) -> void:
 	for comp_name in data:
 		if comp_name in _components:
 			_components[comp_name].deserialize(data[comp_name])
+
+
+## 安全获取 EcsWorld Autoload（通过宿主节点的场景树）
+func _get_ecs_world() -> Node:
+	if host_node and host_node.is_inside_tree():
+		return host_node.get_node_or_null("/root/EcsWorld")
+	return null

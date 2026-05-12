@@ -179,7 +179,10 @@ func _get_matching_entities(system: EcsSystem) -> Array:
 func _make_query_key(component_names: Array[StringName]) -> String:
 	var sorted: Array[StringName] = component_names.duplicate()
 	sorted.sort()
-	return ",".join(sorted)
+	var packed := PackedStringArray()
+	for s in sorted:
+		packed.append(String(s))
+	return ",".join(packed)
 
 
 ## 按优先级排序

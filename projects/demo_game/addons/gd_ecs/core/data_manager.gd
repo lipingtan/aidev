@@ -1,4 +1,4 @@
-class_name DataManagerClass extends Node
+extends Node
 ## 全局数据表管理器
 ##
 ## 统一管理所有策划配置数据（物品表、技能表、怪物表等），

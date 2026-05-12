@@ -1,4 +1,4 @@
-class_name DlcManagerClass extends Node
+extends Node
 ## DLC 管理器（Autoload）
 ##
 ## 负责扫描、验证、加载和卸载 DLC 包。
@@ -28,7 +28,12 @@ var game_version: String = "0.1.0"
 
 
 func _ready() -> void:
-	# 启动时自动扫描并加载 DLC
+	# 延迟到下一帧加载 DLC，确保 EcsWorld 等 Autoload 已就绪
+	call_deferred("_deferred_load_dlcs")
+
+
+## 延迟加载所有 DLC
+func _deferred_load_dlcs() -> void:
 	var manifests: Array[DlcManifest] = scan_dlcs()
 	for manifest in manifests:
 		load_dlc(manifest.id)

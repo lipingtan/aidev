@@ -1,4 +1,4 @@
-class_name EventBusClass extends Node
+extends Node
 ## 全局事件总线
 ##
 ## 提供发布/订阅机制，让系统间通过事件名解耦通信。

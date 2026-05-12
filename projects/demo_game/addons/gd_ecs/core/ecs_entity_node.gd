@@ -40,10 +40,15 @@ func _init() -> void:
 
 
 func _enter_tree() -> void:
-	# 绑定到父节点
-	_mixin.setup(get_parent())
+	# 绑定到父节点（如果有）
+	var parent: Node = get_parent()
+	if parent:
+		_mixin.setup(parent)
+	else:
+		_mixin.setup(self)
+		push_warning("EcsEntityNode 没有父节点，将自身作为宿主")
 	if EcsWorld:
-		# 注册父节点为 Entity（EcsWorld 通过 duck typing 识别）
+		# 注册自身为 Entity
 		EcsWorld.register_entity(self)
 
 

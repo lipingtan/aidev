@@ -1,4 +1,4 @@
-class_name ObjectPoolClass extends Node
+extends Node
 ## 全局对象池管理器
 ##
 ## 避免高频创建/销毁节点导致的 GC 压力。
