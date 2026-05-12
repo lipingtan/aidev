@@ -66,24 +66,27 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 | 任务类型 | 必读文件 |
 |----------|----------|
+| **写代码前：多平台画质与性能定稿** | `AIDOC/global-info/knowledge/steering/pre-development-defaults.md` |
 | **启动全新游戏项目** | `AIDOC/global-info/knowledge/steering/project-bootstrap.md` |
 | 执行开发工作流（双轨并行） | `AIDOC/global-info/knowledge/steering/development-workflow.md` |
 | 每步执行时的依赖检查和产出验证 | `AIDOC/global-info/knowledge/steering/execution-protocol.md` |
 | 叙事/剧情策划工作流 | `AIDOC/global-info/knowledge/steering/narrative-workflow.md` |
 | 2D/3D 分支路由规则 | `AIDOC/global-info/knowledge/steering/branch-routing.md` |
-| 资产管线（导入/生成/集成） | `AIDOC/global-info/knowledge/steering/asset-pipeline.md` |
+| 资产管线（导入/生成/集成）；多平台画质档、纹理分档 | `AIDOC/global-info/knowledge/steering/asset-pipeline.md` |
 | 迭代优化（调试/性能/平衡） | `AIDOC/global-info/knowledge/steering/iteration-workflow.md` |
+| 多平台性能/画质预算 | `AIDOC/global-info/knowledge/steering/performance-budget.md` |
 
 ### 引擎特定规范（Godot）
 
 | 任务类型 | 必读文件 |
 |----------|----------|
 | Godot 引擎特定规范和约束 | `AIDOC/global-info/knowledge/steering/godot/godot-engine.md` |
+| QualitySettings 实现与 API 定稿 | `AIDOC/global-info/knowledge/steering/godot/quality-settings-spec.md` |
 | Godot 代码生成规范 | `AIDOC/global-info/knowledge/steering/godot/code-generation.md` |
 | Godot 工作流补充（POST-CHECK等） | `AIDOC/global-info/knowledge/steering/godot/godot-workflow.md` |
 | Godot 项目启动配置 | `AIDOC/global-info/knowledge/steering/godot/godot-bootstrap.md` |
 
-### 引擎知识
+### 引擎知识（Godot）
 
 | 任务类型 | 必读文件 |
 |----------|----------|
@@ -118,6 +121,14 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 设计/实现存档系统 | `AIDOC/global-info/knowledge/templates/rpg/save-system.md` |
 | 设计/实现战斗系统 | `AIDOC/global-info/knowledge/templates/rpg/combat-system.md` |
 
+### NSFW 系统模板
+
+| 任务类型 | 必读文件 |
+|----------|----------|
+| 设计/实现关系数值系统（好感/堕落/羞耻等） | `AIDOC/global-info/knowledge/templates/nsfw/relationship-stats.md` |
+| 设计/实现 H-Scene 系统 | `AIDOC/global-info/knowledge/templates/nsfw/h-scene-system.md` |
+| 设计/实现 CG Gallery / 回想系统 | `AIDOC/global-info/knowledge/templates/nsfw/cg-gallery.md` |
+
 ### 动作系统模板
 
 | 任务类型 | 必读文件 |
@@ -146,3 +157,4 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 > **规则**：如果任务涉及多个类型，同时读取对应的多个文件。
 > 知识库文件不存在时，标记为待创建并继续执行。
 > 进入任何制作阶段前，必须执行 `execution-protocol.md` 的门控检查。
+> **系统模板索引与知识库写作原则**：`AIDOC/global-info/knowledge/templates/README.md`、`AIDOC/global-info/knowledge/GAME-DEV-INDEX.md`（不重复引擎官方文档，只收架构约束与 best practice）。

@@ -18,11 +18,12 @@ config/features=PackedStringArray("4.3")
 [autoload]
 
 EventBus="*res://addons/gd_ecs/core/event_bus.gd"
+QualitySettings="*res://autoload/quality_settings.gd"
 EcsWorld="*res://addons/gd_ecs/core/ecs_world.gd"
 ObjectPool="*res://addons/gd_ecs/core/object_pool.gd"
 DataManager="*res://addons/gd_ecs/core/data_manager.gd"
-DlcManager="*res://addons/dlc_manager/core/dlc_manager.gd"
 SaveManager="*res://addons/gd_ecs/systems/save/save_manager.gd"
+DlcManager="*res://addons/dlc_manager/core/dlc_manager.gd"
 
 [display]
 
