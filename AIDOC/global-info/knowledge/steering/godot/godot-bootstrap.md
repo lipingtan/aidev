@@ -31,19 +31,23 @@ renderer/rendering_method="forward_plus"
 
 [autoload]
 EventBus="*res://addons/gd_ecs/core/event_bus.gd"
-DataManager="*res://addons/gd_ecs/core/data_manager.gd"
+QualitySettings="*res://autoload/quality_settings.gd"
 EcsWorld="*res://addons/gd_ecs/core/ecs_world.gd"
 ObjectPool="*res://addons/gd_ecs/core/object_pool.gd"
+DataManager="*res://addons/gd_ecs/core/data_manager.gd"
+SaveManager="*res://addons/gd_ecs/systems/save/save_manager.gd"
 DlcManager="*res://addons/dlc_manager/core/dlc_manager.gd"
 ```
 
-### 1.2 渲染管线选择
+### 1.2 渲染管线选择（Godot 4.x 三套后端）
 
-| 选项 | 适用场景 | 配置值 |
-|------|----------|--------|
-| Forward+ | 3D 默认，高质量渲染 | `"forward_plus"` |
-| Mobile | 移动端优化 | `"mobile"` |
-| Compatibility | 低端设备/Web | `"gl_compatibility"` |
+| 选项 | rendering_method 值 | 适用场景 | 工作台档位 |
+|------|---------------------|----------|------------|
+| Forward+ | `"forward_plus"` | 3D 默认、桌面高质量 | `desktop_high` |
+| Forward Mobile | `"mobile"` | 移动端首选（保留 PBR / 后效） | `mobile_high`（默认） |
+| Compatibility | `"gl_compatibility"` | 兜底/Web/极老机型 | 不在工作台默认覆盖内 |
+
+> **澄清**：`"mobile"` 是 **Forward Mobile** 渲染器，**不是** Compatibility。`performance-budget.md` 表格中"移动档渲染方法"以此为准。
 
 ### 1.3 物理引擎选择
 
@@ -56,21 +60,25 @@ DlcManager="*res://addons/dlc_manager/core/dlc_manager.gd"
 
 ## 二、Autoload 注册顺序
 
-### 2.1 标准注册顺序
+### 2.1 标准注册顺序（与 `godot-engine.md` §七 / `quality-settings-spec.md` §1 / demo_game 一致）
 
 | 顺序 | 名称 | 职责 | 文件路径 |
 |------|------|------|----------|
 | 1 | EventBus | 全局事件总线 | `res://addons/gd_ecs/core/event_bus.gd` |
-| 2 | DataManager | 数据表管理 | `res://addons/gd_ecs/core/data_manager.gd` |
+| 2 | **QualitySettings** | **多平台画质档、纹理路径解析、画质标量** | `res://autoload/quality_settings.gd` |
 | 3 | EcsWorld | ECS 框架核心 | `res://addons/gd_ecs/core/ecs_world.gd` |
 | 4 | ObjectPool | 对象池 | `res://addons/gd_ecs/core/object_pool.gd` |
-| 5 | DlcManager | DLC 管理 | `res://addons/dlc_manager/core/dlc_manager.gd` |
+| 5 | DataManager | 数据表管理 | `res://addons/gd_ecs/core/data_manager.gd` |
+| 6 | SaveManager | 存档管理（条件注册） | `res://addons/gd_ecs/systems/save/save_manager.gd` |
+| 7 | DlcManager | DLC 管理 | `res://addons/dlc_manager/core/dlc_manager.gd` |
 
 ### 2.2 注册顺序原则
 
-- 被依赖的先注册（EventBus 最先，因为其他系统都可能用到）
+- 被依赖的先注册（EventBus 最先）
+- **QualitySettings 必须早于 DataManager / DlcManager**：避免数据表与 DLC 在档位未知前去 `preload` 含 `tier_*` 路径的资源
 - DlcManager 在 EcsWorld 之后（DLC 需要向 ECS 注册内容）
-- 条件注册：SaveManager（需要存档时）
+- **SaveManager 在 DlcManager 之前**：存档头常含已启用 DLC / 内容版本；若改为先 DLC 再 Save，须同步改加载顺序并在 `architecture.md` 写明理由
+- 条件注册：无存档系统时可省略 SaveManager；其余顺序不变
 
 ---
 
@@ -112,6 +120,8 @@ interact
 ```
 projects/{游戏名}/
 ├── project.godot
+├── autoload/                     # 全局单例脚本（QualitySettings 等）
+│   └── quality_settings.gd       # 多平台画质档，参考 demo_game
 ├── scenes/
 │   ├── levels/
 │   ├── characters/
@@ -134,6 +144,9 @@ projects/{游戏名}/
 │   ├── characters/
 │   ├── environments/
 │   ├── effects/
+│   ├── textures/                 # 含 tier_desktop/、tier_mobile/ 两档纹理
+│   │   ├── tier_desktop/
+│   │   └── tier_mobile/
 │   └── shared/
 │       ├── audio/
 │       ├── ui/
@@ -155,8 +168,10 @@ projects/{游戏名}/
 ```markdown
 ### Godot 工程检查
 - [ ] project.godot 配置正确（分辨率、渲染管线、物理）
-- [ ] renderer/rendering_method 与选择一致
-- [ ] Autoload 脚本已注册且顺序正确
+- [ ] renderer/rendering_method 与目标首档一致（`desktop_high` → `forward_plus`；`mobile_high` 见 `performance-budget.md`）
+- [ ] Autoload 脚本已注册且顺序正确（**QualitySettings 早于 DataManager / DlcManager**）
+- [ ] `autoload/quality_settings.gd` 已就位（可直接复制 `projects/demo_game/autoload/quality_settings.gd`）
+- [ ] `assets/textures/tier_desktop/`、`assets/textures/tier_mobile/` 至少建空目录（`.gitkeep`）
 - [ ] 输入映射已根据游戏类型预配置
 - [ ] 工程可在 Godot 编辑器中正常打开（无报错）
 - [ ] main_menu.tscn 存在（即使是空场景）
@@ -172,7 +187,7 @@ projects/{游戏名}/
 - [ ] 所有 .gd 文件有中文注释
 - [ ] 场景按 levels/characters/ui 分类
 - [ ] .tres 文件在 resources/ 下
-- [ ] 全局单例在 addons/gd_ecs/core/ 下
+- [ ] 工程级 Autoload 脚本在 autoload/ 下；插件提供的单例在 addons/*/ 下并在 project.godot 注册
 - [ ] 插件在 addons/ 下
 - [ ] 碰撞层按标准方案分配（参见 godot-engine.md）
 ```

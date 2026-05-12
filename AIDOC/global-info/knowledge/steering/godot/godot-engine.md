@@ -12,7 +12,7 @@
 | 引擎版本 | **Godot 4.x**（最新稳定版） |
 | 主要语言 | **GDScript** |
 | 辅助语言 | Shader Language（视觉效果） |
-| 渲染管线 | Forward+（3D 默认）/ Compatibility（低端适配时） |
+| 渲染管线 | **桌面** `forward_plus`；**移动默认** `mobile`（Forward Mobile）；**兜底** `gl_compatibility`（Compatibility，导出预设显式选用） |
 | 物理引擎 | Godot Physics（默认）/ Jolt（高精度需求时） |
 | 架构模式 | ECS 混合架构（Node + Component + System） |
 | 插件框架 | gd_ecs（ECS）+ dlc_manager（DLC 动态挂接） |
@@ -117,7 +117,7 @@ assets/textures/
 ### 3.3 Shader / 材质
 
 - 复杂 Shader 须标注 **GPU 开销等级**（见「Shader 注释规范」）；移动端档可切换 `ShaderMaterial` 或 `shader` 变体。
-- **Compatibility** 后端下禁止依赖仅 Forward+ 可用的效果，除非该档明确不支持并有 UI/画质说明。
+- **Forward Mobile（`mobile`）**：默认可用与桌面相近的 PBR；若导出预设切 **`gl_compatibility`**，须按 `asset-pipeline.md` §5.4 做 Shader/后效降级说明，且**禁止**依赖仅 Forward+ 可用的效果（除非该档明确不支持并有 UI/画质说明）。
 
 ### 3.4 与 Adult DLC
 
@@ -195,7 +195,9 @@ projects/{游戏名}/
 | 7 | DlcManager | DLC 管理 |
 | 8 | GameManager | 游戏状态管理（可选） |
 
-**参考工程 `demo_game` 当前顺序**：EventBus → QualitySettings → EcsWorld → ObjectPool → DataManager → DlcManager → SaveManager。
+> **GameManager 建议**：默认 **不注册**。仅在 **跨场景流程状态**、**全局暂停 / 时间缩放**、**关卡流** 等与 `EcsWorld` / `DataManager` 边界反复牵扯时，再增加 **薄 Autoload**（只做事件转发与子系统组合，避免上帝类）。
+
+**参考工程 `demo_game` 当前顺序**：EventBus → QualitySettings → EcsWorld → ObjectPool → DataManager → SaveManager → DlcManager。
 
 ---
 

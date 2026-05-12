@@ -6,6 +6,8 @@
 
 在 **`DataManager`、`DlcManager`、一切会 `preload` 带贴图路径的资源之前** 注册 `QualitySettings`。
 
+**SaveManager 与 DlcManager**：默认 **SaveManager 在前**（存档可记录 DLC / 内容版本）；若加载管线要求先挂载 DLC 再读档，须在项目 `architecture.md` 写明并全局调整顺序。
+
 推荐完整顺序（与 `demo_game` 一致）：
 
 1. `EventBus`（若工程有）
@@ -13,14 +15,14 @@
 3. `EcsWorld`
 4. `ObjectPool`
 5. `DataManager`
-6. `DlcManager`
-7. `SaveManager`
+6. `SaveManager`
+7. `DlcManager`
 
 若工程无 `ObjectPool`，`DataManager` 仍须排在 **`QualitySettings` 之后**。
 
 ## 2. `project.godot` 与运行时画质
 
-- **渲染方法**：以 **导出预设** 为准——Android 预设用 `mobile`（Compatibility），Windows 用 `forward_plus`。运行时改 `rendering_method` 往往不可靠，**不作为本工作台默认要求**。
+- **渲染方法**：以 **导出预设** 为准——Android 预设默认 `mobile`（**Forward Mobile**，非 Compatibility），Windows 用 `forward_plus`。`gl_compatibility` 仅作为移动 Forward Mobile 实测不达标时的兜底导出预设。运行时改 `rendering_method` 往往不可靠，**不作为本工作台默认要求**。
 - **`QualitySettings.apply_renderer_and_quality_settings()`**（参考实现）：根据 `get_scalar(&"msaa_3d")` 设置**主视口 MSAA**；其余键（`shadow_distance`、`ssao_enabled` 等）由**各系统在读取后自行应用**（灯光、Environment、后处理节点），避免单例强耦合场景树。
 
 ## 3. 公开 API（须实现）

@@ -83,7 +83,7 @@
 - [ ] 世界观无逻辑矛盾
 - [ ] 技术架构可支撑 GDD 中所有玩法
 - [ ] 接口定义覆盖所有核心系统
-- [ ] 若含移动端：architecture 已与 **Compatibility** / 移动预算对齐，无仅桌面可用的硬依赖（除非文档明确剔除移动档）
+- [ ] 若含移动端：architecture 已与 **Forward Mobile（`mobile`）或声明的兜底 `gl_compatibility`** 及移动预算对齐，无仅桌面可用的硬依赖（除非文档明确不做移动）
 
 ---
 

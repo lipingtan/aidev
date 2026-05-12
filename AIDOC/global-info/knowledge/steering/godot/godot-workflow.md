@@ -77,11 +77,11 @@
 ### 3.1 Phase 0 验收补充
 
 - [ ] `project.godot` 存在且配置正确
-- [ ] 渲染管线已配置（Forward+ / Compatibility）
+- [ ] 渲染管线已配置（桌面 Forward+；移动 Forward Mobile 或声明的 Compatibility 兜底预设）
 - [ ] 物理引擎已配置（Godot Physics / Jolt）
 - [ ] Autoload 脚本已注册且顺序正确
 - [ ] 输入映射已根据游戏类型预配置
-- [ ] base_component.gd 和 base_system.gd 已生成
+- [ ] ECS 基类已存在：`addons/gd_ecs/core/ecs_component.gd` 与 `ecs_system.gd`（或项目中等价约定）
 - [ ] 工程可在 Godot 编辑器中正常打开（无报错）
 - [ ] main_menu.tscn 存在（即使是空场景）
 - [ ] .gitignore 包含 Godot 特定忽略项（.godot/、*.import）

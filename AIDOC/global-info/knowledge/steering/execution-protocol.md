@@ -99,7 +99,7 @@
 - [ ] 引擎工程配置文件存在
 - [ ] `AIDOC/projects/{游戏名}/README.md` 存在
 - [ ] `AIDOC/projects/{游戏名}/design/` 目录存在
-- [ ] `AIDOC/projects/{游戏名}/narrative/` 目录存在
+- [ ] `AIDOC/projects/{游戏名}/narrative/` 目录存在（若澄清不需要叙事系统，可仅保留 `README.md` 占位说明）
 - [ ] `AIDOC/projects/{游戏名}/iterations/` 目录存在
 - [ ] `AIDOC/projects/{游戏名}/tracker.md` 存在
 - [ ] 引擎工程目录骨架完整（场景/脚本/资源/资产/插件/全局单例）
@@ -120,7 +120,7 @@
 - [ ] `design/architecture.md` 存在且包含：系统架构图、模块接口定义
 - [ ] 核心玩法设计文档存在
 - [ ] **[双平台]** `architecture.md` 含 **QualityProfile / QualitySettings** 模块说明（Autoload、解析纹理路径、`get_scalar` 约定），与 `godot-engine.md` 一致
-- [ ] **[双平台]** 已定义桌面 vs 移动的 **渲染后端策略**（Forward+ / Compatibility）与降级条件
+- [ ] **[双平台]** 已定义桌面 vs 移动的 **渲染方法**（与 `performance-budget.md` §1、`godot-bootstrap.md` §1.2 一致：`forward_plus` vs `mobile` Forward Mobile；兜底 `gl_compatibility` 仅写进导出策略时声明）
 
 ### Phase 2: 原型验证
 

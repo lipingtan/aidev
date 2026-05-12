@@ -14,6 +14,7 @@
 
 | 路径 | 说明 |
 |------|------|
+| `AIDOC/projects/{游戏名}/README.md` | 入口：链到 `projects/{游戏名}/`、`design/`、`tracker.md`（见 `project-bootstrap.md`） |
 | `AIDOC/projects/{游戏名}/design/performance-budget.md` | 从知识库 `performance-budget.md` 复制 |
 | `AIDOC/projects/{游戏名}/design/architecture.md` | 增加一节「多平台画质」：引用 **固定档位 ID**，写明是否只做 PC |
 | `projects/{游戏名}/autoload/quality_settings.gd` | 复制 `demo_game` 同名文件或按 spec 生成 |

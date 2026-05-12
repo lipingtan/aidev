@@ -96,27 +96,8 @@ Camera2D
 | **3D** | PhysicsServer3D | 32层 3D碰撞 | RayCast3D / PhysicsRayQueryParameters3D | Vector3 力/冲量 | Generic6DOFJoint3D 等 |
 | **2D** | PhysicsServer2D | 32层 2D碰撞 | RayCast2D / PhysicsRayQueryParameters2D | Vector2 力/冲量 | PinJoint2D / DampedSpringJoint2D |
 
-**碰撞层规划建议：**
-```
-3D 碰撞层分配：
-  Layer 1: 环境/地形
-  Layer 2: 玩家
-  Layer 3: 敌人
-  Layer 4: 玩家攻击判定
-  Layer 5: 敌人攻击判定
-  Layer 6: 可交互物品
-  Layer 7: 触发区域
-  Layer 8: 导航障碍
-
-2D 碰撞层分配：
-  Layer 1: 地形/平台
-  Layer 2: 玩家
-  Layer 3: 敌人
-  Layer 4: 玩家子弹
-  Layer 5: 敌人子弹
-  Layer 6: 可拾取物品
-  Layer 7: 触发区域
-```
+**碰撞层规划**：本工作台 **统一遵守** `godot/godot-engine.md` 第四节《碰撞层标准分配》（同样写入 `godot/code-generation.md` 第三节）。  
+此处不再单独维护一份方案，避免与代码生成规范冲突。2D 项目沿用相同的 Layer 编号（1=PlayerHurtbox、2=EnemyHurtbox、3=PlayerHitbox、4=EnemyHitbox、5=Environment、6=Interactable、7=Projectile、8=Trigger），按 2D 节点替换实现类型即可。
 
 ### 1.5 光照系统
 

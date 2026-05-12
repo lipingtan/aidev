@@ -8,14 +8,37 @@
 
 | 档位 ID | 平台覆盖 | Godot 渲染方法（导出预设） | 目标 FPS | 参考分辨率 |
 |---------|----------|----------------------------|----------|------------|
-| `desktop_high` | 台式机 / 笔记本 **中端 GPU 及以上**（不承诺集显办公本） | `forward_plus` | 60 | 1920×1080 |
-| `mobile_high` | **中端 SoC 及以上** Android / iOS（不承诺入门级整机） | `mobile`（Compatibility），Forward+ 仅当全量实测通过 | 60 | 1080p |
+| `desktop_high` | 台式机 / 笔记本 **中端 GPU 及以上**（代表性配置见 **下文 1.1 节**，不承诺集显办公本） | `forward_plus`（Forward+） | 60 | 1920×1080 |
+| `mobile_high` | **中端 SoC 及以上** Android / iOS（代表性样机见 **下文 1.1 节**，不承诺入门级整机） | `mobile`（**Forward Mobile**，默认首选）；老旧机型可单独导出预设切 `gl_compatibility`（Compatibility） | 60 | 1080p |
+
+> **注意**：`mobile` 指 **Forward Mobile** 渲染器（保留 PBR、阴影、后效，仅简化阴影与屏幕空间效果），与 `gl_compatibility`（Compatibility）是 **不同的两个后端**。本工作台默认对移动档位用 Forward Mobile，仅在实测不达标或需要 Web/极老机型兜底时切 Compatibility，并在导出预设中显式标注。
 
 **解析规则**：
 
 - `OS.has_feature("mobile")` → `mobile_high`。
 - 否则 → `desktop_high`。
 - 开发覆盖：命令行 **`--aidev-tier=mobile_high`** 在 PC 上可模拟移动标量与 `tier_mobile` 路径（**不再提供** `desktop_low` / `mobile_low`）。
+
+### 1.1 参考中端约定用机（2025–2026）
+
+> 用于 **团队对齐、测试机选型、第七节实测表填设备名**；各项目可替换为代表性上市机型，**不**等同对外「最低配置」文案。
+
+#### 桌面（`desktop_high`）
+
+| 维度 | 约定 |
+|------|------|
+| GPU | 与 **GeForce RTX 3060 / RTX 4060** 或 **Radeon RX 6600 / RX 7600** 同级或更强的 **独显**；默认 **不** 以核显办公本为验收基线 |
+| CPU | 近四年 **6 核及以上** 主流桌面 CPU，或同代游戏本 **H 系**（笔电可测，预算仍以 GPU 为先） |
+| 内存 | **16 GB** |
+
+#### 移动（`mobile_high`）
+
+| 维度 | 约定 |
+|------|------|
+| SoC（Android） | **骁龙 7+ Gen 2 / 7 Gen 3 / 8s Gen 3**；**天玑 8200 / 8300（含 Ultra）** 等 **2023 年起主流中端芯**；**不含** 骁龙 4 系、天玑 700 级入门整机构成的默认锚点 |
+| SoC（iOS） | **A15（iPhone 13 系）及以上** |
+| 内存 | Android 以 **8 GB** 为默认锚点（**6 GB** 可进第七节单测，不作为全团队默认承诺） |
+| 分辨率 | **1080p** 级画面负载；高刷 **非** 本档目标项 |
 
 ## 2. 纹理目录档（固定 2 文件夹）
 
@@ -62,7 +85,8 @@
 | 预设 ID | 用途 |
 |---------|------|
 | `windows_desktop` | PC 正式包，`forward_plus`，含 `tier_desktop` |
-| `android_mobile` / `ios_mobile` | 移动正式包，`mobile`，含 `tier_mobile`；可剔除 `tier_desktop`（分目录策略时） |
+| `android_mobile` / `ios_mobile` | 移动正式包，`mobile`（Forward Mobile），含 `tier_mobile`；可剔除 `tier_desktop`（分目录策略时） |
+| `*_compat`（可选） | 仅当移动 Forward Mobile 实测不达标时单独建：渲染方法 `gl_compatibility` | 
 | `*_dev` | 调试，与对应正式预设一致 |
 
 **Steam Deck**：按 **桌面中端** 验收，使用 `windows_desktop` 同源资源与 `desktop_high`；若实机不稳再单开导出预设调分辨率，**不新增** `desktop_low` 档 ID。

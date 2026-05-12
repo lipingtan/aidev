@@ -64,6 +64,7 @@
 ```
 # 文档目录
 AIDOC/projects/{游戏名}/
+├── README.md                     # 项目入口：引擎工程路径、tracker 链接、简要说明
 ├── design/
 │   ├── gdd.md                    # 游戏设计文档
 │   ├── worldview.md              # 世界观设定
@@ -88,9 +89,10 @@ AIDOC/projects/{游戏名}/
 ├── clarification.md              # 澄清记录
 └── tracker.md                    # 进度追踪
 
-# 引擎工程目录（具体结构由引擎特定启动文件定义）
-{引擎工程目录}/{游戏名}/
+# 引擎工程目录（本工作台默认 projects/{游戏名}/，见 godot-bootstrap.md）
+projects/{游戏名}/
 ├── 引擎工程配置文件
+├── autoload/                     # 全局单例脚本（含 quality_settings.gd 等）
 ├── scenes/                       # 场景文件
 ├── scripts/                      # 脚本
 │   ├── core/                     # 核心系统
@@ -99,8 +101,8 @@ AIDOC/projects/{游戏名}/
 │   ├── narrative/                # [如需叙事系统]
 │   └── ai/                       # AI 行为
 ├── resources/                    # 数据资源
-├── assets/                       # 游戏资产
-├── plugins/                      # 插件
+├── assets/                       # 游戏资产（含 textures/tier_desktop|tier_mobile）
+├── addons/                       # Godot 插件（gd_ecs、dlc_manager 等）
 └── export/                       # 导出配置
 
 # 资产源文件目录
@@ -214,6 +216,13 @@ assets_source/{游戏名}/
 - [ ] tracker.md 已创建，包含 Phase 0~5 进度模板
 - [ ] gdd.md 已创建骨架（标题 + 章节结构）
 - [ ] architecture.md 已创建骨架（技术选型已填写）
+- [ ] **design/performance-budget.md** 已从知识库 `steering/performance-budget.md` 复制到项目（含 `desktop_high` / `mobile_high` 档位表）
+- [ ] **architecture.md「多平台画质」节** 已填（可直接粘 `pre-development-defaults.md` 模板）
+
+### 多平台与画质（如目标含移动端）
+- [ ] `autoload/quality_settings.gd` 已就位（参考 demo_game 同名文件）
+- [ ] `project.godot` `[autoload]` 段含 `QualitySettings`，且早于 `DataManager` / `DlcManager`
+- [ ] `assets/textures/tier_desktop/`、`assets/textures/tier_mobile/` 目录存在（至少 `.gitkeep`）
 
 ### 最终确认
 - [ ] 用户确认项目方向正确

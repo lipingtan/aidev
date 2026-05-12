@@ -229,7 +229,7 @@
 | 档位 ID | 目标平台 | 渲染后端（Godot） | 目标 FPS | 纹理档 | 典型 Max Size（角色/环境） |
 |---------|----------|-------------------|----------|--------|---------------------------|
 | `desktop_high` | PC 中端 GPU 及以上 | Forward+ | 60 | `tier_desktop` | 2048 / 4096 |
-| `mobile_high` | 移动中端 SoC 及以上 | Compatibility（默认） | 60 | `tier_mobile` | 1024 / 2048 |
+| `mobile_high` | 移动中端 SoC 及以上 | `mobile`（Forward Mobile，默认） | 60 | `tier_mobile` | 1024 / 2048 |
 
 **规则**：仅两档；策划表、数据表、代码 **只关心** `QualitySettings.current_tier`（上表 ID），禁止散落 `if OS.get_name()` 拼贴图路径。
 
@@ -262,7 +262,7 @@
 ### 5.4 材质与 Shader
 
 - **主材质**：预留 **移动端简化版** Shader（减少采样次数、禁用视差/复杂屏幕空间依赖）；由 QualityProfile 或 `shader_variant` 切换。
-- **Compatibility 渲染器**：移动端低端档须在 Phase 2 验证 **全主线 + 关键战斗 / H-Scene（若适用）** 可运行，见 `execution-protocol.md` Phase 2。
+- **移动档渲染**：`mobile_high` 默认 **Forward Mobile**（`rendering_method="mobile"`）；若某导出预设使用 `gl_compatibility`，须在 Phase 2 单独验证 **关键流程**，见 `execution-protocol.md` Phase 2。
 
 ### 5.5 资产需求卡补充字段（3D）
 
