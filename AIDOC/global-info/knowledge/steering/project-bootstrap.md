@@ -1,5 +1,7 @@
 # 项目启动流程（通用）
 
+> **开发前**：先读 **`pre-development-defaults.md`**（多平台画质、性能数字、`QualitySettings` 已定稿），再执行本节澄清与目录创建。
+
 ## 概述
 
 本文档定义了从零启动一个新游戏项目的通用流程，确保项目结构规范、配置正确、可立即进入开发。
@@ -38,6 +40,8 @@
 | 16 | 是否需要叙事系统 | 是 / 否 | 是 |
 | 17 | 是否需要存档系统 | 是 / 否 | 是 |
 | 18 | 特殊技术需求 | 自由文本 | 无 |
+| 19 | **若目标含移动：最低机型档位**（SoC / RAM / 系统） | 自由文本 | 无移动则填「不适用」 |
+| 20 | **QualityProfile 档位** | 固定为 `desktop_high` + `mobile_high`（见 `performance-budget.md`）；**仅 PC** 项目在澄清中写「无移动」并只维护 `tier_desktop` |
 
 ### 1.3 澄清完成标准
 
@@ -65,6 +69,7 @@ AIDOC/projects/{游戏名}/
 │   ├── worldview.md              # 世界观设定
 │   ├── art-style.md              # 美术风格定义
 │   ├── architecture.md           # 技术架构
+│   ├── performance-budget.md     # 多平台帧率/显存/画质档（与 QualityProfile 对齐）
 │   ├── balance.md                # 数值平衡
 │   ├── characters/               # 角色设定目录
 │   │   └── README.md

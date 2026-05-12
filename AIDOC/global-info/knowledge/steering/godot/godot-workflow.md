@@ -25,6 +25,7 @@
 | 目录骨架 | 文件系统 | `projects/{游戏名}/` 完整创建 |
 | Godot 工程 | project.godot | 可在 Godot 编辑器中打开，渲染管线/物理引擎已配置 |
 | 插件初始化 | addons/ | gd_ecs、dlc_manager 目录已创建 |
+| **QualitySettings** | autoload/ + 注册项 | 多平台项目：`QualitySettings`（或等价）已加入 Autoload，顺序见 `godot-engine.md` |
 
 ---
 
@@ -59,6 +60,16 @@
 | 2 | 资源类型匹配 | Resource 子类与数据结构一致 |
 | 3 | 路径引用有效 | 资源中引用的其他资源路径存在 |
 
+### 2.4 多平台 / QualityProfile（含纹理分档）
+
+> 项目含移动端或多画质档时，在资源集成类步骤后执行。
+
+| # | 检查项 | 说明 |
+|---|--------|------|
+| 1 | `QualitySettings` 已注册 | Autoload **早于** `DataManager` 与 `DlcManager`，顺序见 `godot-engine.md` |
+| 2 | 当前档纹理路径有效 | 抽样主角色/主场景材质，无缺失纹理（无洋红） |
+| 3 | 导出预设一致 | 目标平台预设与 `asset-pipeline.md` 第五节策略一致（剔除/包含 tier 目录正确） |
+
 ---
 
 ## 三、Godot 特定验收标准补充
@@ -74,12 +85,14 @@
 - [ ] 工程可在 Godot 编辑器中正常打开（无报错）
 - [ ] main_menu.tscn 存在（即使是空场景）
 - [ ] .gitignore 包含 Godot 特定忽略项（.godot/、*.import）
+- [ ] **多平台项目**：`QualitySettings`（或等价）Autoload 已配置，详见 `godot-engine.md`
 
 ### 3.2 Phase 2 验收补充
 
 - [ ] 原型场景可在 Godot 编辑器中按 F5 启动运行
 - [ ] GDScript 无运行时错误（Output 面板无红色报错）
 - [ ] 场景树结构合理（无过深嵌套）
+- [ ] **多平台**：至少一次导出的移动端/等价包能加载原型主场景，`QualitySettings.current_tier` 与导出意图一致（参见 `execution-protocol.md` Phase 2）
 
 ### 3.3 Phase 4 验收补充
 

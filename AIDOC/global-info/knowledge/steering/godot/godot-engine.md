@@ -91,7 +91,41 @@ signal died()
 
 ---
 
-## 三、碰撞层标准分配
+## 三、QualityProfile（多平台画质档）
+
+### 3.1 职责与实现位置
+
+- **默认定稿**：`performance-budget.md`（档位 ID、`tier_*` 目录名、`get_scalar` 键与数值）。
+- **API、Autoload、检测优先级**：`godot/quality-settings-spec.md`。
+- **参考实现**：`projects/demo_game/autoload/quality_settings.gd`（新工程复制后改 `TEXTURES_ROOT` 若路径不同）。
+- 提供 `resolve_texture(relative_path: String)`（相对 tier 目录的路径），**禁止**业务散落 `OS.get_name()` 拼纹理全路径。
+- 提供 `get_scalar(key: StringName)`：阴影、后效、同屏角色、粒子倍率等（键表见 `performance-budget.md` 第五节）。
+- **初始化顺序**：任意大批量加载纹理 / `DataManager` / `DlcManager` **之前**完成档位检测。
+
+### 3.2 目录约定
+
+与 `asset-pipeline.md` **第五节**一致，工程内示例：
+
+```
+assets/textures/
+├── tier_desktop/
+└── tier_mobile/
+```
+
+或使用同源双导入变体；代码仍通过本单例解析 **最终** `res://` 路径。
+
+### 3.3 Shader / 材质
+
+- 复杂 Shader 须标注 **GPU 开销等级**（见「Shader 注释规范」）；移动端档可切换 `ShaderMaterial` 或 `shader` 变体。
+- **Compatibility** 后端下禁止依赖仅 Forward+ 可用的效果，除非该档明确不支持并有 UI/画质说明。
+
+### 3.4 与 Adult DLC
+
+- 高清纹理 PCK 仅在 `desktop_high`（或项目定义的桌面档）下挂载；**移动端基座**不得依赖桌面专属路径。
+
+---
+
+## 四、碰撞层标准分配
 
 | Layer | 名称 | 用途 |
 |-------|------|------|
@@ -106,7 +140,7 @@ signal died()
 
 ---
 
-## 四、节点选择规则
+## 五、节点选择规则
 
 | 需求 | 3D 节点 | 2D 节点 |
 |------|---------|---------|
@@ -123,7 +157,7 @@ signal died()
 
 ---
 
-## 五、Godot 工程目录规范
+## 六、Godot 工程目录规范
 
 ```
 projects/{游戏名}/
@@ -142,27 +176,30 @@ projects/{游戏名}/
 ├── resources/                  # 数据资源（.tres）
 ├── assets/                     # 游戏资产（按对象自包含 + shared/按类型）
 ├── addons/                     # 插件
-├── autoload/                   # 全局单例
+├── autoload/                   # 全局单例（含 quality_settings.gd）
 └── dlc/                        # DLC 包
 ```
 
 ---
 
-## 六、Autoload 注册顺序
+## 七、Autoload 注册顺序
 
 | 顺序 | 名称 | 职责 |
 |------|------|------|
 | 1 | EventBus | 全局事件总线 |
-| 2 | DataManager | 数据表管理 |
+| 2 | **QualitySettings** | **多平台画质档、纹理路径解析、画质标量**（**必须在 DataManager / DlcManager 之前**） |
 | 3 | EcsWorld | ECS 框架核心 |
 | 4 | ObjectPool | 对象池 |
-| 5 | SaveManager | 存档管理 |
-| 6 | DlcManager | DLC 管理 |
-| 7 | GameManager | 游戏状态管理 |
+| 5 | DataManager | 数据表管理 |
+| 6 | SaveManager | 存档管理 |
+| 7 | DlcManager | DLC 管理 |
+| 8 | GameManager | 游戏状态管理（可选） |
+
+**参考工程 `demo_game` 当前顺序**：EventBus → QualitySettings → EcsWorld → ObjectPool → DataManager → DlcManager → SaveManager。
 
 ---
 
-## 七、禁止事项
+## 八、禁止事项
 
 - `var x = value` 不带类型标注
 - 单文件超过 200 行
@@ -172,10 +209,11 @@ projects/{游戏名}/
 - 循环依赖
 - 深层继承（>3 层）
 - 直接修改其他节点的私有变量
+- **业务代码中直接根据 OS 类型拼接 NSFW / 高清纹理路径**（须经过 QualitySettings）
 
 ---
 
-## 八、Shader 注释规范
+## 九、Shader 注释规范
 
 ```glsl
 shader_type spatial;
@@ -188,7 +226,7 @@ uniform float param_name : hint_range(0.0, 1.0) = 0.5;  // 参数用途说明
 
 ---
 
-## 九、导出变量规范
+## 十、导出变量规范
 
 ```gdscript
 @export_group("移动参数")

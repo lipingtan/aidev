@@ -103,6 +103,10 @@
 - [ ] `AIDOC/projects/{游戏名}/iterations/` 目录存在
 - [ ] `AIDOC/projects/{游戏名}/tracker.md` 存在
 - [ ] 引擎工程目录骨架完整（场景/脚本/资源/资产/插件/全局单例）
+- [ ] **[NSFW]** `clarification.md` 中已填写目标平台合规声明（Steam AO / itch.io 等）
+- [ ] **[NSFW]** `clarification.md` 中已填写 All-Ages vs R-18 版本发布策略
+- [ ] **[双平台]** `clarification.md` 已填写目标平台（桌面 / Android / iOS 等）与 **最低机型档位**
+- [ ] **[双平台]** `design/performance-budget.md` 或 `architecture.md` 已包含 **QualityProfile 档位表**（参见 `asset-pipeline.md` 第四节 4.5）
 
 ### Phase 1: 核心设计
 
@@ -115,6 +119,8 @@
 - [ ] `design/worldview.md` 存在且包含：世界规则、地理、历史、核心冲突
 - [ ] `design/architecture.md` 存在且包含：系统架构图、模块接口定义
 - [ ] 核心玩法设计文档存在
+- [ ] **[双平台]** `architecture.md` 含 **QualityProfile / QualitySettings** 模块说明（Autoload、解析纹理路径、`get_scalar` 约定），与 `godot-engine.md` 一致
+- [ ] **[双平台]** 已定义桌面 vs 移动的 **渲染后端策略**（Forward+ / Compatibility）与降级条件
 
 ### Phase 2: 原型验证
 
@@ -127,6 +133,8 @@
 - [ ] 核心玩法循环可完成至少 1 次完整流程
 - [ ] 操作手感验证报告存在
 - [ ] 代码通过代码级 POST-CHECK
+- [ ] **[双平台]** 已在 **至少一个移动导出目标**（真机或 CI 构建包）上进行 smoke：启动、加载主线原型场景、**纹理/显存峰值**记录在 `iterations/prototype_feedback.md` 或 `iterations/mobile_smoke.md`
+- [ ] **[双平台]** 已验证 **当前档** 下 `QualityProfile` 解析的纹理路径无缺失（无粉红材质）
 
 ### Phase 3: 核心系统实现
 
@@ -165,6 +173,13 @@
 - [ ] 内存使用不超过预算上限
 - [ ] 无崩溃性 Bug
 - [ ] 可成功导出为目标平台可执行文件
+- [ ] **[NSFW]** All-Ages 版本可独立运行（无 DLC 时无报错）
+- [ ] **[NSFW]** Adult DLC 加载后所有 H-Scene 可正常触发
+- [ ] **[NSFW]** 马赛克开关在日本地区测试可用
+- [ ] **[NSFW]** 各目标平台导出包已按 `compliance/multi-version-strategy.md` 打包矩阵验证
+- [ ] **[NSFW]** 所有角色档案的 `declared_adult` 字段已最终核查
+- [ ] **[双平台]** **桌面** 与 **移动** 导出预设各至少一条已成功出包；安装包体积与 **移动端 VRAM 峰值** 对照 `asset-pipeline.md` 第四节 / 第七节预算记录
+- [ ] **[双平台]** **桌面档 + 移动档**（`desktop_high` 与 `mobile_high`）各完成可玩通 smoke，无 OOM、无致命掉帧区（记录于 `iterations/performance.md`）
 
 ---
 
@@ -182,6 +197,22 @@
 | 6 | 命名规范 | 类名 PascalCase、函数/变量 snake_case |
 | 7 | 无硬编码魔法数字 | 使用常量或导出变量 |
 | 8 | 无循环依赖 | A 不同时引用 B 且 B 引用 A |
+| 9 | **NSFW 合规**：涉及 NSFW 内容的代码必须经过合规检查，见下方清单 | 仅 NSFW 相关代码适用 |
+
+---
+
+## 五-A、NSFW 内容合规 POST-CHECK
+
+> 涉及 H-Scene、角色设定、NSFW 资产描述、提示词生成时执行。
+
+| # | 检查项 | 说明 |
+|---|--------|------|
+| 1 | **角色年龄声明** | 场景中涉及的所有角色档案有 `declared_adult: true` 字段 |
+| 2 | **无未成年化描述** | 代码/注释/文档中无 "childlike"、"young-looking" 等未成年暗示词（在 NSFW 语境中） |
+| 3 | **触发条件含合规检查** | H-Scene 触发器调用了 `character.compliance.declared_adult` 检查 |
+| 4 | **DLC 门控完整** | NSFW 内容入口有 `DLCManager.is_adult_dlc_active()` 判断 |
+| 5 | **全年龄 fallback 存在** | 每个 NSFW 触发点有对应的 All-Ages 替代动画/分支 |
+| 6 | **马赛克开关已接入** | 明确性描绘的视觉元素已接入 `CensorshipManager` |
 
 ---
 

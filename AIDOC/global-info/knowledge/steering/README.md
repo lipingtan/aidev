@@ -1,3 +1,11 @@
-# 工作流规范文件
+# Steering（工作流与工程规范）
 
-工作流规范文件，定义开发流程、门控机制、代码生成规范等
+| 类型 | 入口 |
+|------|------|
+| 开发前定稿 | `pre-development-defaults.md` |
+| 双轨 Phase | `development-workflow.md` |
+| 门控 | `execution-protocol.md` |
+| 多平台预算 | `performance-budget.md`、`godot/quality-settings-spec.md` |
+| 资产 | `asset-pipeline.md` |
+
+知识库 **写什么、不写什么**：`../GAME-DEV-INDEX.md`。

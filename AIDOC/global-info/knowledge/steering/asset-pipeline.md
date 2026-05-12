@@ -222,11 +222,75 @@
 - [ ] 实时光源：≤8（移动端≤4）
 ```
 
+### 4.5 多平台画质矩阵（QualityProfile，摘要）
+
+> 详细策略见下文 **第五节**。此处为 **阶段 1（需求 / 架构）** 必须填写的摘要表，写入 `design/architecture.md` 或 `design/performance-budget.md`。
+
+| 档位 ID | 目标平台 | 渲染后端（Godot） | 目标 FPS | 纹理档 | 典型 Max Size（角色/环境） |
+|---------|----------|-------------------|----------|--------|---------------------------|
+| `desktop_high` | PC 中端 GPU 及以上 | Forward+ | 60 | `tier_desktop` | 2048 / 4096 |
+| `mobile_high` | 移动中端 SoC 及以上 | Compatibility（默认） | 60 | `tier_mobile` | 1024 / 2048 |
+
+**规则**：仅两档；策划表、数据表、代码 **只关心** `QualitySettings.current_tier`（上表 ID），禁止散落 `if OS.get_name()` 拼贴图路径。
+
 ---
 
-## 五、提示词模板库规范
+## 五、多平台画质与纹理分档（桌面 / 移动端）
 
-### 5.1 风格关键词库
+### 5.1 设计目标
+
+- 桌面与移动端 **共享同一套逻辑资源 ID**（材质槽、数据表 `texture_id`），避免重复填表。
+- **贴图物理文件**可按档分目录或使用 **不同导入 Max Size / 压缩**，避免移动端加载桌面级 4K 贴图导致 OOM。
+- Phase 0~1 锁定 **性能预算 + 档位枚举**；Phase 2 起在 **真机或等价配置** 上验证，避免 Phase 4~5 整体降质返工。
+
+### 5.2 QualityProfile 单例（工程约束）
+
+- **默认定稿与数值**：`performance-budget.md`。
+- **实现与 API**：`godot/quality-settings-spec.md`；**参考脚本**：`projects/demo_game/autoload/quality_settings.gd`。
+- 全局单例名 **`QualitySettings`**，职责见该 spec；此处不重复。
+
+### 5.3 纹理分档实现策略（三选一或组合）
+
+| 策略 | 做法 | 适用 |
+|------|------|------|
+| **A. 分目录档** | `assets/.../textures/tier_desktop/` 与 `tier_mobile/` 各有一套同名逻辑键或子路径；加载时由 QualityProfile 拼接 | 桌面/移动差异大、需独立美工时 |
+| **B. 同源 + 导入预设** | 同一张母贴图在 `assets_source/`，工程内 **不同导入路径 / 重复资源** 指向不同 `Max Size` / 压缩；导出移动端构建剔除高分辨率变体 | 差异主要在分辨率与压缩 |
+| **C. 桌面高清补丁 PCK** | 基座包仅 `tier_mobile`；桌面或 DLC 追加 `tier_desktop` 包，运行时挂载 | 控制移动端安装体积、与 DLC 管线一致 |
+
+**命名约定**：逻辑 ID 使用 `snake_case`；目录仅 `tier_desktop`、`tier_mobile`（与 `performance-budget.md` 一致）。
+
+### 5.4 材质与 Shader
+
+- **主材质**：预留 **移动端简化版** Shader（减少采样次数、禁用视差/复杂屏幕空间依赖）；由 QualityProfile 或 `shader_variant` 切换。
+- **Compatibility 渲染器**：移动端低端档须在 Phase 2 验证 **全主线 + 关键战斗 / H-Scene（若适用）** 可运行，见 `execution-protocol.md` Phase 2。
+
+### 5.5 资产需求卡补充字段（3D）
+
+在 **阶段 1 资产需求卡**中增加：
+
+```markdown
+- 目标档位：desktop_only / mobile_required / both
+- 桌面贴图上限：___（如角色 2048）
+- 移动贴图上限：___（如角色 1024）
+- 是否提供 mobile 专属 LOD：是 / 否
+```
+
+### 5.6 注册表与导出
+
+- `design/asset-registry.md` 中增加列 **「档位」**：`desktop` / `mobile` / `both`。
+- **导出预设**：至少 `Windows`、`Android`（或目标移动平台）两套；移动端预设可配合 **排除过滤** 剔除 `tier_desktop_only` 目录（若采用策略 A/C）。
+- **体积**：移动端基座包纹理 VRAM 预算以 `4.4` **性能预算检查表** 与 **第七节·7.4 内存预算** 为准；超标须在集成阶段降档，不得留到上线前一次性裁剪。
+
+### 5.7 与 NSFW / DLC 的交叉
+
+- Adult DLC 中 **高清纹理包** 仅挂载在 `tier_desktop` 或可选下载；**不得**作为移动端基座必选依赖。
+- 马赛克 / 审查层与画质档正交：同一档内仍可开关 `CensorshipManager`。
+
+---
+
+## 六、提示词模板库规范
+
+### 6.1 风格关键词库
 
 **存放位置**：`AIDOC/global-info/knowledge/common/style-keywords.md`
 
@@ -240,7 +304,7 @@
 | 暗黑 | dark fantasy, gritty, desaturated, ominous | 暗黑风格游戏 |
 | 可爱 | chibi, cute, round shapes, pastel colors | Q版/可爱风格 |
 
-### 5.2 色彩范围定义
+### 6.2 色彩范围定义
 
 ```markdown
 ## 项目调色板模板
@@ -266,7 +330,7 @@
 - 避免高饱和荧光色（除特效外）
 ```
 
-### 5.3 负面提示词库
+### 6.3 负面提示词库
 
 **存放位置**：`AIDOC/global-info/knowledge/common/negative-prompts.md`
 
@@ -278,7 +342,7 @@
 | 背景干扰 | busy background, cluttered, text, watermark, signature | 需要透明背景时 |
 | 色彩问题 | oversaturated, washed out, neon colors, color banding | 色彩控制 |
 
-### 5.4 提示词模板
+### 6.4 提示词模板
 
 **角色立绘模板：**
 ```
@@ -304,9 +368,9 @@ wide angle, detailed background, game asset
 
 ---
 
-## 六、资产优化规范
+## 七、资产优化规范
 
-### 6.1 纹理压缩
+### 7.1 纹理压缩
 
 | 平台 | 压缩格式 | 适用纹理类型 | 质量设置 |
 |------|----------|-------------|----------|
@@ -326,7 +390,7 @@ wide angle, detailed background, game asset
 └── Max Size: 根据用途限制（UI≤512, 道具≤1024, 角色≤2048, 环境≤4096）
 ```
 
-### 6.2 LOD（细节层次）
+### 7.2 LOD（细节层次）
 
 | LOD 级别 | 距离范围 | 多边形比例 | 材质简化 | 适用对象 |
 |----------|----------|-----------|----------|----------|
@@ -341,7 +405,7 @@ wide angle, detailed background, game asset
 - 道具：LOD0-LOD1（2级）或无 LOD
 - 植被：LOD0-LOD2 + Billboard
 
-### 6.3 图集（Atlas）
+### 7.3 图集（Atlas）
 
 **图集打包规则：**
 ```
@@ -357,7 +421,7 @@ wide angle, detailed background, game asset
 └── 动画帧序列放在同一图集（避免切换）
 ```
 
-### 6.4 内存预算
+### 7.4 内存预算
 
 | 资产类别 | PC 预算 | 移动端预算 | 优化策略 |
 |----------|---------|-----------|----------|
@@ -376,7 +440,7 @@ var video_memory: int = Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USE
 var static_memory: int = Performance.get_monitor(Performance.MEMORY_STATIC)
 ```
 
-### 6.5 资产加载策略
+### 7.5 资产加载策略
 
 | 策略 | 适用场景 | 实现方式 |
 |------|----------|----------|

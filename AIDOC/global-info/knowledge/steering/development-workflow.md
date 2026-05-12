@@ -1,5 +1,7 @@
 ﻿# 开发工作流规范（通用）
 
+> **写代码前**：先完成 **`pre-development-defaults.md`** 与 **`performance-budget.md`** 在项目中的落地（含 `QualitySettings`）。
+
 ## 概述
 
 本文档定义了游戏开发的双轨并行工作流，涵盖从项目初始化到打磨优化的完整生命周期。
@@ -35,6 +37,9 @@
 | 游戏概念确认 | clarification.md | 游戏名、类型、平台、维度、风格全部确认 |
 | 核心体验一句话 | GDD 开头 | 能用一句话说清楚"玩家在做什么、为什么好玩" |
 | 参考游戏列表 | GDD 附录 | 至少 3 个参考作品，标注借鉴点 |
+| **[NSFW] 合规声明** | clarification.md NSFW 节 | 目标分级（R-18/R-18G）、目标平台（Steam/DLsite/itch.io）、All-Ages 版策略已确认 |
+| **[NSFW] 版本发布策略** | clarification.md NSFW 节 | Base Game + Adult DLC 拆分方案已确认，参考 `compliance/multi-version-strategy.md` |
+| **双平台与画质档** | clarification.md 技术节 + `design/performance-budget.md` 或 architecture 附件 | 目标平台（桌面/移动）、**最低机型**、QualityProfile 档位 ID、纹理分档策略（参见 `asset-pipeline.md` 第五节）已确认 |
 
 #### 技术轨道产出物
 | 产出物 | 格式 | 验收标准 |
@@ -43,12 +48,14 @@
 | 游戏引擎工程 | 引擎工程配置文件 | 可在编辑器中打开，渲染管线/物理引擎已配置 |
 | 技术选型文档 | architecture.md 初稿 | 引擎版本、渲染管线、物理引擎、架构模式已确定 |
 | 插件初始化 | 插件目录 | 核心插件目录已创建 |
+| **QualitySettings 占位** | `autoload/` 或空脚本 | `project.godot` 中 **QualitySettings**（或 `QualityProfile`）Autoload 项已注册，顺序符合 `godot-engine.md` |
 
 #### 验收标准
 - [ ] clarification.md 所有必填项已回答
 - [ ] 目录骨架完整创建
 - [ ] 引擎工程可正常打开
 - [ ] 双方对游戏方向达成一致
+- [ ] 若含移动端目标：**最低机型与 QualityProfile 档位表**已写入文档（参见 `execution-protocol.md` Phase 0）
 
 ---
 
@@ -66,6 +73,7 @@
 | 产出物 | 格式 | 验收标准 |
 |--------|------|----------|
 | 技术架构文档 | architecture.md | 模块划分、数据流、依赖关系图完整 |
+| **多平台画质与纹理** | architecture.md 专节 + `asset-pipeline.md` 对齐 | **QualityProfile** 职责、纹理分档目录或导入策略、桌面/移动 **渲染后端降级** 条件已写明 |
 | 框架配置 | 核心插件目录 | Component 基类、System 基类可用 |
 | 模块接口定义 | 核心脚本目录各接口文件 | 所有核心系统的接口已定义（无实现） |
 | 数据结构定义 | 资源目录骨架 | 数据资源模板文件已创建 |
@@ -75,6 +83,7 @@
 - [ ] 世界观无逻辑矛盾
 - [ ] 技术架构可支撑 GDD 中所有玩法
 - [ ] 接口定义覆盖所有核心系统
+- [ ] 若含移动端：architecture 已与 **Compatibility** / 移动预算对齐，无仅桌面可用的硬依赖（除非文档明确剔除移动档）
 
 ---
 
@@ -95,12 +104,14 @@
 | 手感验证报告 | iterations/prototype_feedback.md | 操作延迟、动画流畅度、碰撞精度评估 |
 | AI 行为原型 | 敌人可运行 | 至少 1 类敌人有基础 AI 行为 |
 | 相机系统原型 | 可运行 | 跟随、锁定基础功能可用 |
+| **移动 smoke 记录** | `iterations/mobile_smoke.md`（或并入 `prototype_feedback.md`） | 至少一个移动导出包：**启动、主原型场景加载、贴图无缺失、显存/内存峰值**已记录 |
 
 #### 验收标准
-- [ ] 原型可流畅运行（≥60 FPS）
+- [ ] 原型可流畅运行（桌面目标：≥60 FPS；**移动端**按 `performance-budget.md` 或 GDD 约定帧率）
 - [ ] 核心操作手感通过评审
 - [ ] 敌人 AI 行为符合设计预期
 - [ ] 相机不穿墙、不晕眩
+- [ ] 若含移动端：**Phase 2** 与 `execution-protocol.md` 双平台 smoke 项一致
 
 ---
 
@@ -122,12 +133,20 @@
 | 叙事系统 | 完整实现 | 对话播放、任务追踪、条件触发 |
 | UI 系统 | 完整实现 | HUD、背包、技能栏、对话框、地图 |
 | 存档系统 | 完整实现 | 存/读档、自动存档、多槽位 |
+| **[NSFW] 关系数值系统** | 完整实现 | 参考 `templates/nsfw/relationship-stats.md`；好感/堕落/羞耻等数值可读写、信号可触发 |
+| **[NSFW] H-Scene 系统骨架** | 骨架实现 | 参考 `templates/nsfw/h-scene-system.md`；触发器合规检查、阶段状态机、DLC 门控、fallback 分支全部到位 |
+| **[NSFW] CG Gallery 系统** | 完整实现 | 参考 `templates/nsfw/cg-gallery.md`；解锁记录独立存档、UI 可正常浏览 |
+| **[NSFW] 服装状态机** | 完整实现 | 各服装层切换可用；H-Scene 触发时状态可读取 |
+| **[NSFW] DLC 动态挂接** | 完整实现 | `DLCManager` 可检测 Adult DLC 状态；NSFW 内容入口统一走 DLC 门控 |
 
 #### 验收标准
 - [ ] 所有核心系统可独立运行
 - [ ] 系统间集成无报错
 - [ ] 数值计算结果符合设计公式
 - [ ] UI 响应流畅、布局正确
+- [ ] **[NSFW]** 关系数值系统所有 stat 可正确计算 + 触发信号
+- [ ] **[NSFW]** H-Scene 触发器合规检查通过（角色年龄声明验证）
+- [ ] **[NSFW]** All-Ages 模式下 H-Scene 触发点正确 fallback，无报错
 
 ---
 
@@ -140,6 +159,9 @@
 | 全部敌人设计 | characters/enemies/ | 每类敌人的属性、技能、AI 行为、掉落表 |
 | 全部道具设计 | design/items/ | 每个道具的效果、获取方式、稀有度 |
 | 音效需求清单 | design/audio.md | 每个场景/动作需要的音效列表 |
+| **[NSFW] H-Scene 内容设计** | design/h-scenes/ | 每个 H-Scene 的触发条件、阶段设计、角色对话脚本完整；每个场景角色合规声明已确认 |
+| **[NSFW] CG 清单** | design/cg-list.md | 所有 CG 编号、触发场景、角色、内容标签完整登记 |
+| **[NSFW] NSFW 音频需求** | design/audio.md NSFW 节 | 每个 H-Scene 阶段所需语音状态机规格（喘息/呻吟/高潮语音库阶段切换）已定义 |
 
 #### 技术轨道产出物
 | 产出物 | 格式 | 验收标准 |
@@ -149,12 +171,19 @@
 | 道具数据 | 道具数据资源目录 | 所有道具的数据资源完整 |
 | 音效集成 | 音频资产目录 | 音效文件导入并绑定到对应事件 |
 | DLC 框架 | DLC 目录 | DLC 挂接点已预留 |
+| **[NSFW] H-Scene 内容实现** | H-Scene 场景目录 | 所有 H-Scene 触发器、动画、语音、CG 解锁集成完毕；合规检查通过 |
+| **[NSFW] NSFW 音频集成** | 音频资产/adult/ | 语音库按阶段状态机绑定；All-Ages/Adult 音频包切换可用 |
+| **[NSFW] 隐私功能实现** | 设置/全局单例 | 老板键、默认禁用截图 API、存档加密已实现 |
+| **[NSFW] 马赛克 Shader** | 渲染/Shader 目录 | 实时马赛克 Shader 接入 CensorshipManager；日区自动打码验证通过 |
 
 #### 验收标准
 - [ ] 所有关卡可从头到尾游玩
 - [ ] 无缺失资产导致的报错
 - [ ] 所有道具效果正确触发
 - [ ] 音效与动作同步
+- [ ] **[NSFW]** 所有 H-Scene 触发条件验证通过（包含合规检查）
+- [ ] **[NSFW]** CG Gallery 所有 CG 解锁逻辑覆盖完整
+- [ ] **[NSFW]** Adult DLC 禁用时，全年龄模式无 NSFW 内容泄露
 
 ---
 
@@ -174,12 +203,20 @@
 | Bug 修复记录 | iterations/bugfix/ | 所有已知 Bug 已修复或标记为 Won't Fix |
 | 平衡调整 | 数值数据资源更新 | 根据评审报告调整数值 |
 | 发布包 | export/ | 目标平台的可运行包 |
+| **[NSFW] 多版本发布包** | export/（各版本子目录） | 参考 `compliance/multi-version-strategy.md` 打包矩阵完整输出 |
+| **[NSFW] 合规文档包** | compliance-docs/ | 角色年龄声明、内容审核日志、平台申报记录完整归档 |
+| **双平台发布包** | export/（desktop / mobile 子目录或命名区分） | 桌面与移动 **导出预设**各至少一条可安装包；体积与 VRAM 对照 `asset-pipeline.md` 预算 |
 
 #### 验收标准
 - [ ] 目标平台 ≥60 FPS（或设计目标帧率）
 - [ ] 内存占用在预算内
 - [ ] 无 Crash 级 Bug
 - [ ] 通过完整流程测试
+- [ ] **[双平台]** **`desktop_high` 与 `mobile_high`** 各验证一通（见 `execution-protocol.md` Phase 5）
+- [ ] **[NSFW]** All-Ages 版可在 Steam 普通标签下正常上架（通过平台内容审核）
+- [ ] **[NSFW]** Adult DLC 版通过目标平台（Steam AO / itch.io / DLsite）成人内容审核
+- [ ] **[NSFW]** 日本版马赛克验证通过
+- [ ] **[NSFW]** 合规文档包完整，可应对平台投诉
 
 ---
 
