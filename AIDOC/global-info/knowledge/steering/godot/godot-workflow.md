@@ -1,0 +1,144 @@
+# Godot 开发工作流补充规范
+
+> 本文件是 `development-workflow.md`（通用版）的 Godot 引擎特定补充。
+> 使用时需同时参考通用工作流规范。
+
+---
+
+## 一、Godot 技术轨道产出物格式
+
+### 1.1 文件格式对应
+
+| 通用概念 | Godot 具体格式 | 说明 |
+|----------|---------------|------|
+| 脚本代码 | `.gd`（GDScript） | 主要开发语言 |
+| 场景文件 | `.tscn` | Godot 场景格式 |
+| 数据资源 | `.tres` | Godot 资源格式 |
+| 着色器 | `.gdshader` | Godot Shader Language |
+| 插件 | `addons/` 目录下的 GDScript 插件 | 遵循 Godot 插件规范 |
+| 引擎工程配置文件 | `project.godot` | INI 格式配置 |
+
+### 1.2 Phase 0 技术轨道产出物（Godot 特定）
+
+| 产出物 | 格式 | 验收标准 |
+|--------|------|----------|
+| 目录骨架 | 文件系统 | `godot_projects/{游戏名}/` 完整创建 |
+| Godot 工程 | project.godot | 可在 Godot 编辑器中打开，渲染管线/物理引擎已配置 |
+| 插件初始化 | addons/ | gd_ecs、dlc_manager 目录已创建 |
+
+---
+
+## 二、Godot 特定 POST-CHECK 项
+
+### 2.1 代码级 POST-CHECK（GDScript）
+
+在通用 POST-CHECK 基础上，增加以下 Godot 特定检查：
+
+| # | 检查项 | 说明 |
+|---|--------|------|
+| 1 | GDScript 语法无错误 | 无解析错误，可被 Godot 编辑器加载 |
+| 2 | 类型标注完整 | 所有函数参数、返回值、成员变量有 GDScript 类型标注 |
+| 3 | class_name 声明 | 每个脚本文件有 class_name 声明 |
+| 4 | @export 分组 | 导出变量使用 @export_group 分组 |
+| 5 | 信号使用过去时态 | 信号名使用 snake_case 过去时态命名 |
+
+### 2.2 场景级 POST-CHECK
+
+| # | 检查项 | 说明 |
+|---|--------|------|
+| 1 | .tscn 可在 Godot 编辑器打开 | 场景文件格式正确，无损坏 |
+| 2 | 节点类型正确 | 使用正确的 Godot 节点类型（参见 godot-engine.md 节点选择规则） |
+| 3 | 脚本挂载正确 | 脚本路径正确，extends 匹配节点类型 |
+| 4 | 碰撞层配置 | 碰撞层/掩码按标准分配方案配置 |
+
+### 2.3 资源级 POST-CHECK
+
+| # | 检查项 | 说明 |
+|---|--------|------|
+| 1 | .tres 格式正确 | 资源文件可被 Godot 正确加载 |
+| 2 | 资源类型匹配 | Resource 子类与数据结构一致 |
+| 3 | 路径引用有效 | 资源中引用的其他资源路径存在 |
+
+---
+
+## 三、Godot 特定验收标准补充
+
+### 3.1 Phase 0 验收补充
+
+- [ ] `project.godot` 存在且配置正确
+- [ ] 渲染管线已配置（Forward+ / Compatibility）
+- [ ] 物理引擎已配置（Godot Physics / Jolt）
+- [ ] Autoload 脚本已注册（GameManager、EventBus）
+- [ ] 输入映射已根据游戏类型预配置
+- [ ] Godot 工程目录骨架完整（scenes/scripts/resources/assets/addons/autoload）
+
+### 3.2 Phase 2 验收补充
+
+- [ ] 原型场景可在 Godot 编辑器中按 F5 启动运行
+- [ ] GDScript 无运行时错误（Output 面板无红色报错）
+- [ ] 场景树结构合理（无过深嵌套）
+
+### 3.3 Phase 4 验收补充
+
+- [ ] 所有 .tres 数据文件可在 Inspector 中正确显示
+- [ ] 所有 .tscn 场景可独立运行
+- [ ] Autoload 单例状态在场景切换时正确保持
+
+---
+
+## 四、Godot 工程目录结构
+
+```
+godot_projects/{游戏名}/
+├── project.godot
+├── scenes/
+│   ├── levels/
+│   ├── characters/
+│   ├── ui/
+│   └── 2d/                     # 按需创建
+├── scripts/
+│   ├── core/
+│   ├── gameplay/
+│   ├── ui/
+│   ├── narrative/
+│   └── ai/
+├── resources/                  # 数据资源（.tres）
+├── assets/                     # 游戏资产
+│   ├── characters/
+│   ├── environments/
+│   ├── effects/
+│   └── shared/
+│       ├── audio/
+│       ├── ui/
+│       └── fonts/
+├── addons/                     # 插件
+│   ├── gd_ecs/
+│   ├── dlc_manager/
+│   └── shared/
+├── autoload/                   # 全局单例
+├── dlc/                        # DLC 包
+└── export/                     # 导出配置
+```
+
+---
+
+## 五、Godot 特定的生成节奏补充
+
+### 5.1 角色数据生成
+
+每个角色设计完成后，生成以下 Godot 特定文件：
+- `resources/characters/{角色名}.tres` — 角色属性数据
+- `scripts/gameplay/{角色名}_controller.gd` — 角色专属逻辑（如有）
+- `scenes/characters/{角色名}.tscn` — 角色场景
+
+### 5.2 关卡场景生成
+
+每个关卡设计完成后，生成：
+- `scenes/levels/{关卡名}.tscn` — 关卡场景骨架
+- `resources/levels/{关卡名}_config.tres` — 关卡配置数据
+
+### 5.3 道具/技能批量生成
+
+批量设计完成后，生成：
+- `resources/items/{道具名}.tres` — 每个道具的数据资源
+- `resources/skills/{技能名}.tres` — 每个技能的数据资源

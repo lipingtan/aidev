@@ -1,0 +1,387 @@
+# 资产管线规范
+
+## 概述
+
+本文档定义了 Godot 项目中 3D 和 2D 资产的完整生命周期管理，包括导入流程、质量标准、注册追踪和优化规范。
+
+---
+
+## 一、3D 资产生命周期
+
+### 1.1 七阶段定义
+
+| 阶段 | 名称 | 进入条件 | 主要活动 | 完成标志 |
+|------|------|----------|----------|----------|
+| 1 | **需求定义** | 设计文档中明确需要该资产 | 确定资产规格（多边形预算、材质需求、动画需求） | 资产需求卡已填写 |
+| 2 | **获取/创建** | 需求卡已确认 | 购买素材包 / 外包制作 / AI 辅助生成 | 原始文件到位（assets_source/） |
+| 3 | **格式转换** | 原始文件已获取 | 转换为 Godot 支持格式（.glb/.gltf） | 文件可被 Godot 导入器识别 |
+| 4 | **导入配置** | 格式转换完成 | 设置导入参数、材质映射、LOD、动画分离 | 编辑器中显示正确，无材质丢失 |
+| 5 | **适配集成** | 导入配置完成 | 添加碰撞、脚本挂载点、交互区域、导航 | 创建为 PackedScene，可实例化 |
+| 6 | **质量验证** | 适配集成完成 | 性能测试、视觉检查、功能验证 | 通过所有质量检查项 |
+| 7 | **发布就绪** | 质量验证通过 | 注册到资产注册表、标记版本 | 注册表状态为 "ready" |
+
+### 1.2 各阶段详细规范
+
+#### 阶段 1：需求定义
+
+**资产需求卡模板：**
+```markdown
+## 资产需求卡
+
+- 资产名称：
+- 资产类型：角色 / 环境 / 道具 / 武器 / 特效
+- 用途场景：
+- 多边形预算：≤ ___K 面
+- 材质需求：PBR / 卡通 / 自发光
+- 贴图分辨率：512 / 1024 / 2048 / 4096
+- 动画需求：无 / 简单循环 / 复杂骨骼
+- LOD 需求：无 / 2级 / 3级
+- 优先级：高 / 中 / 低
+- 参考图：[链接/描述]
+```
+
+#### 阶段 2：获取/创建
+
+| 获取方式 | 适用场景 | 存放位置 | 注意事项 |
+|----------|----------|----------|----------|
+| 购买素材包 | 环境、通用道具 | assets_source/{游戏名}/3d_packages/ | 检查许可证、格式兼容性 |
+| AI 辅助生成 | 概念验证、简单模型 | assets_source/{游戏名}/ai_generated/ | 需人工审查质量 |
+| 手动建模 | 主角、关键道具 | assets_source/{游戏名}/custom/ | 遵循多边形预算 |
+| 程序化生成 | 地形、植被 | 运行时生成 | 需要种子可复现 |
+
+#### 阶段 3-5：参见「branch-routing.md」中的 3D 资产导入流程
+
+#### 阶段 6：质量验证清单
+
+```markdown
+## 3D 资产质量验证
+- [ ] 多边形数在预算内
+- [ ] 材质正确显示（无粉色/黑色面）
+- [ ] 碰撞形状合理（不过大/过小）
+- [ ] LOD 切换无明显跳变
+- [ ] 动画播放流畅（无抖动/穿模）
+- [ ] 内存占用在预算内
+- [ ] 实例化后 FPS 影响 ≤2
+- [ ] 光照响应正确（阴影、反射）
+```
+
+#### 阶段 7：发布就绪
+
+- 更新资产注册表状态为 "ready"
+- 标记版本号
+- 记录最终性能数据
+
+---
+
+## 二、2D 资产生命周期
+
+### 2.1 七阶段定义
+
+| 阶段 | 名称 | 进入条件 | 主要活动 | 完成标志 |
+|------|------|----------|----------|----------|
+| 1 | **需求定义** | 设计文档中明确需要该资产 | 确定尺寸、风格、动画帧数 | 资产需求卡已填写 |
+| 2 | **提示词设计** | 需求卡已确认 | 编写 AI 生成提示词、确定风格锁定参数 | 提示词通过风格一致性审查 |
+| 3 | **批量生成** | 提示词已确认 | AI 批量生成、人工筛选最佳变体 | 每个资产有 1 个确认的变体 |
+| 4 | **后处理** | 变体已选定 | 去背景、统一尺寸、色彩校正、边缘处理 | 所有资产视觉风格统一 |
+| 5 | **切图打包** | 后处理完成 | 精灵表切割、动画定义、图集打包 | SpriteFrames/Atlas 资源已创建 |
+| 6 | **导入验证** | 切图打包完成 | 导入 Godot、预览动画、检查显示效果 | 显示正确、动画流畅 |
+| 7 | **发布就绪** | 导入验证通过 | 注册到资产注册表、标记版本 | 注册表状态为 "ready" |
+
+### 2.2 质量评估标准
+
+| 评估维度 | 评分标准 | A级(优秀) | B级(合格) | C级(需修改) | D级(重做) |
+|----------|----------|-----------|-----------|-------------|-----------|
+| 风格一致性 | 与项目调色板/风格的匹配度 | 95%+ 匹配 | 85-95% | 70-85% | <70% |
+| 细节完整性 | 主体完整度、无异常 | 完美无瑕 | 微小瑕疵可忽略 | 明显瑕疵需修复 | 严重缺陷 |
+| 边缘质量 | 抠图/边缘处理质量 | 完美干净 | 极少毛刺 | 需要手动修边 | 背景大量残留 |
+| 动画流畅度 | 帧间过渡自然度 | 丝滑流畅 | 基本流畅 | 有卡顿感 | 严重跳帧 |
+| 尺寸规范 | 与其他资产的比例协调 | 完全协调 | 基本协调 | 需微调 | 比例严重失调 |
+
+**评级规则：**
+- 所有维度 ≥B 级：通过
+- 任一维度 C 级：需修改后重新评估
+- 任一维度 D 级：重新生成
+
+---
+
+## 三、资产注册表格式
+
+### 3.1 注册表结构
+
+资产注册表存放位置：`AIDOC/projects/{游戏名}/design/asset-registry.md`
+
+```markdown
+## 资产注册表
+
+### 角色资产
+
+| 资产ID | 名称 | 来源 | 格式 | 用途 | 依赖 | 状态 | 版本 | 备注 |
+|--------|------|------|------|------|------|------|------|------|
+| CHR-001 | 主角模型 | 外包 | .glb | 玩家角色 | 骨骼:rig_humanoid | ready | 1.2 | 含12套动画 |
+| CHR-002 | 村民A | 素材包 | .glb | NPC | 骨骼:rig_simple | importing | 1.0 | 需适配碰撞 |
+| CHR-003 | 史莱姆 | AI生成 | .png(sheet) | 敌人 | 无 | processing | 0.1 | 8帧动画 |
+```
+
+### 3.2 字段定义
+
+| 字段 | 类型 | 说明 | 示例值 |
+|------|------|------|--------|
+| 资产ID | string | 唯一标识，格式：{类型缩写}-{序号} | CHR-001, ENV-012, ITM-003 |
+| 名称 | string | 资产的描述性名称 | "主角模型" |
+| 来源 | enum | 获取方式 | 外包/素材包/AI生成/手动/程序化 |
+| 格式 | string | 文件格式 | .glb/.gltf/.png/.svg |
+| 用途 | string | 在游戏中的用途 | "玩家角色"/"背景装饰" |
+| 依赖 | string | 依赖的其他资产/资源 | "骨骼:rig_humanoid" |
+| 状态 | enum | 当前生命周期阶段 | 见状态枚举 |
+| 版本 | string | 语义化版本号 | "1.0"/"1.2" |
+| 备注 | string | 补充说明 | "含12套动画" |
+
+### 3.3 状态枚举
+
+| 状态值 | 说明 | 允许的下一状态 |
+|--------|------|----------------|
+| `planned` | 已规划，尚未获取 | acquiring |
+| `acquiring` | 正在获取/创建中 | converting, cancelled |
+| `converting` | 格式转换中 | importing |
+| `importing` | 导入配置中 | integrating |
+| `integrating` | 适配集成中 | verifying |
+| `verifying` | 质量验证中 | ready, integrating(退回) |
+| `ready` | 发布就绪，可使用 | deprecated |
+| `deprecated` | 已废弃，有替代品 | (终态) |
+| `cancelled` | 已取消，不再需要 | (终态) |
+
+### 3.4 类型缩写表
+
+| 缩写 | 类型 | 示例 |
+|------|------|------|
+| CHR | 角色 | CHR-001 主角 |
+| ENV | 环境 | ENV-001 村庄房屋 |
+| ITM | 道具/物品 | ITM-001 治疗药水 |
+| WPN | 武器 | WPN-001 铁剑 |
+| EFX | 特效 | EFX-001 火焰粒子 |
+| UI | UI元素 | UI-001 血条框 |
+| AUD | 音频 | AUD-001 脚步声 |
+| MAT | 材质 | MAT-001 石头材质 |
+
+---
+
+## 四、兼容性检查清单
+
+### 4.1 Godot 版本兼容性
+
+```markdown
+## Godot 版本兼容性检查
+- [ ] 目标 Godot 版本：4.x（具体版本：___）
+- [ ] 导入格式支持：.glb(✓) .gltf(✓) .fbx(✓) .obj(✓)
+- [ ] Shader 语法兼容（无废弃 API 调用）
+- [ ] 插件版本兼容（gd_ecs、dlc_manager）
+- [ ] 导出模板版本匹配
+```
+
+### 4.2 材质兼容性
+
+```markdown
+## 材质兼容性检查
+- [ ] PBR 通道映射正确：
+  - [ ] Albedo/BaseColor → albedo_texture
+  - [ ] Normal → normal_texture
+  - [ ] Roughness → roughness_texture
+  - [ ] Metallic → metallic_texture
+  - [ ] AO → ao_texture
+  - [ ] Emission → emission_texture
+- [ ] 材质类型匹配渲染管线：
+  - [ ] Forward+: StandardMaterial3D / ShaderMaterial
+  - [ ] Compatibility: 避免 SSR/SSAO 依赖
+- [ ] 透明材质正确配置（alpha_scissor / alpha_blend）
+- [ ] 双面材质标记（cull_mode = disabled）
+```
+
+### 4.3 骨骼兼容性
+
+```markdown
+## 骨骼兼容性检查
+- [ ] 骨骼命名规范（Godot 可识别的命名）
+- [ ] 骨骼层级正确（Root → Hips → Spine → ...）
+- [ ] 骨骼数量在预算内（角色 ≤80 骨骼）
+- [ ] 动画重定向兼容（如使用通用骨骼）
+- [ ] IK 目标点正确配置
+- [ ] 权重绑定无异常（无飞面/穿模）
+```
+
+### 4.4 性能预算
+
+```markdown
+## 性能预算检查
+- [ ] 单模型多边形：角色≤30K / 环境≤100K / 道具≤5K
+- [ ] 单贴图分辨率：角色≤2048 / 环境≤4096 / 道具≤1024
+- [ ] 场景总多边形：≤500K（移动端≤200K）
+- [ ] 场景总贴图内存：≤512MB（移动端≤256MB）
+- [ ] Draw Call 预算：≤200（移动端≤100）
+- [ ] 骨骼动画角色同屏：≤20（移动端≤10）
+- [ ] 粒子系统同屏：≤10 个发射器
+- [ ] 实时光源：≤8（移动端≤4）
+```
+
+---
+
+## 五、提示词模板库规范
+
+### 5.1 风格关键词库
+
+**存放位置**：`AIDOC/global-info/knowledge/common/style-keywords.md`
+
+| 风格类别 | 关键词示例 | 适用场景 |
+|----------|-----------|----------|
+| 写实 | photorealistic, detailed, high-fidelity, lifelike | 写实风格游戏 |
+| 卡通 | cel-shaded, anime-style, vibrant colors, bold outlines | 卡通风格游戏 |
+| 像素 | pixel art, 16-bit, retro, limited palette | 像素风格游戏 |
+| 低多边形 | low-poly, geometric, minimalist, flat-shaded | 低多边形风格 |
+| 手绘 | hand-painted, watercolor, sketch-like, textured brush | 手绘风格 |
+| 暗黑 | dark fantasy, gritty, desaturated, ominous | 暗黑风格游戏 |
+| 可爱 | chibi, cute, round shapes, pastel colors | Q版/可爱风格 |
+
+### 5.2 色彩范围定义
+
+```markdown
+## 项目调色板模板
+
+### 主色调
+- 主色：#XXXXXX（用途：主要UI、主角配色）
+- 辅色：#XXXXXX（用途：次要元素、环境基调）
+- 强调色：#XXXXXX（用途：交互提示、重要信息）
+
+### 环境色调
+- 安全区域：暖色调（#XXX ~ #XXX）
+- 危险区域：冷色调/暗色调（#XXX ~ #XXX）
+- 中立区域：中性色调（#XXX ~ #XXX）
+
+### 角色色调
+- 友方：蓝/绿色系
+- 敌方：红/紫色系
+- 中立：灰/棕色系
+
+### 禁用色彩
+- 不使用纯黑（#000000）→ 用深灰（#1a1a2e）
+- 不使用纯白（#FFFFFF）→ 用米白（#f5f5f0）
+- 避免高饱和荧光色（除特效外）
+```
+
+### 5.3 负面提示词库
+
+**存放位置**：`AIDOC/global-info/knowledge/common/negative-prompts.md`
+
+| 类别 | 负面提示词 | 用途 |
+|------|-----------|------|
+| 质量控制 | blurry, low quality, artifacts, noise, pixelated | 所有生成 |
+| 人体异常 | extra fingers, deformed hands, extra limbs, bad anatomy | 角色生成 |
+| 风格偏离 | photorealistic (当目标是卡通时), 3d render (当目标是2D时) | 风格锁定 |
+| 背景干扰 | busy background, cluttered, text, watermark, signature | 需要透明背景时 |
+| 色彩问题 | oversaturated, washed out, neon colors, color banding | 色彩控制 |
+
+### 5.4 提示词模板
+
+**角色立绘模板：**
+```
+{风格关键词}, {角色描述}, {姿态}, {表情}, {服装描述}, 
+{色彩关键词}, {背景要求}, {技术参数}
+
+示例：
+anime-style, female warrior, standing pose, confident smile, 
+silver armor with blue accents, warm lighting, transparent background,
+full body, high detail, clean lines
+```
+
+**场景背景模板：**
+```
+{风格关键词}, {场景类型}, {时间/天气}, {氛围}, 
+{主要元素}, {色调}, {构图}, {技术参数}
+
+示例：
+fantasy landscape, medieval village, sunset, peaceful atmosphere,
+cobblestone streets with wooden houses, warm orange tones, 
+wide angle, detailed background, game asset
+```
+
+---
+
+## 六、资产优化规范
+
+### 6.1 纹理压缩
+
+| 平台 | 压缩格式 | 适用纹理类型 | 质量设置 |
+|------|----------|-------------|----------|
+| PC (Windows) | BC7 (S3TC) | Albedo, Normal | High |
+| PC (Windows) | BC5 | Normal Map (RG) | High |
+| PC (Windows) | BC4 | Roughness/Metallic (单通道) | Medium |
+| Mobile (Android) | ETC2 / ASTC | 所有类型 | Medium |
+| Mobile (iOS) | ASTC | 所有类型 | Medium |
+| Web | Basis Universal | 所有类型 | Medium |
+
+**Godot 导入设置：**
+```
+纹理导入配置：
+├── Compress Mode: VRAM Compressed（3D纹理）/ Lossless（像素风格）
+├── Filter: Linear（3D）/ Nearest（像素风格）
+├── Mipmaps: Generate（3D）/ Disabled（UI/像素）
+└── Max Size: 根据用途限制（UI≤512, 道具≤1024, 角色≤2048, 环境≤4096）
+```
+
+### 6.2 LOD（细节层次）
+
+| LOD 级别 | 距离范围 | 多边形比例 | 材质简化 | 适用对象 |
+|----------|----------|-----------|----------|----------|
+| LOD0 | 0-10m | 100% | 完整材质 | 近距离观察 |
+| LOD1 | 10-30m | 50% | 合并材质通道 | 中距离 |
+| LOD2 | 30-60m | 25% | 简化材质 | 远距离 |
+| LOD3 | 60m+ | 10% 或 Billboard | 单色/贴片 | 极远距离 |
+
+**LOD 配置规则：**
+- 角色：LOD0-LOD2（3级）
+- 环境建筑：LOD0-LOD3（4级）
+- 道具：LOD0-LOD1（2级）或无 LOD
+- 植被：LOD0-LOD2 + Billboard
+
+### 6.3 图集（Atlas）
+
+**图集打包规则：**
+```
+图集分类策略：
+├── 按场景打包：同一关卡的资产打包到一个图集
+├── 按类型打包：所有 UI 图标一个图集、所有粒子一个图集
+├── 按使用频率：高频资产（HUD）单独图集，常驻内存
+└── 尺寸限制：单个图集 ≤4096x4096
+
+图集优化目标：
+├── 填充率 ≥85%（减少浪费）
+├── 同一 Draw Call 内的精灵尽量在同一图集
+└── 动画帧序列放在同一图集（避免切换）
+```
+
+### 6.4 内存预算
+
+| 资产类别 | PC 预算 | 移动端预算 | 优化策略 |
+|----------|---------|-----------|----------|
+| 纹理总量 | ≤1GB VRAM | ≤256MB VRAM | 压缩 + LOD + 流式加载 |
+| 网格总量 | ≤200MB | ≤50MB | LOD + 实例化 + 遮挡剔除 |
+| 动画数据 | ≤100MB | ≤30MB | 压缩 + 按需加载 |
+| 音频 | ≤200MB | ≤50MB | 流式播放 + OGG 压缩 |
+| 脚本/资源 | ≤50MB | ≤20MB | 延迟加载 |
+| **总计** | **≤1.5GB** | **≤400MB** | - |
+
+**内存监控指标：**
+```gdscript
+# 运行时内存监控
+var texture_memory: int = Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)
+var video_memory: int = Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)
+var static_memory: int = Performance.get_monitor(Performance.MEMORY_STATIC)
+```
+
+### 6.5 资产加载策略
+
+| 策略 | 适用场景 | 实现方式 |
+|------|----------|----------|
+| 预加载 | 必定使用的核心资产 | preload() / 场景自带 |
+| 延迟加载 | 可能使用的资产 | ResourceLoader.load_threaded_request() |
+| 流式加载 | 大型开放世界 | 分区加载 + 距离触发 |
+| 对象池 | 频繁创建/销毁的对象 | ObjectPool 模式 |
+| 按需卸载 | 离开区域后不再需要 | queue_free() + 资源引用释放 |

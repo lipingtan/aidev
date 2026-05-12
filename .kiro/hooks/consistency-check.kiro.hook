@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "提示词一致性检查",
+  "description": "当提示词文件被编辑时，检查角色描述和风格关键词是否与设定文件一致",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/prompts/**/*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "刚才有提示词文件被编辑了。请执行一致性检查：\n\n1. 找到该提示词文件所属的项目目录\n2. 读取该项目的 story/characters.md 和 story/style-bible.md\n3. 检查编辑后的提示词中：\n   - 角色描述关键词是否与 characters.md 中的视觉关键词一致\n   - 风格锚定词是否与 style-bible.md 中的设定一致\n   - 是否包含负面提示词\n4. 如果发现不一致，提醒用户并建议修正\n5. 如果一切一致，简短确认即可\n\n注意：只检查一致性，不要自动修改文件。"
+  }
+}

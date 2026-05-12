@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "分镜完成提醒生成提示词",
+  "description": "当分镜文件被创建时，提醒用户可以生成对应的提示词",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "src/**/storyboard/ep-*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "刚才创建了一个新的分镜文件。请简短提醒用户：这段分镜已就绪，可以生成对应的 KLING AI 提示词了。不要自动生成，只是提醒。"
+  }
+}
