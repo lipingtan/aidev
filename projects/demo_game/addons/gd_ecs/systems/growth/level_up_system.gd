@@ -21,7 +21,7 @@ func get_query() -> Array[StringName]:
 	return [&"Experience", &"BaseStats"]
 
 
-func process(entities: Array[EcsEntity], delta: float) -> void:
+func process(entities: Array, delta: float) -> void:
 	for entity in entities:
 		var exp_comp: ExperienceComponent = entity.get_component(&"Experience")
 		if not exp_comp.growth_profile:
@@ -39,7 +39,7 @@ func process(entities: Array[EcsEntity], delta: float) -> void:
 
 
 ## 执行升级逻辑
-func _apply_level_up(entity: EcsEntity, exp_comp: ExperienceComponent) -> void:
+func _apply_level_up(entity: Node, exp_comp: ExperienceComponent) -> void:
 	var base: BaseStatsComponent = entity.get_component(&"BaseStats")
 	var growth: Dictionary = exp_comp.growth_profile.stat_growth
 	

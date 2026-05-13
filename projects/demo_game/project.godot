@@ -13,7 +13,7 @@ config_version=5
 config/name="Demo Game"
 config/description="ARPG Demo - ECS + DLC 框架验证工程"
 run/main_scene="res://scenes/ui/main_menu.tscn"
-config/features=PackedStringArray("4.3")
+config/features=PackedStringArray("4.5")
 
 [autoload]
 

@@ -9,13 +9,15 @@
 
 | 配置项 | 默认值 |
 |--------|--------|
-| 引擎版本 | **Godot 4.x**（最新稳定版） |
+| 引擎版本 | **Godot 4.5+**（最低要求 4.5） |
 | 主要语言 | **GDScript** |
 | 辅助语言 | Shader Language（视觉效果） |
 | 渲染管线 | Forward+（3D 默认）/ Compatibility（低端适配时） |
 | 物理引擎 | Godot Physics（默认）/ Jolt（高精度需求时） |
 | 架构模式 | ECS 混合架构（Node + Component + System） |
 | 插件框架 | gd_ecs（ECS）+ dlc_manager（DLC 动态挂接） |
+
+> **最低版本要求**：Godot 4.5。框架使用了 `@abstract` 注解（4.5 新增），不兼容 4.4 及以下版本。
 
 ---
 

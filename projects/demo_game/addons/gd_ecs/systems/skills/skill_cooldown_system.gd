@@ -12,7 +12,7 @@ func get_query() -> Array[StringName]:
 	return [&"SkillSet"]
 
 
-func process(entities: Array[EcsEntity], delta: float) -> void:
+func process(entities: Array, delta: float) -> void:
 	for entity in entities:
 		var skill_set: SkillSetComponent = entity.get_component(&"SkillSet")
 		var expired: Array[StringName] = []

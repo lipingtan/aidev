@@ -1,11 +1,11 @@
 ﻿# AI 代码生成规范（完整版）
 
-> 本文件定义 AI 为 Godot 4.x 项目生成 GDScript/Shader 代码时必须遵循的完整规范。
-> `.kiro/steering/core.md` 中的"AI 代码生成规则"是本文件的摘要版。
+> 本文件定义 AI 为 Godot 4.5+ 项目生成 GDScript/Shader 代码时必须遵循的完整规范。
+> Godot 4.5 新增 `@abstract` 注解，基类应使用此注解防止直接实例化。
 
 ---
 
-## 一、GDScript 4.x 编码规范
+## 一、GDScript 4.5+ 编码规范
 
 ### 1.1 命名规范
 
@@ -332,3 +332,61 @@ signal level_up(level: int)
 - [ ] 错误处理完整（异步操作、文件 I/O）
 - [ ] 碰撞层在注释中说明含义
 - [ ] 复杂系统有场景树结构文档
+
+---
+
+## 十一、抽象类规范（Godot 4.5+）
+
+### 11.1 何时使用 @abstract
+
+| 场景 | 是否使用 | 说明 |
+|------|:---:|------|
+| 框架基类（EcsComponent、EcsSystem、State） | ✅ | 防止直接实例化，强制子类实现接口 |
+| 有未实现方法的基类 | ✅ | 明确标记哪些方法必须被覆盖 |
+| 普通工具类 | ❌ | 不需要 |
+| 数据容器类 | ❌ | 通常可以直接实例化 |
+
+### 11.2 语法规范
+
+```gdscript
+# 抽象类声明
+@abstract
+class_name EcsSystem extends RefCounted
+## ECS System 抽象基类
+
+## 抽象方法：子类必须覆盖，否则编译报错
+@abstract
+func get_query() -> Array[StringName]:
+    return []
+
+@abstract
+func process(entities: Array, delta: float) -> void:
+    pass
+
+## 非抽象方法：提供默认实现，子类可选择覆盖
+func on_registered() -> void:
+    pass
+```
+
+### 11.3 子类实现规范
+
+```gdscript
+# 具体子类必须实现所有 @abstract 方法
+class_name DamageSystem extends EcsSystem
+## 伤害计算系统
+
+func get_query() -> Array[StringName]:
+    return [&"DamageEvent", &"FinalStats", &"RuntimeStats"]
+
+func process(entities: Array, delta: float) -> void:
+    for entity in entities:
+        # 具体实现
+        pass
+```
+
+### 11.4 注意事项
+
+- `@abstract` 类不能被直接实例化（`EcsSystem.new()` 会报错）
+- `@abstract` 方法的函数体会被忽略，但语法上仍需要写（通常写 `return` 或 `pass`）
+- 子类如果没有实现所有 `@abstract` 方法，编译时会报错
+- `@abstract` 是 Godot 4.5 新增特性，4.4 及以下版本不支持

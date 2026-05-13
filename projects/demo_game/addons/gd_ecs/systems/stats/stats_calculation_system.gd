@@ -24,7 +24,7 @@ func get_query() -> Array[StringName]:
 	return [&"BaseStats", &"FinalStats"]
 
 
-func process(entities: Array[EcsEntity], delta: float) -> void:
+func process(entities: Array, delta: float) -> void:
 	for entity in entities:
 		var final_stats: FinalStatsComponent = entity.get_component(&"FinalStats")
 		if not final_stats.is_dirty:
@@ -36,7 +36,7 @@ func process(entities: Array[EcsEntity], delta: float) -> void:
 
 
 ## 重新计算所有属性
-func _recalculate(entity: EcsEntity, base: BaseStatsComponent, final: FinalStatsComponent) -> void:
+func _recalculate(entity: Node, base: BaseStatsComponent, final: FinalStatsComponent) -> void:
 	# 收集所有修饰器
 	var all_modifiers: Array[StatModifier] = _collect_modifiers(entity)
 	
@@ -48,7 +48,7 @@ func _recalculate(entity: EcsEntity, base: BaseStatsComponent, final: FinalStats
 
 
 ## 收集所有来源的修饰器
-func _collect_modifiers(entity: EcsEntity) -> Array[StatModifier]:
+func _collect_modifiers(entity: Node) -> Array[StatModifier]:
 	var modifiers: Array[StatModifier] = []
 	
 	# 从装备收集
