@@ -1,0 +1,17 @@
+; DLC 打包工程
+; 此工程仅用于制作 DLC 内容并导出为 .pck 文件
+; 不包含主游戏代码，只包含 DLC 资源和脚本
+
+config_version=5
+
+[application]
+
+config/name="DLC Pack Builder"
+config/description="用于打包 DLC 内容为 .pck 文件"
+run/main_scene="res://scenes/export_helper.tscn"
+config/features=PackedStringArray("4.5")
+
+[display]
+
+window/size/viewport_width=800
+window/size/viewport_height=600

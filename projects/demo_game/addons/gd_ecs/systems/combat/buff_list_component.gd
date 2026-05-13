@@ -9,15 +9,7 @@ signal buff_applied(buff_id: StringName)
 ## Buff 移除时触发
 signal buff_removed(buff_id: StringName, reason: StringName)
 
-## Buff 实例（运行时状态）
-class BuffInstance:
-	var buff_data: BuffData
-	var remaining_time: float = 0.0
-	var stack_count: int = 1
-	var tick_timer: float = 0.0
-	var source_entity_id: int = -1
-
-## 当前激活的 Buff 列表
+## 当前激活的 Buff 列表（BuffInstance 数组）
 var active_buffs: Array[BuffInstance] = []
 
 ## 免疫标签（有这些标签则免疫对应 Buff）

@@ -1,0 +1,66 @@
+[gd_scene format=3 uid="uid://ecs_demo_scene"]
+
+[ext_resource type="Script" path="res://scripts/demo/demo_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://addons/gd_ecs/core/ecs_entity_3d.gd" id="2_entity3d"]
+[ext_resource type="Script" path="res://addons/gd_ecs/core/ecs_entity_node.gd" id="3_entitynode"]
+
+[node name="EcsDemo" type="Node"]
+script = ExtResource("1_ctrl")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+script = ExtResource("2_entity3d")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Player"]
+
+[node name="StateMachine" type="Node" parent="Player"]
+
+[node name="Enemy" type="CharacterBody3D" parent="."]
+script = ExtResource("2_entity3d")
+position = Vector3(3, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Enemy"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Enemy"]
+
+[node name="Chest" type="StaticBody3D" parent="."]
+position = Vector3(-3, 0, 0)
+
+[node name="EcsEntityNode" type="Node" parent="Chest"]
+script = ExtResource("3_entitynode")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Chest"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Chest"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 5, 8)
+rotation = Vector3(-0.5, 0, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.8, 0.5, 0)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="StatusLabel" type="Label" parent="UI"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 400.0
+offset_bottom = 200.0
+text = "加载中..."
+
+[node name="LogLabel" type="RichTextLabel" parent="UI"]
+offset_left = 10.0
+offset_top = 210.0
+offset_right = 700.0
+offset_bottom = 580.0
+bbcode_enabled = true
+text = ""
+
+[node name="HintLabel" type="Label" parent="UI"]
+offset_left = 10.0
+offset_top = 590.0
+offset_right = 700.0
+offset_bottom = 640.0
+text = "[A]攻击  [S]宝箱  [D]加载DLC  [F]卸载DLC  [G]施毒  [H]升级"

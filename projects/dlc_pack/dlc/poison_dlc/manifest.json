@@ -1,0 +1,26 @@
+{
+  "id": "poison_dlc",
+  "version": "1.0.0",
+  "display_name": "毒素扩展包",
+  "description": "为游戏添加毒素 Component 和毒素伤害 System",
+  "min_game_version": "0.1.0",
+  "max_game_version": "99.99.99",
+  "dependencies": [],
+  "conflicts": [],
+  "load_order": 100,
+  "content": {
+    "components": [
+      "components/poison_component.gd"
+    ],
+    "systems": [
+      "systems/poison_system.gd"
+    ],
+    "character_extensions": [
+      {
+        "target_entity": "Player",
+        "add_components": ["Poison"],
+        "add_data": ""
+      }
+    ]
+  }
+}

@@ -28,7 +28,7 @@ func process(entities: Array, delta: float) -> void:
 		var expired: Array[int] = []
 		
 		for i in buff_list.active_buffs.size():
-			var inst: BuffListComponent.BuffInstance = buff_list.active_buffs[i]
+			var inst: BuffInstance = buff_list.active_buffs[i]
 			
 			# 永久 Buff 不递减
 			if inst.buff_data.duration < 0.0:
@@ -68,7 +68,7 @@ func process(entities: Array, delta: float) -> void:
 
 
 ## 应用周期效果
-func _apply_tick_effect(entity: Node, inst: BuffListComponent.BuffInstance) -> void:
+func _apply_tick_effect(entity: Node, inst: BuffInstance) -> void:
 	if not entity.has_component(&"RuntimeStats"):
 		return
 	var runtime: RuntimeStatsComponent = entity.get_component(&"RuntimeStats")

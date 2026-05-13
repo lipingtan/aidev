@@ -2,15 +2,7 @@ class_name ComboData extends Resource
 ## 连招定义
 ##
 ## 定义一个连招的输入序列和触发条件。
-
-## 单个连招输入要求
-class ComboInput:
-	## 动作名称（如 &"attack"、&"heavy_attack"）
-	var action: StringName = &""
-	## 与上一个输入的最大间隔（秒）
-	var max_interval: float = 0.5
-	## 可选的方向要求（&"" = 不限方向）
-	var direction_hint: StringName = &""
+## 每个连招由一组 ComboInput 序列组成，按顺序匹配输入缓冲。
 
 ## 连招唯一标识
 @export var id: StringName = &""
@@ -18,7 +10,7 @@ class ComboInput:
 ## 连招名称
 @export var name: String = ""
 
-## 输入序列（按顺序匹配）
+## 输入序列（按顺序匹配，每个元素为 ComboInput 资源）
 @export var sequence: Array[ComboInput] = []
 
 ## 触发的技能 ID

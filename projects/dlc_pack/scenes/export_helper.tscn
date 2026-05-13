@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://dlc_export_helper"]
+
+[ext_resource type="Script" path="res://scripts/export_helper.gd" id="1_script"]
+
+[node name="ExportHelper" type="Node"]
+script = ExtResource("1_script")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 780.0
+offset_bottom = 580.0
+
+[node name="Title" type="Label" parent="VBoxContainer"]
+text = "DLC PCK 导出工具"
+theme_override_font_sizes/font_size = 24
+
+[node name="Separator" type="HSeparator" parent="VBoxContainer"]
+
+[node name="StatusLabel" type="Label" parent="VBoxContainer"]
+text = "准备就绪"
+autowrap_mode = 3
+
+[node name="ExportBtn" type="Button" parent="VBoxContainer"]
+text = "导出 DLC PCK（poison_dlc）"
+
+[node name="HashLabel" type="Label" parent="VBoxContainer"]
+text = "SHA-256: （导出后显示）"
+autowrap_mode = 3

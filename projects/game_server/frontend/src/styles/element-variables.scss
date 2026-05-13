@@ -1,0 +1,30 @@
+/**
+* Element Plus theme customization
+**/
+
+/* theme color */
+$--el-color-primary: #1890ff !default;
+$--el-color-success: #13ce66 !default;
+$--el-color-warning: #FFBA00 !default;
+$--el-color-danger: #ff4949 !default;
+
+$--el-button-font-weight: 400 !default;
+
+$--el-border-color-light: #dfe4ed !default;
+$--el-border-color-lighter: #e6ebf5 !default;
+
+$--el-table-border: 1px solid #dfe6ec !default;
+
+// Element Plus uses CSS variables for theming, so we can override them
+:root {
+  --el-color-primary: #{$--el-color-primary};
+  --el-color-success: #{$--el-color-success};
+  --el-color-warning: #{$--el-color-warning};
+  --el-color-danger: #{$--el-color-danger};
+}
+
+// the :export directive is the magic sauce for webpack
+// https://www.bluematador.com/blog/how-to-share-variables-between-js-and-sass
+:export {
+  theme: $--el-color-primary;
+}

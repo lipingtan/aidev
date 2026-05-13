@@ -47,3 +47,67 @@ desktop.ini
 # 视频文件（生成的视频不纳入版本控制）
 # ----------------------------------------
 output_video/
+
+# ========================================
+# 游戏管理服务（game_server）
+# ========================================
+
+# ----------------------------------------
+# 编译产物（不纳入版本控制）
+# ----------------------------------------
+projects/game_server/dist/
+projects/game_server/backend/web/
+projects/game_server/backend/*.exe
+projects/game_server/backend/game-server
+projects/game_server/backend/game-server.exe
+
+# ----------------------------------------
+# Go 后端（来自 go-admin .gitignore）
+# ----------------------------------------
+projects/game_server/backend/vendor/
+projects/game_server/backend/temp/
+projects/game_server/backend/static/uploadfile/
+projects/game_server/backend/go.sum
+projects/game_server/backend/config/settings.dev.yml
+projects/game_server/backend/config/settings.dev.*.yml
+projects/game_server/backend/config/settings.deva.yml
+projects/game_server/backend/config/settings.b.dev.yml
+projects/game_server/backend/cmd/migrate/migration/version-local/*
+!projects/game_server/backend/cmd/migrate/migration/version-local/doc.go
+
+# ----------------------------------------
+# 配置文件（含敏感信息，不提交）
+# ----------------------------------------
+projects/game_server/backend/config/settings.yml
+projects/game_server/backend/config/settings.local.yml
+
+# ----------------------------------------
+# 前端（来自 go-admin-ui .gitignore）
+# ----------------------------------------
+projects/game_server/frontend/node_modules/
+projects/game_server/frontend/dist/
+projects/game_server/frontend/npm-debug.log*
+projects/game_server/frontend/yarn-debug.log*
+projects/game_server/frontend/yarn-error.log*
+projects/game_server/frontend/tests/**/coverage/
+projects/game_server/frontend/tests/e2e/reports
+projects/game_server/frontend/package-lock.json
+projects/game_server/frontend/yarn.lock
+
+# ----------------------------------------
+# DLC 文件（大文件，不纳入版本控制）
+# ----------------------------------------
+projects/game_server/backend/dlc_files/*.pck
+projects/dlc_server/dlc_files/*.pck
+projects/dlc_pack/exported/
+
+# ----------------------------------------
+# Godot 编辑器缓存
+# ----------------------------------------
+projects/**/.godot/
+projects/**/logs/
+
+# ----------------------------------------
+# Node.js（dlc_server）
+# ----------------------------------------
+projects/dlc_server/node_modules/

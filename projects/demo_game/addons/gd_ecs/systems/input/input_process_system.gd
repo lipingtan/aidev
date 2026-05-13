@@ -87,8 +87,8 @@ func _try_match_sequence(buffer: InputBufferComponent, combo: ComboData) -> bool
 	var seq_idx: int = combo.sequence.size() - 1
 	
 	while seq_idx >= 0 and buf_idx >= 0:
-		var required: ComboData.ComboInput = combo.sequence[seq_idx]
-		var frame: InputBufferComponent.InputFrame = buffer.buffer[buf_idx]
+		var required: ComboInput = combo.sequence[seq_idx]
+		var frame: InputFrame = buffer.buffer[buf_idx]
 		
 		if frame.action != required.action:
 			buf_idx -= 1
@@ -96,7 +96,7 @@ func _try_match_sequence(buffer: InputBufferComponent, combo: ComboData) -> bool
 		
 		# 检查时间间隔
 		if seq_idx < combo.sequence.size() - 1:
-			var next_frame: InputBufferComponent.InputFrame = buffer.buffer[buf_idx + 1]
+			var next_frame: InputFrame = buffer.buffer[buf_idx + 1]
 			if next_frame.timestamp - frame.timestamp > required.max_interval:
 				return false
 		

@@ -4,20 +4,13 @@ class_name InputBufferComponent extends EcsComponent
 ## 记录最近 N 帧的输入，用于连招匹配。
 ## 支持输入宽容窗口（在窗口内的输入都有效）。
 
-## 单帧输入记录
-class InputFrame:
-	var action: StringName = &""
-	var timestamp: float = 0.0
-	var direction: Vector2 = Vector2.ZERO
-	var is_held: bool = false
-
 ## 缓冲有效时间窗口（秒）
 @export var buffer_window: float = 0.3
 
 ## 最大缓冲帧数
 @export var max_frames: int = 10
 
-## 输入缓冲队列
+## 输入缓冲队列（InputFrame 数组）
 var buffer: Array[InputFrame] = []
 
 ## 当前帧时间戳
@@ -48,7 +41,7 @@ func clean_expired() -> void:
 		buffer.pop_front()
 
 
-## 获取最近的指定动作输入（在窗口内）
+## 获取最近的指定动作输入（在窗口内，返回 null 表示无匹配）
 func get_recent_input(action: StringName) -> InputFrame:
 	var cutoff: float = current_time - buffer_window
 	for i in range(buffer.size() - 1, -1, -1):

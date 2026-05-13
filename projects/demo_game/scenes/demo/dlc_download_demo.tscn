@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://dlc_download_demo"]
+
+[ext_resource type="Script" path="res://scripts/demo/dlc_download_demo.gd" id="1_script"]
+
+[node name="DlcDownloadDemo" type="Node"]
+script = ExtResource("1_script")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Background" type="ColorRect" parent="UI"]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.1, 0.1, 0.15, 1)
+
+[node name="Title" type="Label" parent="UI"]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 900.0
+offset_bottom = 50.0
+text = "DLC 下载验证 Demo"
+theme_override_font_sizes/font_size = 22
+
+[node name="StatusBar" type="Label" parent="UI"]
+offset_left = 20.0
+offset_top = 55.0
+offset_right = 900.0
+offset_bottom = 80.0
+text = "状态: 初始化中..."
+
+[node name="ProgressBar" type="ProgressBar" parent="UI"]
+offset_left = 20.0
+offset_top = 85.0
+offset_right = 900.0
+offset_bottom = 105.0
+value = 0.0
+
+[node name="Buttons" type="HBoxContainer" parent="UI"]
+offset_left = 20.0
+offset_top = 115.0
+offset_right = 900.0
+offset_bottom = 155.0
+
+[node name="BtnQuery" type="Button" parent="UI/Buttons"]
+layout_mode = 2
+text = "[1] 查询信息"
+
+[node name="BtnDownload" type="Button" parent="UI/Buttons"]
+layout_mode = 2
+text = "[2] 下载 PCK"
+
+[node name="BtnLoad" type="Button" parent="UI/Buttons"]
+layout_mode = 2
+text = "[3] 加载 PCK"
+
+[node name="BtnTest" type="Button" parent="UI/Buttons"]
+layout_mode = 2
+text = "[4] 测试运行"
+
+[node name="BtnUnload" type="Button" parent="UI/Buttons"]
+layout_mode = 2
+text = "[5] 卸载 DLC"
+
+[node name="BtnFull" type="Button" parent="UI/Buttons"]
+layout_mode = 2
+text = "🚀 全流程"
+
+[node name="LogBox" type="RichTextLabel" parent="UI"]
+offset_left = 20.0
+offset_top = 165.0
+offset_right = 900.0
+offset_bottom = 1060.0
+bbcode_enabled = false
+scroll_following = true
+text = ""
