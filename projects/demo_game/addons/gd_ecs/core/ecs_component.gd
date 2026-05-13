@@ -13,9 +13,9 @@ class_name EcsComponent extends Resource
 ## 4. 通过 EcsEntity.add_component() 挂载到 Entity
 
 ## 返回组件唯一名称（子类必须覆盖）
+## @abstract 方法不能有函数体
 @abstract
-func get_component_name() -> StringName:
-	return &""
+func get_component_name() -> StringName
 
 
 ## 序列化为字典（用于存档）

@@ -150,7 +150,22 @@ projects/{游戏名}/
 
 ---
 
-## 六、Autoload 注册顺序
+## 六、Autoload 命名规范
+
+Autoload 注册名**不能**与脚本的 `class_name` 相同，否则 Godot 会将其视为类名而非实例，导致实例方法调用报错。
+
+**规则**：Autoload 脚本要么不声明 `class_name`，要么使用与注册名不同的名称（如加 `Gd` 前缀）。
+
+| Autoload 注册名 | 脚本 class_name | 说明 |
+|----------------|----------------|------|
+| `EcsWorld` | `GdEcsWorld` | 加前缀区分 |
+| `EventBus` | （无 class_name） | Autoload 脚本不需要 class_name |
+| `DataManager` | （无 class_name） | 同上 |
+| `ObjectPool` | （无 class_name） | 同上 |
+| `DlcManager` | （无 class_name） | 同上 |
+| `SaveManager` | （无 class_name） | 同上 |
+
+## 七、Autoload 注册顺序
 
 | 顺序 | 名称 | 职责 |
 |------|------|------|
@@ -164,7 +179,7 @@ projects/{游戏名}/
 
 ---
 
-## 七、禁止事项
+## 八、禁止事项
 
 - `var x = value` 不带类型标注
 - 单文件超过 200 行
@@ -177,7 +192,7 @@ projects/{游戏名}/
 
 ---
 
-## 八、Shader 注释规范
+## 九、Shader 注释规范
 
 ```glsl
 shader_type spatial;
@@ -190,7 +205,7 @@ uniform float param_name : hint_range(0.0, 1.0) = 0.5;  // 参数用途说明
 
 ---
 
-## 九、导出变量规范
+## 十、导出变量规范
 
 ```gdscript
 @export_group("移动参数")

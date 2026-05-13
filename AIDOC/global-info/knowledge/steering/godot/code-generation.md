@@ -355,13 +355,12 @@ class_name EcsSystem extends RefCounted
 ## ECS System 抽象基类
 
 ## 抽象方法：子类必须覆盖，否则编译报错
+## 注意：@abstract 方法不能有函数体（不能有 return 或 pass）
 @abstract
-func get_query() -> Array[StringName]:
-    return []
+func get_query() -> Array[StringName]
 
 @abstract
-func process(entities: Array, delta: float) -> void:
-    pass
+func process(entities: Array, delta: float) -> void
 
 ## 非抽象方法：提供默认实现，子类可选择覆盖
 func on_registered() -> void:

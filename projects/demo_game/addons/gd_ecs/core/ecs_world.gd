@@ -1,5 +1,5 @@
-class_name EcsWorld extends Node
-## ECS World 管理器（Autoload）
+class_name GdEcsWorld extends Node
+## ECS World 管理器（Autoload 名：EcsWorld）
 ##
 ## 负责管理所有 Entity 和 System 的生命周期，
 ## 提供 Query 机制和 System 调度。
