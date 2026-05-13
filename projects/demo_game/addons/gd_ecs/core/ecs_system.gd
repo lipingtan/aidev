@@ -1,5 +1,6 @@
+@abstract
 class_name EcsSystem extends RefCounted
-## ECS System 基类
+## ECS System 基类（抽象类）
 ##
 ## System 是独立的处理器，负责批量处理匹配特定 Component 组合的 Entity。
 ## 每个 System 声明其关注的 Component 组合（Query），
@@ -25,15 +26,15 @@ var system_name: StringName = &""
 
 
 ## 返回此 System 关注的 Component 名称数组
-## 只有同时拥有所有这些 Component 的 Entity 才会被处理
-func get_query() -> Array[StringName]:
-	return []
+## @abstract 方法不能有函数体
+@abstract
+func get_query() -> Array[StringName]
 
 
 ## 批量处理匹配的 Entity 集合
-## 子类必须覆盖此方法
-func process(entities: Array, delta: float) -> void:
-	pass
+## @abstract 方法不能有函数体
+@abstract
+func process(entities: Array, delta: float) -> void
 
 
 ## System 被注册到 World 时调用（可选覆盖）

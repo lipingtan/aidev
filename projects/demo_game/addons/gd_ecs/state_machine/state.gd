@@ -1,5 +1,6 @@
+@abstract
 class_name State extends Node
-## 状态基类
+## 状态基类（抽象类）
 ##
 ## 状态机中的单个状态。通过读写父 Entity 的 Component 来驱动行为。
 ## 子类覆盖 enter/exit/update/physics_update 实现具体逻辑。

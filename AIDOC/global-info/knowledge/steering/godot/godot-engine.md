@@ -9,13 +9,15 @@
 
 | 配置项 | 默认值 |
 |--------|--------|
-| 引擎版本 | **Godot 4.x**（最新稳定版） |
+| 引擎版本 | **Godot 4.5+**（最低要求 4.5） |
 | 主要语言 | **GDScript** |
 | 辅助语言 | Shader Language（视觉效果） |
 | 渲染管线 | **桌面** `forward_plus`；**移动默认** `mobile`（Forward Mobile）；**兜底** `gl_compatibility`（Compatibility，导出预设显式选用） |
 | 物理引擎 | Godot Physics（默认）/ Jolt（高精度需求时） |
 | 架构模式 | ECS 混合架构（Node + Component + System） |
 | 插件框架 | gd_ecs（ECS）+ dlc_manager（DLC 动态挂接） |
+
+> **最低版本要求**：Godot 4.5。框架使用了 `@abstract` 注解（4.5 新增），不兼容 4.4 及以下版本。
 
 ---
 
@@ -181,6 +183,21 @@ projects/{游戏名}/
 ```
 
 ---
+
+## 六、Autoload 命名规范
+
+Autoload 注册名**不能**与脚本的 `class_name` 相同，否则 Godot 会将其视为类名而非实例，导致实例方法调用报错。
+
+**规则**：Autoload 脚本要么不声明 `class_name`，要么使用与注册名不同的名称（如加 `Gd` 前缀）。
+
+| Autoload 注册名 | 脚本 class_name | 说明 |
+|----------------|----------------|------|
+| `EcsWorld` | `GdEcsWorld` | 加前缀区分 |
+| `EventBus` | （无 class_name） | Autoload 脚本不需要 class_name |
+| `DataManager` | （无 class_name） | 同上 |
+| `ObjectPool` | （无 class_name） | 同上 |
+| `DlcManager` | （无 class_name） | 同上 |
+| `SaveManager` | （无 class_name） | 同上 |
 
 ## 七、Autoload 注册顺序
 

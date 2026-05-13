@@ -14,7 +14,7 @@
 config/name="{游戏显示名}"
 config/description="{核心体验一句话}"
 run/main_scene="res://scenes/ui/main_menu.tscn"
-config/features=PackedStringArray("4.x")
+config/features=PackedStringArray("4.5")
 
 [display]
 window/size/viewport_width=1920
