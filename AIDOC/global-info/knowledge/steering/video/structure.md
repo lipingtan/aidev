@@ -95,10 +95,13 @@ AIDOC/series/{系列名}/
     ├── production-tracker.md       # 制作进度追踪
     │
     └── {NNN}-{单集名}/             # 分集制作目录
-        ├── chapter_plan.md
-        ├── assembly.md
+        ├── story_plan.md               # 集级策划（草案+澄清问题）
+        ├── story_design.md             # 集级定稿（确认后的正式执行版）
+        ├── synopsis.md                 # 本集概要（可选）
+        ├── assembly.md                 # 组装顺序（后期用）
         └── {章节名}/
-            ├── chapter_plan.md
+            ├── chapter_plan.md         # 章级策划（含澄清问题）
+            ├── chapter_design.md       # 章级定稿（确认后的正式执行版）
             └── shots/
                 └── ep-{NNN}/
                     ├── shot_plan.md

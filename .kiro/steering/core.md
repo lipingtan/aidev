@@ -83,6 +83,8 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 执行任务前，根据任务类型读取对应的规范文件：
 
+**工作流导航（不确定从哪开始时读此文件）**：`AIDOC/global-info/knowledge/steering/workflow-navigator.md`
+
 ---
 
 ### 短剧/视频开发规范（独立体系）
@@ -98,6 +100,8 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 叙事/剧情策划工作流 | `AIDOC/global-info/knowledge/steering/video/narrative-workflow.md` |
 | 叙事质量审查 | `AIDOC/global-info/knowledge/steering/video/narrative-quality-review.md` |
 | 启动全新短剧系列 | `AIDOC/global-info/knowledge/steering/video/series-bootstrap-workflow.md` |
+| **镜头制作工作流（逐镜头制作）** | `AIDOC/global-info/knowledge/steering/video/shot-production-workflow.md` |
+| **视频迭代优化协议** | `AIDOC/global-info/knowledge/steering/video/iteration-protocol.md` |
 | 高潮设计哲学 | `AIDOC/global-info/knowledge/steering/video/climax-design-philosophy.md` |
 | 不可预测性设计 | `AIDOC/global-info/knowledge/steering/video/unpredictability-design.md` |
 | 分镜/运镜规范 | `AIDOC/global-info/knowledge/steering/video/cinematography.md` |
@@ -226,11 +230,16 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 | 任务类型 | 必读文件 |
 |----------|----------|
+| **启动全新 Go 项目** | `AIDOC/global-info/knowledge/steering/go/go-project-bootstrap.md` |
 | **Go 编码规范**（命名/格式/注释/错误处理/日志） | `AIDOC/global-info/knowledge/steering/go/go-conventions.md` |
 | **Go 项目目录结构**（分层架构/模块划分/数据库规范） | `AIDOC/global-info/knowledge/steering/go/go-project-structure.md` |
 | **Go 软件开发工作流**（需求→设计→任务→执行→Bugfix） | `AIDOC/global-info/knowledge/steering/go/go-development-workflow.md` |
 | **Go 任务三要素**（Scope/Constraints/Acceptance 详细定义） | `AIDOC/global-info/knowledge/steering/go/go-task-representation.md` |
 | **Go 回归防护**（不变行为清单、回归验证规范） | `AIDOC/global-info/knowledge/steering/go/go-regression-guard.md` |
+| **Go API 设计规范**（URL/分页/响应格式/DTO） | `AIDOC/global-info/knowledge/steering/go/go-api-design.md` |
+| **Go 测试规范**（单元测试/集成测试/覆盖率/Mock） | `AIDOC/global-info/knowledge/steering/go/go-testing.md` |
+| **Go 部署与发布**（构建/Docker/环境变量/发布检查清单） | `AIDOC/global-info/knowledge/steering/go/go-deployment.md` |
+| **Go 前后端联调**（接口对接/CORS/Token/联调检查清单） | `AIDOC/global-info/knowledge/steering/go/go-frontend-integration.md` |
 | **Go Git 工作流**（分支策略/Commit规范/PR流程） | `AIDOC/global-info/knowledge/steering/go/go-git-workflow.md` |
 | **Go 安全编码**（认证/SQL安全/敏感数据/输入验证） | `AIDOC/global-info/knowledge/steering/go/go-security.md` |
 | **Go 代码审查**（审查维度/问题级别/检查清单） | `AIDOC/global-info/knowledge/steering/go/go-code-review.md` |

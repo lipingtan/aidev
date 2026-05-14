@@ -161,3 +161,83 @@ a single tear forming but not falling.
 | 忽略物理 | 动作不自然 | 加入重力、惯性等物理描述 |
 | 风格不一致 | 各镜头画面割裂 | Master Prompt 统一风格锚定 |
 | 角色描述变化 | 角色外貌不一致 | 固定使用 characters.md 中的关键词 |
+
+---
+
+## shot_design → 最终提示词 组装流程
+
+> 当 shot_design 被用户确认后，按以下步骤组装最终提示词写入 output/。
+
+### KLING AI 组装步骤
+
+```
+步骤 1：组装 Master Prompt
+    ├── 从 style-bible.md 提取风格锚定词
+    ├── 从 shot_design 提取场景视觉描述
+    ├── 从 shot_design 提取角色视觉关键词
+    ├── 从 shot_design 提取情绪氛围
+    └── 组合为：[风格], [场景], [角色A描述], [角色B描述]. [氛围]. [色调].
+
+步骤 2：组装 Shot Prompt
+    ├── 从 shot_design 提取景别+运镜
+    ├── 从 shot_design 提取动作描述
+    ├── 从 shot_design 提取光线设计
+    ├── 从 shot_design 提取对话（如有）
+    └── 组合为：[景别, 运镜]: [动作]. [光线]. [对话].
+
+步骤 3：组装 Negative Prompt
+    ├── 全局负面提示词（从 negative-prompts.md）
+    ├── 场景特定负面（从 shot_design）
+    └── 组合为：Negative prompt: [全局], [场景特定]
+
+步骤 4：附加元数据
+    ├── Duration: {X} seconds
+    ├── 元素绑定 ID（从 shot_design）
+    └── 对话音频指令（如有）
+
+步骤 5：写入 output/
+    └── output/{系列}/kling/{NNN}-{单集}/{章节}/ep-{NNN}.md
+```
+
+### WAN 2.5 组装步骤
+
+```
+步骤 1：组装整体描述
+    ├── 从 shot_design 提取叙事概述（一句话）
+    ├── 从 style-bible.md 提取风格设定
+    └── 组合为：[叙事概述]. [风格设定].
+
+步骤 2：组装 Shot 时间戳
+    ├── 从 shot_design 提取时长
+    ├── 计算时间戳区间 [0s-Xs]
+    ├── 从 shot_design 提取景别+动作+环境
+    └── 组合为：Shot 1 [0s-Xs]: [景别]: [画面描述].
+
+步骤 3：写入 output/
+    └── output/{系列}/wan25/{NNN}-{单集}/{章节}/ep-{NNN}.md
+```
+
+### 最终提示词文件格式（KLING）
+
+```markdown
+<!-- Master Prompt -->
+{风格锚定}, {场景描述}, {角色描述}. {氛围}. {色调}.
+
+Negative prompt: {负面提示词}
+
+<!-- Shot -->
+{景别, 运镜}: {动作描述}. {光线}. {对话（如有）}.
+
+Duration: {X} seconds
+Elements: {元素绑定ID列表}
+Audio: {对话音频指令}
+```
+
+### 质量检查（写入前）
+
+- [ ] 风格锚定词与 style-bible 一致
+- [ ] 角色描述与 characters/*.md 完全一致（逐词对照）
+- [ ] 无中文残留（output/ 中纯英文）
+- [ ] 无注释/说明文字（纯提示词）
+- [ ] 时长与 pacing-map 一致
+- [ ] 元素绑定 ID 与 elements-registry 一致

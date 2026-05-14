@@ -185,11 +185,10 @@ ALTER TABLE game ADD COLUMN xxx ...;
 ### 5.1 文件存放位置
 
 ```
-projects/{project}/
-└── .kiro/specs/Fix-{N}-{bug简述}/
-    ├── bugfix.md       # bug 分析文档
-    ├── design.md       # 修复设计
-    └── tasks.md        # 修复任务
+AIDOC/project_doc/{project-name}/Fix-{N}-{bug简述}/
+├── bugfix.md       # bug 分析文档
+├── design.md       # 修复设计
+└── tasks.md        # 修复任务
 ```
 
 ### 5.2 Bugfix 文档格式
@@ -263,3 +262,22 @@ AIDOC/project_doc/{project-name}/Fix-{N}-{bug简述}/
 ```
 projects/{project-name}/    # 与游戏工程平级
 ```
+
+---
+
+## 相关规范索引
+
+| 规范 | 关系 |
+|------|------|
+| `go-project-bootstrap.md` | 新项目从零启动的 Phase 0 流程 |
+| `go-conventions.md` | 编码规范（命名/格式/注释/错误处理） |
+| `go-project-structure.md` | 目录结构和分层架构 |
+| `go-task-representation.md` | 任务三要素的详细定义 |
+| `go-regression-guard.md` | 回归防护规范 |
+| `go-api-design.md` | RESTful API 设计规范 |
+| `go-testing.md` | 测试编写规范 |
+| `go-deployment.md` | 部署与发布流程 |
+| `go-git-workflow.md` | Git 分支和提交规范 |
+| `go-security.md` | 安全编码规范 |
+| `go-code-review.md` | 代码审查规范 |
+| `go-debugging.md` | 排查方法论 |
