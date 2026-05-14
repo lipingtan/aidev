@@ -22,7 +22,7 @@
 
 | 产出物 | 格式 | 验收标准 |
 |--------|------|----------|
-| 目录骨架 | 文件系统 | `projects/{游戏名}/` 完整创建 |
+| 目录骨架 | 文件系统 | `projects/{解决方案名}/{游戏名}/` 完整创建 |
 | Godot 工程 | project.godot | 可在 Godot 编辑器中打开，渲染管线/物理引擎已配置 |
 | 插件初始化 | addons/ | gd_ecs、dlc_manager 目录已创建 |
 | **QualitySettings** | autoload/ + 注册项 | 多平台项目：`QualitySettings`（或等价）已加入 Autoload，顺序见 `godot-engine.md` |
@@ -105,7 +105,7 @@
 ## 四、Godot 工程目录结构
 
 ```
-projects/{游戏名}/
+projects/{解决方案名}/{游戏名}/
 ├── project.godot
 ├── scenes/
 │   ├── levels/

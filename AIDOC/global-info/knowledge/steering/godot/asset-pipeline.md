@@ -109,7 +109,7 @@
 
 ### 3.1 注册表结构
 
-资产注册表存放位置：`AIDOC/projects/{游戏名}/design/asset-registry.md`
+资产注册表存放位置：`AIDOC/game_doc/{游戏名}/design/asset-registry.md`
 
 ```markdown
 ## 资产注册表

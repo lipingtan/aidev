@@ -260,7 +260,7 @@ AIDOC/project_doc/{project-name}/Fix-{N}-{bug简述}/
 
 工程代码放在：
 ```
-projects/{project-name}/    # 与游戏工程平级
+projects/{解决方案名}/{项目名}/    # 解决方案下的工程目录
 ```
 
 ---

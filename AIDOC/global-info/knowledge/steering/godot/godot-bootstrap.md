@@ -118,7 +118,7 @@ interact
 ## 四、Godot 工程目录详细结构
 
 ```
-projects/{游戏名}/
+projects/{解决方案名}/{游戏名}/
 ├── project.godot
 ├── autoload/                     # 全局单例脚本（QualitySettings 等）
 │   └── quality_settings.gd       # 多平台画质档，参考 demo_game

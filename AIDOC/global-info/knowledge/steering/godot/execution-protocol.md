@@ -97,11 +97,11 @@
 
 **POST-CHECK**：
 - [ ] 引擎工程配置文件存在
-- [ ] `AIDOC/projects/{游戏名}/README.md` 存在
-- [ ] `AIDOC/projects/{游戏名}/design/` 目录存在
-- [ ] `AIDOC/projects/{游戏名}/narrative/` 目录存在（若澄清不需要叙事系统，可仅保留 `README.md` 占位说明）
-- [ ] `AIDOC/projects/{游戏名}/iterations/` 目录存在
-- [ ] `AIDOC/projects/{游戏名}/tracker.md` 存在
+- [ ] `AIDOC/game_doc/{游戏名}/README.md` 存在
+- [ ] `AIDOC/game_doc/{游戏名}/design/` 目录存在
+- [ ] `AIDOC/game_doc/{游戏名}/narrative/` 目录存在（若澄清不需要叙事系统，可仅保留 `README.md` 占位说明）
+- [ ] `AIDOC/game_doc/{游戏名}/iterations/` 目录存在
+- [ ] `AIDOC/game_doc/{游戏名}/tracker.md` 存在
 - [ ] 引擎工程目录骨架完整（场景/脚本/资源/资产/插件/全局单例）
 - [ ] **[NSFW]** `clarification.md` 中已填写目标平台合规声明（Steam AO / itch.io 等）
 - [ ] **[NSFW]** `clarification.md` 中已填写 All-Ages vs R-18 版本发布策略
@@ -112,7 +112,7 @@
 
 **PRE-CHECK**：
 - [ ] Phase 0 POST-CHECK 通过
-- [ ] `AIDOC/projects/{游戏名}/README.md` 存在
+- [ ] `AIDOC/game_doc/{游戏名}/README.md` 存在
 
 **POST-CHECK**：
 - [ ] `design/gdd.md` 存在且包含：玩法循环、胜负条件、目标平台

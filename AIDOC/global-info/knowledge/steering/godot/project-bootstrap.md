@@ -65,7 +65,7 @@ AI 根据回答自动生成：
 
 - 必填项 1~10 全部有明确答案
 - 答案无逻辑矛盾（如"2D"+"第三人称3D视角"需确认）
-- 结果写入 `AIDOC/projects/{游戏名}/clarification.md`
+- 结果写入 `AIDOC/game_doc/{游戏名}/clarification.md`
 
 ---
 
@@ -81,7 +81,7 @@ AI 根据回答自动生成：
 
 ```
 # 文档目录
-AIDOC/projects/{游戏名}/
+AIDOC/game_doc/{游戏名}/
 ├── README.md                     # 项目入口：引擎工程路径、tracker 链接、简要说明
 ├── design/
 │   ├── gdd.md                    # 游戏设计文档
@@ -107,8 +107,11 @@ AIDOC/projects/{游戏名}/
 ├── clarification.md              # 澄清记录
 └── tracker.md                    # 进度追踪
 
-# 引擎工程目录（本工作台默认 projects/{游戏名}/，见 godot-bootstrap.md）
-projects/{游戏名}/
+# 引擎工程目录
+# 路径格式：projects/{解决方案名}/{游戏名}/
+# 解决方案名 = 创建工程时所属的项目名（如 demo、my_rpg 等）
+# 同一解决方案下可包含多个相关工程（游戏 + 管理端 + DLC 包等）
+projects/{解决方案名}/{游戏名}/
 ├── 引擎工程配置文件
 ├── autoload/                     # 全局单例脚本（含 quality_settings.gd 等）
 ├── scenes/                       # 场景文件
@@ -217,7 +220,7 @@ assets_source/{游戏名}/
 - [ ] clarification.md 已生成
 
 ### 目录结构
-- [ ] AIDOC/projects/{游戏名}/ 完整创建
+- [ ] AIDOC/game_doc/{游戏名}/ 完整创建
 - [ ] 引擎工程目录完整创建
 - [ ] assets_source/{游戏名}/ 完整创建
 - [ ] 所有 README.md 包含目录用途说明

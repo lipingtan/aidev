@@ -22,7 +22,7 @@
 #### 阶段一：世界观构建
 
 **输入**：游戏类型、美术风格、核心体验
-**产出**：`AIDOC/projects/{游戏名}/design/worldview.md`
+**产出**：`AIDOC/game_doc/{游戏名}/design/worldview.md`
 
 | 章节 | 内容要求 | 完成标准 |
 |------|----------|----------|
@@ -36,7 +36,7 @@
 #### 阶段二：剧情大纲
 
 **输入**：世界观文档、主角设定
-**产出**：`AIDOC/projects/{游戏名}/narrative/outline.md`
+**产出**：`AIDOC/game_doc/{游戏名}/narrative/outline.md`
 
 | 章节 | 内容要求 | 完成标准 |
 |------|----------|----------|
@@ -50,7 +50,7 @@
 #### 阶段三：支线设计
 
 **输入**：剧情大纲、世界观、区域设计
-**产出**：`AIDOC/projects/{游戏名}/narrative/quests/side/`
+**产出**：`AIDOC/game_doc/{游戏名}/narrative/quests/side/`
 
 | 支线类型 | 设计要求 | 与主线关系 |
 |----------|----------|-----------|
@@ -63,7 +63,7 @@
 #### 阶段四：对话编写
 
 **输入**：支线设计、角色设定、场景上下文
-**产出**：`AIDOC/projects/{游戏名}/narrative/dialogues/`
+**产出**：`AIDOC/game_doc/{游戏名}/narrative/dialogues/`
 
 对话编写规则：
 1. 每段对话有明确的叙事目的（推进剧情/揭示信息/建立关系）

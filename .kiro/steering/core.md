@@ -35,7 +35,7 @@
 | `AIDOC/series/` | 短剧相关规范与过程文档（策划、剧本、分镜、制作记录） |
 | `AIDOC/game_doc/` | 游戏开发过程文档（GDD、世界观、角色、关卡、叙事、制作进度） |
 | `AIDOC/project_doc/` | Go 软件系统过程文档（需求、设计、任务、变更日志） |
-| `projects/` | 所有工程代码（游戏引擎工程 + Go 软件系统，平级存放） |
+| `projects/` | 所有工程代码（按解决方案分组，每个解决方案下含游戏引擎工程 + 配套服务端等） |
 | `assets_source/` | 外部资产源文件（素材包原始文件、AI 生成原图） |
 | `.kiro/` | 工作流配置（steering 规范、specs 文件） |
 
@@ -43,8 +43,22 @@
 - 短剧制作的所有过程文档 → `AIDOC/series/{系列名}/`
 - 游戏开发的所有过程文档 → `AIDOC/game_doc/{游戏名}/`
 - Go 软件系统的所有过程文档 → `AIDOC/project_doc/{项目名}/`
-- 游戏引擎工程代码 → `projects/{游戏名}/`
-- Go 软件系统代码 → `projects/{项目名}/`（与游戏工程平级）
+- 所有工程代码 → `projects/{解决方案名}/{工程名}/`
+- 解决方案命名：以创建工程时所属的项目名命名（英文 snake_case）
+- 同一解决方案下可包含多个相关工程（如游戏工程 + 管理端 + DLC 包）
+
+**解决方案层示例：**
+```
+projects/
+├── demo/                          # demo 解决方案
+│   ├── demo_game/                 # Godot 游戏工程
+│   ├── dlc_pack/                  # DLC 资源包
+│   └── game_server/               # Go 管理端/服务端
+│
+└── my_rpg/                        # 另一个解决方案（示例）
+    ├── my_rpg_game/               # 游戏工程
+    └── my_rpg_server/             # 配套服务端
+```
 
 **`source/` 文件夹约定：**
 每个项目过程文件夹下可放置 `source/` 子目录，用于存放外部参考材料、初始想法、讨论记录等输入素材。AI 基于 `source/` 中的内容生成项目所需的基础资料。
@@ -220,8 +234,6 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 查看对话脚本 | `AIDOC/game_doc/{游戏名}/narrative/dialogues/` |
 | 查看制作进度 | `AIDOC/game_doc/{游戏名}/tracker.md` |
 
----
-
 ### Go 软件项目规范（独立体系）
 
 适用于 `projects/` 下的 Go 后端软件项目（如 game_server）。与游戏开发规范、短剧规范完全独立，互不引用。
@@ -248,7 +260,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 #### Go 项目适用规则
 
 - Go 软件系统过程文档 → `AIDOC/project_doc/{项目名}/`
-- Go 软件系统工程代码 → `projects/{项目名}/`（与游戏工程平级）
+- Go 软件系统工程代码 → `projects/{解决方案名}/{项目名}/`
 - 全局规范文件 → `AIDOC/global-info/knowledge/steering/go/`
 
 > **规则**：如果任务涉及多个类型，同时读取对应的多个文件。

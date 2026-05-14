@@ -226,7 +226,7 @@
 
 ### 5.1 日志存放位置
 
-`AIDOC/projects/{游戏名}/iterations/`
+`AIDOC/game_doc/{游戏名}/iterations/`
 
 ### 5.2 日志文件命名
 

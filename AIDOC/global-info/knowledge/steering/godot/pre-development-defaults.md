@@ -14,16 +14,16 @@
 
 | 路径 | 说明 |
 |------|------|
-| `AIDOC/projects/{游戏名}/README.md` | 入口：链到 `projects/{游戏名}/`、`design/`、`tracker.md`（见 `project-bootstrap.md`） |
-| `AIDOC/projects/{游戏名}/design/performance-budget.md` | 从知识库 `performance-budget.md` 复制 |
-| `AIDOC/projects/{游戏名}/design/architecture.md` | 增加一节「多平台画质」：引用 **固定档位 ID**，写明是否只做 PC |
-| `projects/{游戏名}/autoload/quality_settings.gd` | 复制 `demo_game` 同名文件或按 spec 生成 |
-| `projects/{游戏名}/assets/textures/tier_desktop/…` | 至少铺一条英雄测试路径，移动可先 symlink 或重复一份到低档 |
-| `projects/{游戏名}/project.godot` | `[rendering] renderer/rendering_method` 与首档一致；Autoload 含 `QualitySettings` |
+| `AIDOC/game_doc/{游戏名}/README.md` | 入口：链到 `projects/{解决方案名}/{游戏名}/`、`design/`、`tracker.md`（见 `project-bootstrap.md`） |
+| `AIDOC/game_doc/{游戏名}/design/performance-budget.md` | 从知识库 `performance-budget.md` 复制 |
+| `AIDOC/game_doc/{游戏名}/design/architecture.md` | 增加一节「多平台画质」：引用 **固定档位 ID**，写明是否只做 PC |
+| `projects/{解决方案名}/{游戏名}/autoload/quality_settings.gd` | 复制 `demo_game` 同名文件或按 spec 生成 |
+| `projects/{解决方案名}/{游戏名}/assets/textures/tier_desktop/…` | 至少铺一条英雄测试路径，移动可先 symlink 或重复一份到低档 |
+| `projects/{解决方案名}/{游戏名}/project.godot` | `[rendering] renderer/rendering_method` 与首档一致；Autoload 含 `QualitySettings` |
 
 ## 与 demo 工程对齐
 
-工作台参考实现：**`projects/demo_game/autoload/quality_settings.gd`** + `project.godot` 中已注册顺序。新游戏按 spec 复制即可。
+工作台参考实现：**`projects/demo/demo_game/autoload/quality_settings.gd`** + `project.godot` 中已注册顺序。新游戏按 spec 复制即可。
 
 ## 粘贴到 `design/architecture.md` 的固定小节（原文可拷贝）
 

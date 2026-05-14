@@ -162,7 +162,7 @@ assets/textures/
 ## 六、Godot 工程目录规范
 
 ```
-projects/{游戏名}/
+projects/{解决方案名}/{游戏名}/
 ├── project.godot
 ├── scenes/                     # 场景文件
 │   ├── levels/

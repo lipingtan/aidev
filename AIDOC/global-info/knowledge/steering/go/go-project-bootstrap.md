@@ -53,7 +53,7 @@ AIDOC/project_doc/{项目名}/
 └── source/                  # 外部参考材料
 
 # 工程代码
-projects/{项目名}/
+projects/{解决方案名}/{项目名}/
 ├── backend/
 │   ├── app/                 # 业务域
 │   ├── cmd/                 # 入口
