@@ -21,6 +21,7 @@ type SysUser struct {
 	PostId   int      `json:"postId" gorm:"size:20;comment:岗位"`
 	Remark   string   `json:"remark" gorm:"size:255;comment:备注"`
 	Status   string   `json:"status" gorm:"size:4;comment:状态"`
+	TenantId int      `json:"tenantId" gorm:"default:0;comment:租户ID 0=超级管理员"`
 	DeptIds  []int    `json:"deptIds" gorm:"-"`
 	PostIds  []int    `json:"postIds" gorm:"-"`
 	RoleIds  []int    `json:"roleIds" gorm:"-"`

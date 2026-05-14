@@ -1,38 +1,13 @@
 <template>
-  <BasicLayout>
-    <template #wrapper>
-      <el-card class="box-card">
-        <div v-loading="loading" :style="'height:' + height">
-          <iframe
-            :src="src"
-            frameborder="no"
-            style="width: 100%; height: 100%"
-            scrolling="auto"
-          />
-        </div>
-      </el-card>
-    </template>
-  </BasicLayout>
+  <div class="main p-4">
+    <el-alert title="Swagger API 文档" type="info" :closable="false" description="请访问后端 Swagger 文档查看接口详情" />
+    <div class="mt-4">
+      <el-link type="primary" :href="`http://localhost:8000/swagger/admin/index.html`" target="_blank">
+        打开 Swagger 文档
+      </el-link>
+    </div>
+  </div>
 </template>
-<script>
-export default {
-  name: 'SwaggerDoc',
-  components: {},
-  data() {
-    return {
-      src: process.env.VUE_APP_BASE_API + '/swagger/admin/index.html',
-      height: document.documentElement.clientHeight - 94.5 + 'px;',
-      loading: true
-    }
-  },
-  mounted: function() {
-    setTimeout(() => {
-      this.loading = false
-    }, 230)
-    const that = this
-    window.onresize = function temp() {
-      that.height = document.documentElement.clientHeight - 94.5 + 'px;'
-    }
-  }
-}
+<script setup lang="ts">
+defineOptions({ name: "Swagger" });
 </script>

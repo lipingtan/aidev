@@ -2,6 +2,7 @@ package router
 
 import (
 	"go-admin/app/admin/apis"
+	"go-admin/app/tenant/router"
 	"mime"
 
 	"github.com/go-admin-team/go-admin-core/sdk/config"
@@ -40,8 +41,8 @@ func sysBaseRouter(r *gin.RouterGroup) {
 
 	if config.ApplicationConfig.Mode != "prod" {
 		r.GET("/", apis.GoAdmin)
+		r.GET("/info", handler.Ping)
 	}
-	r.GET("/info", handler.Ping)
 }
 
 func sysStaticFileRouter(r *gin.RouterGroup) {
@@ -49,10 +50,9 @@ func sysStaticFileRouter(r *gin.RouterGroup) {
 	if err != nil {
 		return
 	}
-	r.Static("/static", "./static")
-	if config.ApplicationConfig.Mode != "prod" {
-		r.Static("/form-generator", "./static/form-generator")
-	}
+	// 静态文件由 embed.FS 提供，不再从磁盘服务
+	// r.Static("/static", "./static")
+	// r.Static("/form-generator", "./static/form-generator")
 }
 
 func sysSwaggerRouter(r *gin.RouterGroup) {
@@ -69,9 +69,16 @@ func sysCheckRoleRouterInit(r *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddle
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/login", authMiddleware.LoginHandler)
-		// Refresh time can be longer than token timeout
 		v1.GET("/refresh_token", authMiddleware.RefreshHandler)
 	}
+
+	// pure-admin 前端适配：/login 和 /refresh-token 直接映射到 JWT handler
+	r.POST("/login", authMiddleware.LoginHandler)
+	r.POST("/refresh-token", authMiddleware.RefreshHandler)
+
+	// 租户管理路由
+	router.RegisterTenantRouter(v1, authMiddleware)
+
 	registerBaseRouter(v1, authMiddleware)
 }
 

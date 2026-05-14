@@ -1,55 +1,54 @@
 package models
 
 import (
-	"fmt"
-	"go-admin/common/global"
-	"gorm.io/gorm"
-	"io/ioutil"
+	_ "embed"
 	"log"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
-func InitDb(db *gorm.DB) (err error) {
-	filePath := "config/db.sql"
-	err = ExecSql(db, filePath)
-	if global.Driver == "postgres" {
-		filePath = "config/pg.sql"
-		err = ExecSql(db, filePath)
-	}
-	return err
+//go:embed sql/db.sql
+var dbSQL string
+
+// InitDb 执行初始数据 SQL（从 embed 读取，不依赖磁盘文件）
+func InitDb(db *gorm.DB) error {
+	return execSQLContent(db, dbSQL)
 }
 
-func ExecSql(db *gorm.DB, filePath string) error {
-	sql, err := Ioutil(filePath)
-	if err != nil {
-		fmt.Println("数据库基础数据初始化脚本读取失败！原因:", err.Error())
-		return err
-	}
-	sqlList := strings.Split(sql, ";")
-	for i := 0; i < len(sqlList)-1; i++ {
-		if strings.Contains(sqlList[i], "--") {
-			fmt.Println(sqlList[i])
+// execSQLContent 执行 SQL 内容
+func execSQLContent(db *gorm.DB, content string) error {
+	// 去掉 UTF-8 BOM
+	content = strings.TrimPrefix(content, "\xef\xbb\xbf")
+
+	// 关闭严格模式，兼容旧版 db.sql 的列顺序差异
+	_ = db.Exec("SET sql_mode=''").Error
+
+	// 按行过滤注释，再重新拼接
+	var filteredLines []string
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "--") || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
-		sql := strings.Replace(sqlList[i]+";", "\n", "", -1)
-		sql = strings.TrimSpace(sql)
-		if err = db.Exec(sql).Error; err != nil {
-			log.Printf("error sql: %s", sql)
-			if !strings.Contains(err.Error(), "Query was empty") {
-				return err
+		filteredLines = append(filteredLines, line)
+	}
+	content = strings.Join(filteredLines, "\n")
+
+	sqlList := strings.Split(content, ";")
+	for _, s := range sqlList {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if err := db.Exec(s).Error; err != nil {
+			log.Printf("SQL 执行警告（已跳过）: %v | sql: %.120s", err, s)
+			if strings.Contains(err.Error(), "Duplicate entry") ||
+				strings.Contains(err.Error(), "Query was empty") {
+				continue
 			}
+			return err
 		}
 	}
 	return nil
-}
-
-func Ioutil(filePath string) (string, error) {
-	if contents, err := ioutil.ReadFile(filePath); err == nil {
-		//因为contents是[]byte类型，直接转换成string类型后会多一行空格,需要使用strings.Replace替换换行符
-		result := strings.Replace(string(contents), "\n", "", 1)
-		fmt.Println("Use ioutil.ReadFile to read a file:", result)
-		return result, nil
-	} else {
-		return "", err
-	}
 }

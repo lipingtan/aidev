@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "CR任务完成变更记录",
+  "description": "当 agent 执行完毕后，检查本次是否涉及 CR task 的代码实现，如果是则在对应 CR 的 change-log 目录下自动记录变更",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "请检查本次执行是否涉及以下情况：用户让你基于某个 CR 的 task 进行代码实现（如编写 Java 代码、修改接口、新增 Service 等）。\n\n判断条件：\n1. 本次对话中是否提到了具体的 CR 目录（如 domain/{域}/spec/normalCR/CRxx-xxx/ 或 minorCR/xxx/）\n2. 本次是否实际修改或新增了 src/ 下的 Java 代码文件\n\n如果两个条件都满足，请执行以下操作：\n1. 找到对应 CR 目录下的 change-log/ 子目录\n2. 如果 change-log/ 目录不存在，创建它\n3. 创建或追加变更记录文件，文件名格式：Task-{序号}-{任务名}-change-log.md\n4. 记录内容包括：\n   - 任务名称\n   - 变更时间（当前时间）\n   - 变更的代码文件列表（新增/修改的 Java 文件路径）\n   - 变更内容摘要（每个文件改了什么，一句话描述）\n\n如果本次执行不涉及 CR task 的代码实现，则跳过，不做任何操作。"
+  }
+}

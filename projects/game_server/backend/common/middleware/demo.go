@@ -8,6 +8,11 @@ import (
 
 func DemoEvn() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 未安装时 ApplicationConfig 为 nil，跳过 demo 模式检查
+		if config.ApplicationConfig == nil {
+			c.Next()
+			return
+		}
 		method := c.Request.Method
 		if config.ApplicationConfig.Mode == "demo" {
 			if method == "GET" ||

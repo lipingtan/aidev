@@ -1,0 +1,13 @@
+{
+  "name": "Code Review on Save",
+  "version": "1.0.0",
+  "description": "保存代码文件时提示进行代码审查",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["*.java", "*.vue", "*.ts", "*.js"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "请对刚才修改的文件进行简要代码审查，检查是否符合项目规范。"
+  }
+}

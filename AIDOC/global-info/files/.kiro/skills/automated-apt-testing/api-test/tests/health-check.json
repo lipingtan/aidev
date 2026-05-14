@@ -1,0 +1,33 @@
+{
+  "name": "健康检查测试",
+  "description": "验证系统健康状态",
+  "baseUrl": "{{baseUrl}}",
+  "tests": [
+    {
+      "name": "GET /health - 系统健康检查",
+      "request": {
+        "method": "GET",
+        "url": "/health"
+      },
+      "expect": {
+        "statusCode": 200,
+        "body": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "name": "GET /api/info - API 信息",
+      "request": {
+        "method": "GET",
+        "url": "/api/info"
+      },
+      "expect": {
+        "statusCode": 200,
+        "body": {
+          "version": "{{version}}"
+        }
+      }
+    }
+  ]
+}

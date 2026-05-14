@@ -1,23 +1,26 @@
 <template>
-  <div id="app">
+  <el-config-provider :locale="currentLocale">
     <router-view />
-  </div>
+    <ReDialog />
+  </el-config-provider>
 </template>
 
-<script>
-export default {
-  name: 'App',
-  mounted() {
-    // 声明: 百度统计统计相关下载使用量无别的用途
-    // 可自行删除
-    var _hmt = _hmt || []
-    ;(function() {
-      var hm = document.createElement('script')
-      hm.src = 'https://hm.baidu.com/hm.js?1d2d61263f13e4b288c8da19ad3ff56d'
-      var s = document.getElementsByTagName('script')[0]
-      s.parentNode.insertBefore(hm, s)
-    })()
-  }
-}
-</script>
+<script lang="ts">
+import { defineComponent } from "vue";
+import { ElConfigProvider } from "element-plus";
+import { ReDialog } from "@/components/ReDialog";
+import zhCn from "element-plus/es/locale/lang/zh-cn";
 
+export default defineComponent({
+  name: "app",
+  components: {
+    [ElConfigProvider.name]: ElConfigProvider,
+    ReDialog
+  },
+  computed: {
+    currentLocale() {
+      return zhCn;
+    }
+  }
+});
+</script>

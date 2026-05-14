@@ -1,11 +1,19 @@
 # Steering（工作流与工程规范）
 
-| 类型 | 入口 |
-|------|------|
-| 开发前定稿 | `pre-development-defaults.md` |
-| 双轨 Phase | `development-workflow.md` |
-| 门控 | `execution-protocol.md` |
-| 多平台预算 | `performance-budget.md`、`godot/quality-settings-spec.md` |
-| 资产 | `asset-pipeline.md` |
+三套独立规范体系，互不引用：
 
-知识库 **写什么、不写什么**：`../GAME-DEV-INDEX.md`。
+| 目录 | 领域 | 文件数 |
+|------|------|:------:|
+| `video/` | 短剧/视频制作 | 17 |
+| `godot/` | 游戏开发（Godot 引擎） | 17 |
+| `go/` | Go 软件系统开发 | 9 |
+
+## 通用文件（根目录）
+
+| 文件 | 说明 |
+|------|------|
+| `token-cost-best-practices.md` | Token 费用优化（人工参考，不作为 AI 规则加载） |
+
+## 索引入口
+
+所有规范的索引在 `.kiro/steering/core.md` 中统一管理。

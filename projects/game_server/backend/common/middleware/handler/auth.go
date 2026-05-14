@@ -29,6 +29,7 @@ func PayloadFunc(data interface{}) jwt.MapClaims {
 			jwt.NiceKey:      u.Username,
 			jwt.DataScopeKey: r.DataScope,
 			jwt.RoleNameKey:  r.RoleName,
+			"tenantId":       u.TenantId,
 		}
 	}
 	return jwt.MapClaims{}
