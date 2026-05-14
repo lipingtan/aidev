@@ -1,9 +1,0 @@
-Java Coding Standard Skill License
-
-Based on GDC Java Backend Development Specification V1.0
-
-This skill provides comprehensive Java backend coding standards and guidelines covering naming conventions, OOP principles, collection handling, concurrency, exception handling, unit testing, security requirements, and engineering structure.
-
-For internal use within GDC organization.
-
-Copyright 2021 GDC. All rights reserved.
