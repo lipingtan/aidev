@@ -6,6 +6,27 @@
 
 ---
 
+## 零、规范触发时机速查
+
+> 以下规范不是"写完再查"，而是在特定节点**主动触发**。
+
+| 规范 | 触发时机 | 触发条件 |
+|------|----------|----------|
+| `compliance/content-guidelines.md` | Phase 0 澄清 + 每次创建角色 + 每次写 NSFW 内容 | 项目含 NSFW 标记 |
+| `performance-budget.md` | Phase 0 定稿 + Phase 2 实测 + Phase 4 每新增关卡 + Phase 5 最终验证 | 始终 |
+| `experience-benchmarks.md` | 设计计划（定默认值）+ Phase 2 验收 + Phase 5 调优 | 涉及操作手感的功能 |
+| `patterns/README.md` | feature-development-flow 2.3 设计计划 | 每个新功能 |
+| `templates/README.md` | feature-development-flow 2.3 设计计划 | 每个新功能 |
+| `compliance/platform-policies.md` | Phase 5 发布前 | 始终 |
+
+**超标处理流程**（performance-budget）：
+1. 发现指标超出预算 → 记录到 `iterations/performance.md`
+2. 按 `iteration-workflow.md` 第三节"性能优化流程"执行
+3. 优化后重新对照预算表验证
+4. 仍超标 → 评估是否调整预算（需用户确认）或降级功能
+
+---
+
 ## 一、协议总览
 
 ```

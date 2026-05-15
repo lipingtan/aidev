@@ -19,25 +19,25 @@
 
 ### 核心功能（必选）
 
-| 优先级 | 功能模块 | 说明 | 推荐实现顺序 |
-|--------|----------|------|-------------|
-| P0 | 角色移动控制器 | 移动、跳跃、冲刺 | Phase 2 |
-| P0 | 基础战斗 | 轻攻击、重攻击、受击反馈 | Phase 2 |
-| P0 | 相机系统 | 第三人称跟随、锁定 | Phase 2 |
-| P0 | 属性系统 | HP/MP/攻防速等基础属性 | Phase 3 |
-| P0 | 伤害计算 | 攻防公式、元素克制 | Phase 3 |
-| P1 | 闪避/格挡 | 无敌帧、完美格挡 | Phase 3 |
-| P1 | 敌人 AI | 巡逻、追击、攻击模式 | Phase 3 |
-| P1 | 物品/装备 | 背包、装备栏、属性加成 | Phase 3 |
-| P1 | 存档系统 | 存/读档、自动存档 | Phase 3 |
-| P1 | HUD | 血条、体力条、快捷栏 | Phase 3 |
+| 优先级 | 功能模块 | 说明 | 推荐实现顺序 | 对应模板 |
+|--------|----------|------|-------------|----------|
+| P0 | 角色移动控制器 | 移动、跳跃、冲刺 | Phase 2 | `templates/action/character-controller.md` |
+| P0 | 基础战斗 | 轻攻击、重攻击、受击反馈 | Phase 2 | `templates/rpg/combat-system.md` |
+| P0 | 相机系统 | 第三人称跟随、锁定 | Phase 2 | `templates/action/camera-control.md` |
+| P0 | 属性系统 | HP/MP/攻防速等基础属性 | Phase 3 | `templates/rpg/attribute-system.md` |
+| P0 | 伤害计算 | 攻防公式、元素克制 | Phase 3 | `templates/rpg/combat-system.md` |
+| P1 | 闪避/格挡 | 无敌帧、完美格挡 | Phase 3 | `templates/action/dodge-block.md` |
+| P1 | 敌人 AI | 巡逻、追击、攻击模式 | Phase 3 | `patterns/README.md`（状态机/行为树） |
+| P1 | 物品/装备 | 背包、装备栏、属性加成 | Phase 3 | `templates/rpg/inventory-system.md` |
+| P1 | 存档系统 | 存/读档、自动存档 | Phase 3 | `templates/rpg/save-system.md` |
+| P1 | HUD | 血条、体力条、快捷栏 | Phase 3 | — |
 
 ### 扩展功能（按需选择）
 
-| 优先级 | 功能模块 | 说明 | 依赖 |
-|--------|----------|------|------|
-| P2 | 技能系统 | 主动/被动技能、冷却 | 属性系统 |
-| P2 | Buff/Debuff | 状态效果、持续伤害 | 属性系统 |
+| 优先级 | 功能模块 | 说明 | 依赖 | 对应模板 |
+|--------|----------|------|------|----------|
+| P2 | 技能系统 | 主动/被动技能、冷却 | 属性系统 | `templates/rpg/skill-system.md` |
+| P2 | Buff/Debuff | 状态效果、持续伤害 | 属性系统 | `templates/rpg/attribute-system.md`（Modifier） |
 | P2 | 连击系统 | 输入缓冲、连招表 | 基础战斗 |
 | P2 | 成长/升级 | 经验值、等级、属性成长 | 属性系统 |
 | P2 | 锁定系统 | 目标切换、锁定指示器 | 相机系统 |

@@ -160,26 +160,25 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 #### 引擎知识（Godot）
 
+> 以下知识已整合到 `godot-engine.md` 和 `code-generation.md` 中，不单独维护空文件。
+> 遵循 GAME-DEV-INDEX.md 原则：不重复官方文档，只收架构约束与 best practice。
+
 | 任务类型 | 必读文件 |
 |----------|----------|
-| 编写脚本代码 | `AIDOC/global-info/knowledge/steering/game/godot/engines/gdscript-guide.md` |
-| 选择/使用节点类型 | `AIDOC/global-info/knowledge/steering/game/godot/engines/node-types.md` |
-| 设计信号通信 | `AIDOC/global-info/knowledge/steering/game/godot/engines/signal-system.md` |
-| 组织场景树结构 | `AIDOC/global-info/knowledge/steering/game/godot/engines/scene-tree.md` |
-| 使用资源系统 | `AIDOC/global-info/knowledge/steering/game/godot/engines/resource-system.md` |
-| 配置物理/碰撞 | `AIDOC/global-info/knowledge/steering/game/godot/engines/physics-system.md` |
-| 渲染/着色器/视觉效果 | `AIDOC/global-info/knowledge/steering/game/godot/engines/rendering-pipeline.md` |
+| GDScript 编码规范 / 类型标注 / 文件组织 | `AIDOC/global-info/knowledge/steering/game/godot/code-generation.md` |
+| Godot 引擎约束（版本/渲染/物理/Autoload） | `AIDOC/global-info/knowledge/steering/game/godot/godot-engine.md` |
+| 信号使用规范 / 何时用信号 vs 直接调用 | `AIDOC/global-info/knowledge/steering/game/godot/code-generation.md` 第八节 |
+| 碰撞层分配 / 场景树组织 | `AIDOC/global-info/knowledge/steering/game/godot/code-generation.md` 第三、五节 |
+| Shader 注释规范 | `AIDOC/global-info/knowledge/steering/game/godot/code-generation.md` 第四节 |
+| 导出变量 / 异步操作 / 错误处理 | `AIDOC/global-info/knowledge/steering/game/godot/code-generation.md` 第六、七节 |
 
 #### 游戏设计模式
 
 | 任务类型 | 必读文件 |
 |----------|----------|
 | 实现状态机 | `AIDOC/global-info/knowledge/steering/game/patterns/state-machine.md` |
-| 实现组件模式 | `AIDOC/global-info/knowledge/steering/game/patterns/component-pattern.md` |
-| 实现观察者/事件系统 | `AIDOC/global-info/knowledge/steering/game/patterns/observer-pattern.md` |
-| 实现命令模式 | `AIDOC/global-info/knowledge/steering/game/patterns/command-pattern.md` |
-| 实现对象池 | `AIDOC/global-info/knowledge/steering/game/patterns/object-pool.md` |
-| 实现行为树 | `AIDOC/global-info/knowledge/steering/game/patterns/behavior-tree.md` |
+
+> 其余模式（观察者、命令、对象池、行为树、组件）在实际开发需要时按 state-machine.md 格式创建。
 
 #### RPG 系统模板
 

@@ -29,6 +29,48 @@ series-bootstrap-workflow 全部 Phase 通过
 
 ---
 
+## 二-A、规范触发时机速查
+
+> 以下规范不是"知道就行"，而是在特定步骤**主动查阅并落地到产出物中**。
+
+| 规范文件 | 触发步骤 | 落地位置 | 具体动作 |
+|----------|----------|----------|----------|
+| `pacing.md` | story_design | 正式章节表的"情绪强度/节奏"列 | 根据叙事功能分配时长和节奏类型 |
+| `pacing.md` | chapter_design | 片段表的时长列 | 每段时长符合叙事功能的建议范围 |
+| `cinematography.md` | shot_plan | 景别/运镜字段 | 根据场景类型查决策表选镜头组合 |
+| `character-consistency.md` | shot_design | 角色视觉字段 | 从 library/characters/ 逐词复制，不改写 |
+| `character-consistency.md` | shot_design | 元素绑定字段 | 确保同一角色所有镜头绑定同一 ID |
+| `style-keywords.md` | shot_design | Master Prompt 引用字段 | 从 style-bible 提取风格词（style-bible 本身引用此库） |
+| `negative-prompts.md` | shot_design → 提示词组装 | 负面提示词字段 | 基础集(6个) + 场景追加(2-3个) |
+| `tech.md` | shot_design | 各镜头设计表 | 确认镜头数/时长不超引擎限制 |
+| `tech.md` | 提示词组装 | output/ 最终格式 | 按引擎格式组装（KLING 自包含 / WAN 时间戳） |
+| `iteration-protocol.md` | 视频生成后 | iterations/ | 效果不满意时触发归因和迭代 |
+
+### 各步骤必读清单
+
+**story_plan/story_design**：
+- `pacing.md` → 确定每章的节奏类型和时长分配
+
+**chapter_plan/chapter_design**：
+- `pacing.md` → 每段时长符合叙事功能
+- `cinematography.md` → 跨段的景别交替规则
+
+**shot_plan**：
+- `cinematography.md` → 场景类型→镜头组合决策表
+- `pacing.md` → 单镜头时长分配指南
+
+**shot_design**：
+- `character-consistency.md` → 角色描述逐词复制 + 元素绑定
+- `style-keywords.md`（通过 style-bible）→ 风格锚定词
+- `negative-prompts.md` → 组装负面提示词
+- `tech.md` → 引擎限制（镜头数/时长/对话字数）
+
+**提示词组装**（shot_design → output/）：
+- `prompt-engineering.md` → 组装流程和格式
+- `tech.md` → 最终格式规范
+
+---
+
 ## 三、完整流程总览
 
 ```
