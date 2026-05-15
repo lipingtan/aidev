@@ -102,7 +102,7 @@ output/{系列名}/
 
 - Phase 0 确认的类型/题材（README.md）
 - 用户提供的素材（如有）
-- 对应的世界观模板（`global-info/templates/worldview/{类型}.md`）
+- 对应的世界观模板（`AIDOC/global-info/knowledge/steering/video/templates/worldview/{类型}.md`）
 
 ### 产出
 

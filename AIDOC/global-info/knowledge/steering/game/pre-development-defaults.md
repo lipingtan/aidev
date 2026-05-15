@@ -1,4 +1,4 @@
-# 开发前定稿（单一入口）
+﻿# 开发前定稿（单一入口）
 
 > 新开工程 **写代码前** 对齐本文 + 复制 `performance-budget.md` 到项目 `design/`，并在 Godot 工程中注册 `QualitySettings`。不要求你再「猜」档位数和路径规则。
 
@@ -8,7 +8,7 @@
 2. **`godot/quality-settings-spec.md`** — Autoload 顺序、API、`project.godot` 渲染方法切换规则。
 3. **`asset-pipeline.md`** 第五节 — 分目录 / PCK / 导入变体如何接 `tier_*`。
 4. **`compliance/content-guidelines.md`** — 含 NSFW 或 AI 生成资产时必读。
-5. **`AIDOC/global-info/knowledge/GAME-DEV-INDEX.md`** — 知识库**收什么**（架构约束 / best practice，不抄官方手册）。
+5. **`AIDOC/global-info/knowledge/steering/game/GAME-DEV-INDEX.md`** — 知识库**收什么**（架构约束 / best practice，不抄官方手册）。
 
 ## 项目仓库最小产出（Phase 0 结束前）
 

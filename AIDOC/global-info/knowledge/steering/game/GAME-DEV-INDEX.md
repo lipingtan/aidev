@@ -1,4 +1,4 @@
-# 游戏开发知识库 · 索引与写作原则
+﻿# 游戏开发知识库 · 索引与写作原则
 
 ## 写作原则（必读）
 
@@ -8,7 +8,7 @@
 
 | 类型 | 说明 | 典型位置 |
 |------|------|----------|
-| **架构约束** | 与本工作台绑定的边界：Autoload 顺序、ECS+DLC、`QualitySettings`、纹理 `tier_*`、碰撞层编号、单文件行数、禁止旁路读 Base 伤害等 | `steering/godot/`、`performance-budget.md`、`godot-engine.md` |
+| **架构约束** | 与本工作台绑定的边界：Autoload 顺序、ECS+DLC、`QualitySettings`、纹理 `tier_*`、碰撞层编号、单文件行数、禁止旁路读 Base 伤害等 | `steering/game/`、`performance-budget.md`、`godot-engine.md` |
 | **Best practice** | 在 Godot 上仍算「选型」的东西：何时用 FSM+AnimationTree、伤害单边入口、存档不序列化 Node 路径等 | `templates/*`、`patterns/state-machine.md`（短文） |
 | **反模式 / 陷阱** | 「看似能用但会破坏管线」的清单 | 各 `templates/*` 末节、`steering/pitfalls.md`（若维护） |
 
@@ -34,7 +34,7 @@
 | `compliance/platform-policies.md` | Steam / DLsite / itch.io 等上架与分区常见要求（**非法律意见**） |
 | `compliance/multi-version-strategy.md` | All-Ages / R-18、Base + Adult DLC、导出与打包矩阵 |
 
-与 `.cursor/rules/core.mdc`「合规与发行」表一致；`steering/*.md` 里写的 `compliance/xxx.md` 均相对于本目录 **`AIDOC/global-info/knowledge/`**。
+与 `.cursor/rules/core.mdc`「合规与发行」表一致；`steering/game/*.md` 里写的 `compliance/xxx.md` 均相对于本目录 **`AIDOC/global-info/knowledge/steering/game/`**。
 
 ## 占位文件策略
 

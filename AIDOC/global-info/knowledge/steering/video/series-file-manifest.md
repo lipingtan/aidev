@@ -10,7 +10,7 @@
 
 | # | 文件 | 生成步骤 | 对应规范 | 输入依赖 | 说明 |
 |---|------|----------|----------|----------|------|
-| F1 | `worldview/worldview.md` | Phase 1 | `series-bootstrap-workflow.md` Phase 1 节 | README(类型) + `global-info/templates/worldview/{类型}.md` | 从模板继承并定制，包含政治/地理/历史/经济/信仰/种族/魔法/核心冲突 |
+| F1 | `worldview/worldview.md` | Phase 1 | `series-bootstrap-workflow.md` Phase 1 节 | README(类型) + `AIDOC/global-info/knowledge/steering/video/templates/worldview/{类型}.md` | 从模板继承并定制，包含政治/地理/历史/经济/信仰/种族/魔法/核心冲突 |
 | F2 | `worldview/timeline.md` | Phase 2 | `series-bootstrap-workflow.md` Phase 2 节 | F1(世界历史) + README(集数/时间跨度) | 故事内时间轴，按月/阶段标注主要事件 |
 | F3 | `scripts/大纲.md` | Phase 2 | `series-bootstrap-workflow.md` Phase 2 节 | F1(世界规则) + README(集数) | 整体结构+每幕概述+情绪弧线+伏笔规划 |
 | F4 | `scripts/故事细化.md` | Phase 2 | `series-bootstrap-workflow.md` Phase 2 节 | F1 + F3(大纲) | 每幕每章10个节点+心理剖析+关键矛盾+伏笔标注 |

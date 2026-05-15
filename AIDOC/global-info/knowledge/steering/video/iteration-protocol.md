@@ -135,7 +135,7 @@
 
 > 在迭代中发现的引擎能力边界，记录于此避免重复踩坑。
 
-存放位置：`AIDOC/global-info/knowledge/engines/{引擎名}/limitations.md`
+存放位置：`AIDOC/global-info/knowledge/steering/video/engines/{引擎名}/limitations.md`
 
 记录格式：
 ```markdown

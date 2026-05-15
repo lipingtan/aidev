@@ -1,4 +1,4 @@
-# 迭代优化规范
+﻿# 迭代优化规范
 
 ## 概述
 
@@ -387,7 +387,7 @@
 ### 7.2 案例库结构
 
 ```
-AIDOC/global-info/knowledge/cases/
+AIDOC/global-info/knowledge/steering/game/cases/
 ├── success/                    # 成功案例
 │   ├── performance/            # 性能优化成功案例
 │   ├── architecture/           # 架构设计成功案例
