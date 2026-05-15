@@ -8,29 +8,24 @@
 /
 ├── AIDOC/                      ← 📋 所有过程文档（策划、设计、确认、参考图）
 │   ├── global-info/            ← 全局信息（跨系列共享）
-│   │   ├── universe/           #   世界观、时间线
-│   │   ├── characters/         #   角色原型
-│   │   ├── scripts/            #   原始剧本素材
-│   │   └── knowledge/          #   引擎技巧、有效模式、踩坑记录
+│   │   └── knowledge/          #   制作知识库 + 规范
+│   │       └── steering/video/ #   视频制作规范
 │   │
-│   └── {系列名}/               ← 按系列组织
-│       ├── library/            #   系列资产（风格、角色、场景、元素注册表）
-│       ├── references/         #   系列参考图（角色图、场景图、风格图）
-│       └── {NNN}-{单集名}/     #   每集的过程文档（编号从001开始）
-│           ├── story_plan.md   #   故事策划 plan
-│           ├── synopsis.md     #   大纲
-│           ├── pacing-map.md   #   节奏图
-│           └── {章节名}/       #   按章节组织
-│               ├── chapter_plan.md
-│               └── shots/      #   逐段 CR
-│                   └── ep-{NNN}/
+│   └── series/                 ← 所有系列的容器
+│       └── {系列名}/           ← 按系列组织
+│           ├── foundation/     #   策划层（世界观、角色、剧本）
+│           ├── production/     #   制作层（library + 分集目录）
+│           └── README.md
 │
 ├── output/                     ← 🎬 所有最终提示词（干净、即用）
 │   └── {系列名}/               #   按系列组织
+│       ├── assets/             #   资产生成提示词（参考图用）
 │       ├── kling/              #   KLING AI（默认）
 │       │   └── {NNN}-{单集}/{章节}/ep-{NNN}.md
 │       └── wan25/              #   WAN 2.5（按需）
-│           └── {NNN}-{单集}/{章节}/ep-{NNN}.md
+│
+├── output_video/               ← 生成的视频文件（git ignored）
+│   └── {系列名}/
 │
 ├── .kiro/                      ← ⚙️ 工作流配置
 └── .gitignore
@@ -45,13 +40,14 @@
 
 ## 全局约定
 
-- 过程文档全部在 `AIDOC/` 下，结果文档全部在 `output/` 下
-- 项目按 `AIDOC/{系列名}/{NNN}-{单集名}/` 组织，单集编号从 001 开始
+- 过程文档全部在 `AIDOC/series/` 下，结果文档全部在 `output/` 下
+- 项目按 `AIDOC/series/{系列名}/production/{NNN}-{单集名}/` 组织，单集编号从 001 开始
 - `output/` 目录结构：`output/{系列}/{引擎}/{NNN}-{单集}/{章节}/ep-{NNN}.md`
-- 每个 5~15 秒片段是一个独立 CR，有完整的 plan → 确认 → design → 确认 → 生成提示词流程
+- 每个 5~15 秒片段有完整的 plan → 确认 → design → 确认 → 生成提示词流程
 - 资产查找优先级：单集 > 系列 library/ > 全局 global-info/
 - 系列名和单集名使用 kebab-case 格式
 - 默认视频引擎为 KLING AI，**仅生成 KLING 提示词**，WAN 2.5 需用户明确要求时才生成
 - 文档使用中文，提示词内容使用英文
-- 参考图片放在 `AIDOC/{系列}/references/` 下
-- KLING 元素绑定标识记录在 `AIDOC/{系列}/library/elements-registry.md`
+- 参考图片放在 `AIDOC/series/{系列名}/production/references/` 下
+- KLING 元素绑定标识记录在 `AIDOC/series/{系列名}/production/library/elements-registry.md`
+- 有元素标识的用 `@标识` 引用，无标识的用文字描述（见 `element-readiness.md`）

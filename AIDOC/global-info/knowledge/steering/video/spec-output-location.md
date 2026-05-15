@@ -14,12 +14,14 @@
 ## 过程文档路径
 
 ```
-AIDOC/{系列}/{NNN}-{单集名}/
+AIDOC/series/{系列名}/production/{NNN}-{单集名}/
 ├── story_plan.md
+├── story_design.md
 ├── synopsis.md
 ├── pacing-map.md
 └── {章节名}/
     ├── chapter_plan.md
+    ├── chapter_design.md
     └── shots/ep-{NNN}/
         ├── shot_plan.md
         ├── shot_design.md

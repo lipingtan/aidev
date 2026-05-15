@@ -35,6 +35,7 @@ series-bootstrap-workflow 全部 Phase 通过
 
 | 规范文件 | 触发步骤 | 落地位置 | 具体动作 |
 |----------|----------|----------|----------|
+| `element-readiness.md` | chapter_design 确认后 | 就绪报告（输出给用户） | 检查本章所有元素是否有平台标识，未就绪的提示用户创建 |
 | `pacing.md` | story_design | 正式章节表的"情绪强度/节奏"列 | 根据叙事功能分配时长和节奏类型 |
 | `pacing.md` | chapter_design | 片段表的时长列 | 每段时长符合叙事功能的建议范围 |
 | `cinematography.md` | shot_plan | 景别/运镜字段 | 根据场景类型查决策表选镜头组合 |
@@ -429,7 +430,8 @@ AIDOC/series/{系列名}/production/{NNN}-{单集名}/{章节名}/
 ### 5.6 门控
 
 - chapter_plan 中的澄清问题全部回答 → 生成 chapter_design
-- 用户确认 chapter_design → 逐镜头进入 shot_plan
+- 用户确认 chapter_design → **执行元素就绪检查**（见 `element-readiness.md`）
+- 元素就绪检查通过 → 逐镜头进入 shot_plan
 
 ---
 

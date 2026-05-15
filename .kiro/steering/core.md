@@ -123,6 +123,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 叙事质量审查 | `AIDOC/global-info/knowledge/steering/video/narrative-quality-review.md` |
 | 启动全新短剧系列 | `AIDOC/global-info/knowledge/steering/video/series-bootstrap-workflow.md` |
 | **镜头制作工作流（逐镜头制作）** | `AIDOC/global-info/knowledge/steering/video/shot-production-workflow.md` |
+| **元素就绪检查（制作前置）** | `AIDOC/global-info/knowledge/steering/video/element-readiness.md` |
 | **视频迭代优化协议** | `AIDOC/global-info/knowledge/steering/video/iteration-protocol.md` |
 | 高潮设计哲学 | `AIDOC/global-info/knowledge/steering/video/climax-design-philosophy.md` |
 | 不可预测性设计 | `AIDOC/global-info/knowledge/steering/video/unpredictability-design.md` |

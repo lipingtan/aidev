@@ -42,35 +42,27 @@ KLING 和 WAN 都推荐先建立环境上下文，再描述主体和动作。这
 
 ## KLING AI 提示词编写指南
 
-### Master Prompt 模板
+> **重要**：KLING 多镜头模式中，每个镜头各自一个完整提示词，没有独立的 Master Prompt。
+> 下方的"Master Prompt"概念指的是**每个镜头提示词中都要包含的风格/场景/角色基础描述**，
+> 不是一个单独的输入框。
+
+### 每镜头自包含提示词模板
 
 ```
-[风格锚定], [环境描述], [角色A: 2~3个视觉特征], [角色B: 2~3个视觉特征（如有）]. [情绪/氛围]. [色调].
-
-Negative prompt: [负面提示词]
+[风格锚定], [环境描述], [角色视觉特征（@元素ID 或文字）]. 
+[景别 + 运镜]: [主体动作描述]. [光线]. [情绪/氛围].
+Negative: [负面提示词]
+(Duration: Xs)
 ```
 
 **示例：**
 ```
 Cinematic 35mm film, warm color grading. A dimly lit vintage café at night, 
-rain streaking down the windows. A woman in her late 20s with short black hair, 
-wearing an oversized cream knit sweater, sits alone at a corner table. 
-Melancholic, intimate atmosphere. Palette: warm amber, deep brown, soft cream.
-
-Negative prompt: blurry, low quality, watermark, jittery eyes, warping fingers, 
-character drift, frozen lips.
-```
-
-### Shot Prompt 模板
-
-```
-[景别 + 运镜]: [主体动作描述]. [环境细节/光线变化]. [对话（如有）].
-```
-
-**示例：**
-```
+rain streaking down the windows. @cafe_woman_body @cream_sweater sits alone 
+at a corner table.
 Close-up, slow push in: She traces the rim of her coffee cup with one finger, 
 steam rising in the warm lamplight. Her eyes are unfocused, lost in thought.
+Negative: blur, distort, low quality, warping fingers, jittery eyes, character drift between shots
 (Duration: 4 seconds)
 ```
 
@@ -170,33 +162,44 @@ a single tear forming but not falling.
 
 ### KLING AI 组装步骤
 
+> KLING 多镜头模式：每个镜头一个完整自包含提示词，无独立 Master Prompt。
+
 ```
-步骤 1：组装 Master Prompt
-    ├── 从 style-bible.md 提取风格锚定词
-    ├── 从 shot_design 提取场景视觉描述
-    ├── 从 shot_design 提取角色视觉关键词
-    ├── 从 shot_design 提取情绪氛围
-    └── 组合为：[风格], [场景], [角色A描述], [角色B描述]. [氛围]. [色调].
+对于 chapter_design 中的每个镜头：
 
-步骤 2：组装 Shot Prompt
-    ├── 从 shot_design 提取景别+运镜
-    ├── 从 shot_design 提取动作描述
-    ├── 从 shot_design 提取光线设计
-    ├── 从 shot_design 提取对话（如有）
-    └── 组合为：[景别, 运镜]: [动作]. [光线]. [对话].
+步骤 1：组装镜头提示词
+    ├── 风格锚定词（从 style-bible.md）
+    ├── 场景描述（从 shot_design 场景视觉）
+    ├── 角色描述（@元素ID 或文字，从 shot_design 元素绑定）
+    ├── 景别+运镜+动作（从 shot_design 各镜头设计表）
+    ├── 光线+氛围（从 shot_design）
+    ├── 负面提示词（基础集 + 场景追加）
+    └── Duration
 
-步骤 3：组装 Negative Prompt
-    ├── 全局负面提示词（从 negative-prompts.md）
-    ├── 场景特定负面（从 shot_design）
-    └── 组合为：Negative prompt: [全局], [场景特定]
-
-步骤 4：附加元数据
-    ├── Duration: {X} seconds
-    ├── 元素绑定 ID（从 shot_design）
+步骤 2：附加元数据
+    ├── 元素绑定 ID 列表
     └── 对话音频指令（如有）
 
-步骤 5：写入 output/
+步骤 3：写入 output/
     └── output/{系列}/kling/{NNN}-{单集}/{章节}/ep-{NNN}.md
+```
+
+### 最终提示词文件格式（KLING 多镜头）
+
+```markdown
+Shot 1 (Duration: Xs):
+{风格锚定}, {场景描述}. {角色: @ID 或文字描述}.
+{景别, 运镜}: {动作描述}. {光线}. {对话（如有）}.
+Negative: {负面提示词}
+Elements: {@id1, @id2, ...}
+
+Shot 2 (Duration: Ys):
+{风格锚定}, {场景描述}. {角色: @ID 或文字描述}.
+{景别, 运镜}: {动作描述}. {光线}.
+Negative: {负面提示词}
+Elements: {@id1, @id2, ...}
+
+...
 ```
 
 ### WAN 2.5 组装步骤
@@ -219,19 +222,7 @@ a single tear forming but not falling.
 
 ### 最终提示词文件格式（KLING）
 
-```markdown
-<!-- Master Prompt -->
-{风格锚定}, {场景描述}, {角色描述}. {氛围}. {色调}.
-
-Negative prompt: {负面提示词}
-
-<!-- Shot -->
-{景别, 运镜}: {动作描述}. {光线}. {对话（如有）}.
-
-Duration: {X} seconds
-Elements: {元素绑定ID列表}
-Audio: {对话音频指令}
-```
+> 见上方"KLING AI 组装步骤"中的格式。每个镜头自包含所有信息。
 
 ### 质量检查（写入前）
 
