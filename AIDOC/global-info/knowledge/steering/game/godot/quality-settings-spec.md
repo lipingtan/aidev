@@ -66,11 +66,6 @@ func apply_renderer_and_quality_settings() -> void:
 
 任一步 `ResourceLoader.exists` 为真即用；全否在 DEV 下 `push_warning`。
 
-## 6. 与 DLC / NSFW
-
-- **高清包**仅增加 `tier_desktop` 下文件或独立 PCK；**不得**要求移动端基座加载 `tier_desktop`。
-- `DlcManager` 解析完挂载路径后，若涉及纹理，应仍通过 `QualitySettings.resolve_texture` 或约定「DLC 内也分 `tier_*`」。
-
 ## 7. 验证清单（Phase 2）
 
 - [ ] PC 编辑器 F5：`current_tier` 为 `desktop_high`（无参数时）。

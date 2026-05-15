@@ -228,7 +228,7 @@ Autoload 注册名**不能**与脚本的 `class_name` 相同，否则 Godot 会�
 - 循环依赖
 - 深层继承（>3 层）
 - 直接修改其他节点的私有变量
-- **业务代码中直接根据 OS 类型拼接 NSFW / 高清纹理路径**（须经过 QualitySettings）
+- **业务代码中直接根据 OS 类型拼接高清纹理路径**（须经过 QualitySettings）
 
 ---
 

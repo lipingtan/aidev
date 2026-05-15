@@ -10,7 +10,6 @@
 |----|------|
 | save_version | int 或 semver；加载走 `SaveMigrator` |
 | 分块 | player / world / meta，便于调试与部分重置 |
-| NSFW | Gallery 解锁可独立文件（见 `cg-gallery.md`） |
 
 ## 验收
 

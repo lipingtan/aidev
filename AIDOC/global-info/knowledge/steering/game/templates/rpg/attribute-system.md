@@ -17,7 +17,6 @@
 ## 与工程对齐
 
 - 与 `addons/gd_ecs`：`BaseStatsComponent` / `FinalStatsComponent` / `StatModifier` 资源同形态即可。
-- **NSFW**：好感、堕落等走 `templates/nsfw/relationship-stats.md`，勿与 attack/defense 混用同一表，除非剧情技能明确需要。
 
 ## 验收
 

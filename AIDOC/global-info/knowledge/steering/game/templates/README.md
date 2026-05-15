@@ -22,9 +22,6 @@
 | 闪避/格挡 | `action/dodge-block.md` | 设计计划阶段 |
 | 锁定系统 | `action/lock-on.md` | 设计计划阶段 |
 | 相机控制 | `action/camera-control.md` | 设计计划阶段 |
-| 关系数值（好感/堕落） | `nsfw/relationship-stats.md` | 设计计划阶段 |
-| H-Scene 系统 | `nsfw/h-scene-system.md` | 设计计划阶段 |
-| CG Gallery | `nsfw/cg-gallery.md` | 设计计划阶段 |
 
 ---
 

@@ -24,17 +24,18 @@
 |------|------|
 | `templates/rpg/*.md` | 模块职责与工程对齐，**不是** GDScript 百科 |
 | `templates/action/*.md` | 同上 |
-| `templates/nsfw/*.md` | NSFW 管线 + 合规挂钩 |
 
-## 合规与发行（`compliance/`）
+## 合规与发行（`nsfw/`）
 
 | 路径 | 用途 |
 |------|------|
-| `compliance/content-guidelines.md` | 内容红线、角色档案合规元数据、AI 生成前检查 |
-| `compliance/platform-policies.md` | Steam / DLsite / itch.io 等上架与分区常见要求（**非法律意见**） |
-| `compliance/multi-version-strategy.md` | All-Ages / R-18、Base + Adult DLC、导出与打包矩阵 |
+| `nsfw/content-guidelines.md` | 内容红线、角色档案合规元数据、AI 生成前检查 |
+| `nsfw/platform-policies.md` | Steam / DLsite / itch.io 等上架与分区常见要求（**非法律意见**） |
+| `nsfw/multi-version-strategy.md` | All-Ages / R-18、Base + Adult DLC、导出与打包矩阵 |
+| `nsfw/development-workflow.md` | NSFW 项目工作流补充（Phase 0~5 特有产出物与验收） |
+| `nsfw/execution-protocol.md` | NSFW 项目执行协议补充（POST-CHECK 与合规清单） |
 
-与 `.cursor/rules/core.mdc`「合规与发行」表一致；`steering/game/*.md` 里写的 `compliance/xxx.md` 均相对于本目录 **`AIDOC/global-info/knowledge/steering/game/`**。
+与 `.cursor/rules/core.mdc`「合规与发行」表一致；`steering/game/*.md` 里写的 `nsfw/xxx.md` 均相对于本目录 **`AIDOC/global-info/knowledge/steering/game/`**。
 
 ## 占位文件策略
 

@@ -12,10 +12,6 @@
 | 条件 | 统一 `ConditionEvaluator`；与任务 DSL 共用更佳 |
 | 本地化 | 文本只存 key，脚本不硬编码展示文案 |
 
-## 与 NSFW
-
-敏感分支受 `content-guidelines.md` 与玩家内容开关约束；H-Scene 准入条件见 `h-scene-system.md`。
-
 ## 验收
 
 - [ ] 跳过/快进不破坏任务与标记变量

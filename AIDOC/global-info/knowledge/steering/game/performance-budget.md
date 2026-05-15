@@ -75,10 +75,7 @@
 | `glow_enabled` | bool | true | false |
 | `msaa_3d` | int | 2（2×） | 0 |
 | `max_skinned_actors` | int | 20 | 8 |
-| `hscene_lod_skip` | int | 0 | 1 |
 | `particle_multiplier` | float | 1.0 | 0.5 |
-
-`hscene_lod_skip`：NSFW 场景简化等级（与 H-Scene 系统约定）。
 
 ## 6. 导出预设命名（建议）
 

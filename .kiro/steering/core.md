@@ -1,14 +1,22 @@
-﻿# AI 游戏开发工作台 — 核心规范
+﻿# AI 辅助项目开发工作台 — 核心规范
 
 ## 项目身份
 
-本工作区是 **AI 辅助游戏开发工作台**，面向 ARPG + 动作混合类型游戏（3D 为主、2D 为辅），支持单人 + AI 深度协作模式。
+本工作区是 **AI 辅助项目开发工作台**，支持多类型项目的 AI 深度协作开发。
+
+当前支持的项目类型：
+
+| 类型 | 说明 | 规范体系 |
+|------|------|----------|
+| **游戏开发** | ARPG + 动作混合类型（3D 为主、2D 为辅），Godot 引擎 | `steering/game/` |
+| **AI 短剧/视频制作** | 从故事策划到视频引擎提示词的全流程 | `steering/video/` |
+| **软件系统开发** | Go 后端服务（Web API、管理端等） | `steering/software/` |
 
 核心产出物：
-- 可运行的游戏工程代码
-- 游戏设计文档（GDD、世界观、角色、关卡策划）
-- 叙事文档（剧情大纲、任务设计、对话脚本）
-- 技术架构文档（ECS 框架、DLC 系统、数值系统）
+- 可运行的工程代码（游戏/后端/前端）
+- 设计文档（GDD、架构、需求、API 设计）
+- 叙事/策划文档（世界观、剧本、分镜、角色设定）
+- 结构化提示词（AI 视频生成用）
 
 ## 语言规范
 
@@ -31,21 +39,21 @@
 
 | 目录 | 职责 |
 |------|------|
-| `AIDOC/global-info/` | 全局知识库、规范文件（所有领域共用） |
-| `AIDOC/series/` | 短剧相关规范与过程文档（策划、剧本、分镜、制作记录） |
-| `AIDOC/game_doc/` | 游戏开发过程文档（GDD、世界观、角色、关卡、叙事、制作进度） |
-| `AIDOC/project_doc/` | Go 软件系统过程文档（需求、设计、任务、变更日志） |
-| `projects/` | 所有工程代码（按解决方案分组，每个解决方案下含游戏引擎工程 + 配套服务端等） |
-| `assets_source/` | 外部资产源文件（素材包原始文件、AI 生成原图） |
-| `.kiro/` | 工作流配置（steering 规范、specs 文件） |
+| `AIDOC/global-info/` | 全局知识库与规范（`knowledge/steering/` 下按领域分类） |
+| `AIDOC/series/` | 短剧/视频项目的过程文档（策划、剧本、分镜、制作记录） |
+| `AIDOC/game_doc/` | 游戏项目的过程文档（GDD、世界观、角色、关卡、叙事） |
+| `AIDOC/project_doc/` | 软件项目的过程文档（需求、设计、任务、变更日志） |
+| `projects/` | 所有工程代码（按解决方案分组） |
+| `assets_source/` | 外部资产源文件（素材包、AI 生成原图） |
+| `.kiro/` | 工作流配置（steering 规范） |
 
 **目录使用规则：**
-- 短剧制作的所有过程文档 → `AIDOC/series/{系列名}/`
-- 游戏开发的所有过程文档 → `AIDOC/game_doc/{游戏名}/`
-- Go 软件系统的所有过程文档 → `AIDOC/project_doc/{项目名}/`
+- 短剧/视频过程文档 → `AIDOC/series/{系列名}/`
+- 游戏过程文档 → `AIDOC/game_doc/{游戏名}/`
+- 软件系统过程文档 → `AIDOC/project_doc/{项目名}/`
 - 所有工程代码 → `projects/{解决方案名}/{工程名}/`
-- 解决方案命名：以创建工程时所属的项目名命名（英文 snake_case）
-- 同一解决方案下可包含多个相关工程（如游戏工程 + 管理端 + DLC 包）
+- 解决方案命名：以项目名命名（英文 snake_case）
+- 同一解决方案下可包含多个相关工程（游戏 + 管理端 + DLC 包等）
 
 **解决方案层示例：**
 ```
@@ -95,13 +103,13 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 ## 知识库索引
 
-执行任务前，根据任务类型读取对应的规范文件：
+执行任务前，根据任务类型和项目领域读取对应的规范文件。
 
-**工作流导航（不确定从哪开始时读此文件）**：`AIDOC/global-info/knowledge/steering/workflow-navigator.md`
+**不确定从哪开始？** → 读 `AIDOC/global-info/knowledge/steering/workflow-navigator.md`
 
 ---
 
-### 短剧/视频开发规范（独立体系）
+### 一、短剧/视频制作规范（`steering/video/`）
 
 | 任务类型 | 必读文件 |
 |----------|----------|
@@ -127,9 +135,9 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 ---
 
-### 游戏开发规范（独立体系，Godot 引擎）
+### 二、游戏开发规范（`steering/game/` + `steering/game/godot/`）
 
-标注 `[common]` 的为通用游戏开发规范，适用于任何引擎；其余为 Godot 特定。
+通用规范适用于任何引擎；`godot/` 下为 Godot 特定。
 
 #### 通用游戏规范 [common]
 
@@ -192,13 +200,13 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 设计/实现存档系统 | `AIDOC/global-info/knowledge/steering/game/templates/rpg/save-system.md` |
 | 设计/实现战斗系统 | `AIDOC/global-info/knowledge/steering/game/templates/rpg/combat-system.md` |
 
-#### NSFW 系统模板
+#### NSFW 规范（独立目录，非 NSFW 项目忽略）
+
+> 详见 `AIDOC/global-info/knowledge/steering/game/nsfw/README.md`
 
 | 任务类型 | 必读文件 |
 |----------|----------|
-| 设计/实现关系数值系统（好感/堕落/羞耻等） | `AIDOC/global-info/knowledge/steering/game/templates/nsfw/relationship-stats.md` |
-| 设计/实现 H-Scene 系统 | `AIDOC/global-info/knowledge/steering/game/templates/nsfw/h-scene-system.md` |
-| 设计/实现 CG Gallery / 回想系统 | `AIDOC/global-info/knowledge/steering/game/templates/nsfw/cg-gallery.md` |
+| NSFW 项目完整规范索引 | `AIDOC/global-info/knowledge/steering/game/nsfw/README.md` |
 
 #### 动作系统模板
 
@@ -210,14 +218,6 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 实现闪避/格挡 | `AIDOC/global-info/knowledge/steering/game/templates/action/dodge-block.md` |
 | 实现锁定系统 | `AIDOC/global-info/knowledge/steering/game/templates/action/lock-on.md` |
 | 实现相机控制 | `AIDOC/global-info/knowledge/steering/game/templates/action/camera-control.md` |
-
-#### 合规与发行
-
-| 任务类型 | 必读文件 |
-|----------|----------|
-| 确认内容红线 / AI 生成 NSFW 内容前 | `AIDOC/global-info/knowledge/steering/game/compliance/content-guidelines.md` |
-| 平台上架（Steam/DLsite/itch.io）前 | `AIDOC/global-info/knowledge/steering/game/compliance/platform-policies.md` |
-| 规划 All-Ages vs R-18 双版本 / 打包配置 | `AIDOC/global-info/knowledge/steering/game/compliance/multi-version-strategy.md` |
 
 #### 项目级资产
 
@@ -233,9 +233,9 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 查看对话脚本 | `AIDOC/game_doc/{游戏名}/narrative/dialogues/` |
 | 查看制作进度 | `AIDOC/game_doc/{游戏名}/tracker.md` |
 
-### Go 软件项目规范（独立体系）
+### 三、软件系统开发规范（`steering/software/go/`）
 
-适用于 `projects/` 下的 Go 后端软件项目（如 game_server）。与游戏开发规范、短剧规范完全独立，互不引用。
+适用于 Go 后端软件项目。后续可扩展 Java/Python 等语言。
 
 #### Go 开发规范
 

@@ -9,5 +9,3 @@
 | `quest-system.md` | 状态机、目标、奖励、存档字段 |
 | `save-system.md` | 版本、迁移、排除运行时缓存 |
 | `combat-system.md` | 伤害事件、Buff、与动作模块边界 |
-
-与 **`templates/nsfw/relationship-stats.md`** 并列时：关系类数值走 NSFW 模板，战斗属性走本目录。
