@@ -1,6 +1,51 @@
 # 参考图生成策略指南
 
-> 本文件定义如何为 elements-registry 中的注册条目生成 KLING 平台所需的参考图。
+> 本文件定义如何为 elements-registry 中的注册条目生成 KLING 平台所需的参考图提示词。
+
+---
+
+## 零、触发时机与输出位置
+
+### 触发时机
+
+**元素就绪检查时**（chapter_design 确认后、shot_plan 开始前）自动触发。
+具体流程见 `element-readiness.md` 步骤 3。
+
+### 输出位置
+
+所有参考图提示词输出到 `output/{系列}/assets/`，按类型分子目录：
+
+```
+output/{系列}/assets/
+├── characters/     # 角色素体（{标识}.md）+ 服装（{标识}.md）
+├── scenes/         # 场景（{标识}.md）
+├── props/          # 武器/道具（{标识}.md）
+├── fx/             # 魔法效果（{标识}.md）
+└── enemies/        # 敌方单位（{标识}.md）
+```
+
+文件命名与 elements-registry.md 中的标识完全对应：
+- `alan_body` → `output/{系列}/assets/characters/alan_body.md`
+- `alan_sword` → `output/{系列}/assets/props/alan_sword.md`
+- `royal_city_night` → `output/{系列}/assets/scenes/royal_city_night.md`
+
+### 文件格式（每个 .md 文件）
+
+```markdown
+# {标识}
+
+{提示词正文，纯英文，可直接复制粘贴到 KLING 图片生成}
+
+Negative: {负面提示词}
+```
+
+> 文件内容只有提示词，无注释无说明，可直接复制使用。
+
+### 生成规则
+
+- 已存在的文件不重复生成
+- 优先级为"不需要"的元素（单次出现的背景元素）不生成提示词文件
+- 生成后在就绪报告中列出新生成的文件路径
 
 ---
 
