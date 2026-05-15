@@ -43,8 +43,10 @@ series-bootstrap-workflow 全部 Phase 通过
 | `character-consistency.md` | shot_design | 元素绑定字段 | 确保同一角色所有镜头绑定同一 ID |
 | `style-keywords.md` | shot_design | Master Prompt 引用字段 | 从 style-bible 提取风格词（style-bible 本身引用此库） |
 | `negative-prompts.md` | shot_design → 提示词组装 | 负面提示词字段 | 基础集(6个) + 场景追加(2-3个) |
-| `tech.md` | shot_design | 各镜头设计表 | 确认镜头数/时长不超引擎限制 |
+| `tech.md` | shot_design | 各镜头设计表 | 确认镜头数/时长不超引擎限制；选择生成参数 |
 | `tech.md` | 提示词组装 | output/ 最终格式 | 按引擎格式组装（KLING 自包含 / WAN 时间戳） |
+| `post-production.md` | chapter_design | 转场表 | 标注每对镜头的衔接方式 |
+| `post-production.md` | shot_plan | 衔接字段 | 指定与前后镜头的具体衔接手法 |
 | `iteration-protocol.md` | 视频生成后 | iterations/ | 效果不满意时触发归因和迭代 |
 
 ### 各步骤必读清单
@@ -55,16 +57,18 @@ series-bootstrap-workflow 全部 Phase 通过
 **chapter_plan/chapter_design**：
 - `pacing.md` → 每段时长符合叙事功能
 - `cinematography.md` → 跨段的景别交替规则
+- `post-production.md` → 转场表中标注衔接方式
 
 **shot_plan**：
 - `cinematography.md` → 场景类型→镜头组合决策表
 - `pacing.md` → 单镜头时长分配指南
+- `post-production.md` → 与前后镜头的衔接手法
 
 **shot_design**：
 - `character-consistency.md` → 角色描述逐词复制 + 元素绑定
 - `style-keywords.md`（通过 style-bible）→ 风格锚定词
 - `negative-prompts.md` → 组装负面提示词
-- `tech.md` → 引擎限制（镜头数/时长/对话字数）
+- `tech.md` → 引擎限制（镜头数/时长/对话字数）+ 生成参数选择
 
 **提示词组装**（shot_design → output/）：
 - `prompt-engineering.md` → 组装流程和格式
