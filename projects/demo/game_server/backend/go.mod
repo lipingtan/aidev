@@ -27,6 +27,7 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/unrolled/secure v1.17.0
 	golang.org/x/crypto v0.37.0
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/driver/sqlite v1.5.7
@@ -130,7 +131,6 @@ require (
 	golang.org/x/tools v0.32.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/plugin/dbresolver v1.5.3 // indirect
 	modernc.org/fileutil v1.3.0 // indirect
 	modernc.org/libc v1.62.1 // indirect

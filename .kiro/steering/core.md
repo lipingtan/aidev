@@ -113,6 +113,28 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 ---
 
+## 执行前强制检查（违反即为错误）
+
+**任何开发任务开始前，必须按以下顺序操作，不得跳过：**
+
+### Go 软件项目任务
+1. 读取 `AIDOC/global-info/knowledge/steering/software/go/go-development-workflow.md`
+2. 按规范流程执行：Requirement → Design → Task → 执行
+3. 过程文档必须创建到 `AIDOC/project_doc/{项目名}/{功能名}/`，**禁止**创建到 `.kiro/specs/`
+4. 文档格式必须符合规范（requirements.md 含用户故事/FR-N/WHEN-SHALL；design.md 含不变行为清单；tasks.md 含三要素）
+5. 需求阶段必须先创建 `requirements_plan.md` 提出澄清问题，用户确认后再输出 `requirements.md`
+
+### 游戏开发任务
+1. 读取 `AIDOC/global-info/knowledge/steering/game/execution-protocol.md` 执行门控检查
+2. 读取对应功能的规范文件（见下方知识库索引）
+
+### 通用规则
+- **禁止**在未读规范的情况下直接创建文档或代码
+- **禁止**将过程文档（requirements.md / design.md / tasks.md）放到 `.kiro/specs/` 目录
+- `.kiro/specs/` 仅用于 Kiro 工作流内部控制文件（.config.kiro 等）
+
+---
+
 ## 知识库索引
 
 执行任务前，根据任务类型和项目领域读取对应的规范文件。

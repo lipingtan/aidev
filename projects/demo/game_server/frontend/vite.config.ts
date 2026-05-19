@@ -39,6 +39,11 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
           target: "http://localhost:8000",
           changeOrigin: true,
           rewrite: () => "/api/v1/refresh_token"
+        },
+        // 安装向导
+        "/setup": {
+          target: "http://localhost:8000",
+          changeOrigin: true
         }
       },
       // 预热文件以提前转换和缓存结果，降低启动期间的初始页面加载时长并防止转换瀑布
