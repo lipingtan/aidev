@@ -48,6 +48,21 @@ export const updateDlc = (id: number, data: any) =>
 export const deleteDlc = (id: number) =>
   http.request<Result>("delete", `/api/v1/game-dlc/${id}`);
 
+// 上传 DLC PCK 文件
+export const uploadDlcPck = (id: number, file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return http.request<Result>("post", `/api/v1/game-dlc/${id}/upload`, { data: formData, headers: { "Content-Type": "multipart/form-data" } });
+};
+
+// 获取 DLC 下载 URL
+export const getDlcDownloadUrl = (id: number) =>
+  http.request<Result>("get", `/api/v1/game-dlc/${id}/download`);
+
+// 获取 DLC 统计数据
+export const getDlcStats = (params?: any) =>
+  http.request<Result>("get", "/api/v1/game-dlc/stats", { params });
+
 // ─── 玩家管理 ───────────────────────────────────────────
 export const getPlayerList = (params?: PageQuery) =>
   http.request<any>("get", "/api/v1/game-player", { params }).then(adaptPage);

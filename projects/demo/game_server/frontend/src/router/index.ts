@@ -121,8 +121,6 @@ const { VITE_HIDE_HOME } = import.meta.env;
 
 /** 检查后端是否已完成初始化安装，未安装则跳转到 /setup 页面 */
 async function checkInstalled(): Promise<boolean> {
-  const cacheKey = "setup_installed";
-  if (sessionStorage.getItem(cacheKey) === "1") return true;
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -130,7 +128,6 @@ async function checkInstalled(): Promise<boolean> {
     clearTimeout(timeoutId);
     const data = await res.json();
     if (data?.installed) {
-      sessionStorage.setItem(cacheKey, "1");
       return true;
     }
     return false;

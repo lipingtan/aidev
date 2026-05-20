@@ -123,6 +123,8 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 3. 过程文档必须创建到 `AIDOC/project_doc/{项目名}/{功能名}/`，**禁止**创建到 `.kiro/specs/`
 4. 文档格式必须符合规范（requirements.md 含用户故事/FR-N/WHEN-SHALL；design.md 含不变行为清单；tasks.md 含三要素）
 5. 需求阶段必须先创建 `requirements_plan.md` 提出澄清问题，用户确认后再输出 `requirements.md`
+6. 设计阶段必须先创建 `design_plan.md` 提出设计相关澄清问题，用户确认后再输出 `design.md`
+7. **每个阶段切换时（Requirement → Design → Task → 执行），必须重新读取 `go-development-workflow.md` 中对应阶段的流程步骤，确认该阶段的产出物格式和前置条件，不得凭记忆行动**
 
 ### 游戏开发任务
 1. 读取 `AIDOC/global-info/knowledge/steering/game/execution-protocol.md` 执行门控检查
@@ -132,6 +134,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 - **禁止**在未读规范的情况下直接创建文档或代码
 - **禁止**将过程文档（requirements.md / design.md / tasks.md）放到 `.kiro/specs/` 目录
 - `.kiro/specs/` 仅用于 Kiro 工作流内部控制文件（.config.kiro 等）
+- **禁止**跳过 plan 文件直接输出正式文档（requirements_plan → requirements、design_plan → design）
 
 ---
 

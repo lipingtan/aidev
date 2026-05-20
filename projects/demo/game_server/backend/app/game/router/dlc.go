@@ -26,6 +26,8 @@ func registerDlcRouter(v1 *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddleware
 		r.PUT("/:id", api.Update)
 		r.DELETE("/:id", api.Delete)
 		r.POST("/:id/upload", api.UploadPck)
+		r.GET("/:id/download", api.Download)
+		r.GET("/stats", api.Stats)
 	}
 }
 

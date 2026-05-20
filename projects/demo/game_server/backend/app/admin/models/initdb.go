@@ -12,9 +12,16 @@ import (
 //go:embed sql/db.sql
 var dbSQL string
 
+//go:embed sql/menu_init.sql
+var menuInitSQL string
+
 // InitDb 执行初始数据 SQL（从 embed 读取，不依赖磁盘文件）
 func InitDb(db *gorm.DB) error {
-	return execSQLContent(db, dbSQL)
+	if err := execSQLContent(db, dbSQL); err != nil {
+		return err
+	}
+	// 执行游戏管理菜单初始化
+	return execSQLContentRaw(db, menuInitSQL)
 }
 
 // sysMenuInsertRe 匹配 INSERT INTO sys_menu VALUES 语句（不区分大小写）
@@ -65,6 +72,36 @@ func execSQLContent(db *gorm.DB, content string) error {
 		content = re.ReplaceAllString(content, "INSERT INTO "+table+" "+cols+" VALUES ")
 	}
 
+	// 替换旧版图标为 ep: 格式
+	iconReplacements := map[string]string{
+		"'api-server'":    "'ep:setting'",
+		"'user'":          "'ep:user'",
+		"'tree-table'":    "'ep:menu'",
+		"'peoples'":       "'ep:avatar'",
+		"'tree'":          "'ep:office-building'",
+		"'pass'":          "'ep:postcard'",
+		"'education'":     "'ep:notebook'",
+		"'dev-tools'":     "'ep:tools'",
+		"'guide'":         "'ep:document'",
+		"'swagger'":       "'ep:operation'",
+		"'log'":           "'ep:document-copy'",
+		"'logininfor'":    "'ep:tickets'",
+		"'skill'":         "'ep:edit'",
+		"'druid'":         "'ep:monitor'",
+		"'time-range'":    "'ep:timer'",
+		"'job'":           "'ep:calendar'",
+		"'bug'":           "'ep:document'",
+		"'code'":          "'ep:code'",
+		"'build'":         "'ep:edit-pen'",
+		"'api-doc'":       "'ep:connection'",
+		"'system-tools'":  "'ep:set-up'",
+		"'upload'":        "''",
+		"'app-group-fill'": "''",
+	}
+	for old, new_ := range iconReplacements {
+		content = strings.ReplaceAll(content, old, new_)
+	}
+
 	// 按行过滤注释，再重新拼接
 	var filteredLines []string
 	for _, line := range strings.Split(content, "\n") {
@@ -89,6 +126,38 @@ func execSQLContent(db *gorm.DB, content string) error {
 			}
 			// 打印完整 SQL 便于排查
 			log.Printf("SQL 执行失败: %v\n完整SQL: %s", err, s)
+			return err
+		}
+	}
+	return nil
+}
+
+// execSQLContentRaw 执行 SQL 内容（不做列名替换，适用于已带列名的 SQL）
+func execSQLContentRaw(db *gorm.DB, content string) error {
+	content = strings.TrimPrefix(content, "\xef\xbb\xbf")
+
+	var filteredLines []string
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "--") || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		filteredLines = append(filteredLines, line)
+	}
+	content = strings.Join(filteredLines, "\n")
+
+	sqlList := strings.Split(content, ";")
+	for _, s := range sqlList {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if err := db.Exec(s).Error; err != nil {
+			if strings.Contains(err.Error(), "Duplicate entry") ||
+				strings.Contains(err.Error(), "Query was empty") {
+				continue
+			}
+			log.Printf("菜单初始化SQL执行失败: %v\nSQL: %s", err, s)
 			return err
 		}
 	}

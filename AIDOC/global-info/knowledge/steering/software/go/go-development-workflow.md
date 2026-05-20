@@ -103,7 +103,9 @@ ALTER TABLE game ADD COLUMN xxx ...;
 
 ### 3.2 任务三要素格式
 
-**高复杂度任务：**
+> 详细定义见 `go-task-representation.md`，以下为各复杂度的格式示例。
+
+**高复杂度任务（示例）：**
 ```markdown
 ### Task N: {任务名}
 
@@ -126,7 +128,7 @@ ALTER TABLE game ADD COLUMN xxx ...;
 - [ ] 【回归】现有接口不受影响（RG-1）
 ```
 
-**中复杂度任务：**
+**中复杂度任务（示例）：**
 ```markdown
 ### Task N: {任务名}
 
@@ -142,7 +144,7 @@ ALTER TABLE game ADD COLUMN xxx ...;
 - [ ] go build ./... 零错误
 ```
 
-**低复杂度任务：**
+**低复杂度任务（示例）：**
 ```markdown
 ### Task N: {任务名}
 

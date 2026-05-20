@@ -233,16 +233,21 @@ func doInstall(c *gin.Context) {
 	defer sqlDB.Close()
 
 	// 3. 执行数据库迁移（建表）
-	db = db.Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4")
-	if err = runMigrations(db); err != nil {
+	migrateDb := db.Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4")
+	if err = runMigrations(migrateDb); err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "数据库初始化失败: " + err.Error()})
 		return
 	}
 
-	// 4. 写入初始数据（角色、菜单、管理员账号等）
-	if err = adminModels.InitDb(db); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "初始数据写入失败: " + err.Error()})
-		return
+	// 4. 检查是否已有数据（sys_user 表有记录则跳过初始数据写入）
+	var userCount int64
+	db.Raw("SELECT COUNT(*) FROM sys_user").Scan(&userCount)
+	if userCount == 0 {
+		// 写入初始数据（角色、菜单、管理员账号等）
+		if err = adminModels.InitDb(db); err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "初始数据写入失败: " + err.Error()})
+			return
+		}
 	}
 
 	// 4. 写入配置文件
