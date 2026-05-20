@@ -122,10 +122,10 @@ ALTER TABLE game ADD COLUMN xxx ...;
 - 错误必须用 fmt.Errorf 包装并返回，不得忽略
 
 **Acceptance（验证标准）:**
-- [ ] 接口返回正确的分页数据
-- [ ] 不同租户数据互相隔离
-- [ ] go build ./... 零错误
-- [ ] 【回归】现有接口不受影响（RG-1）
+- AC: 接口返回正确的分页数据
+- AC: 不同租户数据互相隔离
+- AC: go build ./... 零错误
+- AC: 【回归】现有接口不受影响（RG-1）
 ```
 
 **中复杂度任务（示例）：**
@@ -139,9 +139,9 @@ ALTER TABLE game ADD COLUMN xxx ...;
 - 不触碰: 其他 model 文件
 
 **Acceptance（验证标准）:**
-- [ ] Model 字段定义正确，包含 GORM tag
-- [ ] DTO 与 Model 字段对应
-- [ ] go build ./... 零错误
+- AC: Model 字段定义正确，包含 GORM tag
+- AC: DTO 与 Model 字段对应
+- AC: go build ./... 零错误
 ```
 
 **低复杂度任务（示例）：**
@@ -151,8 +151,8 @@ ALTER TABLE game ADD COLUMN xxx ...;
 **复杂度**: 低
 
 **Acceptance:**
-- [ ] 修改内容符合需求描述
-- [ ] go build ./... 零错误
+- AC: 修改内容符合需求描述
+- AC: go build ./... 零错误
 ```
 
 ---

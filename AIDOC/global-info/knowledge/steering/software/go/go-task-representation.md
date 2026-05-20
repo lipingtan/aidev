@@ -97,14 +97,14 @@
 - 错误必须用 fmt.Errorf 包装并返回
 
 **Acceptance（验证标准）:**
-- [ ] TenantBy mixin 定义正确，包含 gorm tag
-- [ ] WithTenantId 中间件从 JWT claims 正确提取 tenantId
-- [ ] 游戏列表查询按 tenant_id 过滤
-- [ ] 创建游戏时自动设置 tenant_id
-- [ ] go build ./... 零错误
-- [ ] go vet ./... 无警告
-- [ ] 【回归】现有登录接口不受影响（RG-1）
-- [ ] 【回归】admin 角色仍可查看所有数据（RG-2）
+- AC: TenantBy mixin 定义正确，包含 gorm tag
+- AC: WithTenantId 中间件从 JWT claims 正确提取 tenantId
+- AC: 游戏列表查询按 tenant_id 过滤
+- AC: 创建游戏时自动设置 tenant_id
+- AC: go build ./... 零错误
+- AC: go vet ./... 无警告
+- AC: 【回归】现有登录接口不受影响（RG-1）
+- AC: 【回归】admin 角色仍可查看所有数据（RG-2）
 ```
 
 ### 中复杂度任务
@@ -120,12 +120,12 @@
 - 不触碰: 其他域的 apis/service
 
 **Acceptance（验证标准）:**
-- [ ] GET /api/v1/game 返回分页列表
-- [ ] GET /api/v1/game/:id 返回单条详情
-- [ ] POST /api/v1/game 创建成功
-- [ ] PUT /api/v1/game/:id 更新成功
-- [ ] DELETE /api/v1/game/:id 删除成功
-- [ ] go build ./... 零错误
+- AC: GET /api/v1/game 返回分页列表
+- AC: GET /api/v1/game/:id 返回单条详情
+- AC: POST /api/v1/game 创建成功
+- AC: PUT /api/v1/game/:id 更新成功
+- AC: DELETE /api/v1/game/:id 删除成功
+- AC: go build ./... 零错误
 ```
 
 ### 低复杂度任务
@@ -136,8 +136,8 @@
 **复杂度**: 低
 
 **Acceptance:**
-- [ ] Game struct 包含 Version 字段，类型 string，gorm tag 正确
-- [ ] go build ./... 零错误
+- AC: Game struct 包含 Version 字段，类型 string，gorm tag 正确
+- AC: go build ./... 零错误
 ```
 
 ---
