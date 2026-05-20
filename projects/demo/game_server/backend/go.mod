@@ -139,6 +139,10 @@ require (
 	modernc.org/sqlite v1.37.0 // indirect
 )
 
+require game-server/plugin-sdk v0.0.0
+
+replace game-server/plugin-sdk => ../plugin-sdk
+
 //replace (
 //	github.com/go-admin-team/go-admin-core v1.5.2-0.20231103105356-84418ed9252c => ../go-admin-core
 //	github.com/go-admin-team/go-admin-core/sdk v1.5.2-0.20231103105356-84418ed9252c => ../go-admin-core/sdk

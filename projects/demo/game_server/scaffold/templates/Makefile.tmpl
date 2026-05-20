@@ -1,0 +1,9 @@
+.PHONY: build clean
+
+PLUGIN_NAME = {{.Name}}
+
+build:
+	go build -o $(PLUGIN_NAME) .
+
+clean:
+	rm -f $(PLUGIN_NAME)

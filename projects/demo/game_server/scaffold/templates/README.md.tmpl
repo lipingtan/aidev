@@ -1,0 +1,28 @@
+# {{.Name}} 插件
+
+## 构建
+
+```bash
+make build
+```
+
+## 目录结构
+
+```
+{{.Name}}/
+├── main.go         # 插件入口，实现 PluginService 接口
+├── handler.go      # 业务处理逻辑
+├── plugin.json     # 插件描述文件
+├── go.mod          # Go 模块定义
+├── Makefile        # 构建脚本
+└── frontend/       # 前端组件（可选）
+    ├── src/
+    │   └── index.ts
+    └── package.json
+```
+
+## 开发说明
+
+1. 在 `main.go` 的 `Register` 方法中声明路由前缀、菜单、权限
+2. 在 `HandleRequest` 中处理 HTTP 请求
+3. 前端组件需导出 `{ routes, menus }`

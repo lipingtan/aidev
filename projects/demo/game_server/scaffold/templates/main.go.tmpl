@@ -1,0 +1,50 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"game-server/plugin-sdk/helper"
+	"game-server/plugin-sdk/proto"
+)
+
+// {{.NamePascal}}Plugin 插件实现
+type {{.NamePascal}}Plugin struct{}
+
+func (p *{{.NamePascal}}Plugin) Register(ctx context.Context) (*proto.PluginInfo, error) {
+	return &proto.PluginInfo{
+		Name:        "{{.Name}}",
+		Version:     "0.1.0",
+		Description: "{{.Name}} 插件",
+		RoutePrefix: "{{.Name}}",
+		Menus: []proto.MenuItem{
+			{Title: "{{.NamePascal}}", Icon: "ep/box", Path: "/plugin/{{.Name}}", Sort: 1},
+		},
+	}, nil
+}
+
+func (p *{{.NamePascal}}Plugin) HandleRequest(ctx context.Context, req *proto.HttpRequest) (*proto.HttpResponse, error) {
+	body := fmt.Sprintf(`{"code":200,"msg":"hello from %s","path":"%s"}`, "{{.Name}}", req.Path)
+	return &proto.HttpResponse{
+		StatusCode: int32(http.StatusOK),
+		Headers:    map[string]string{"Content-Type": "application/json"},
+		Body:       []byte(body),
+	}, nil
+}
+
+func (p *{{.NamePascal}}Plugin) Healthcheck(ctx context.Context) (*proto.HealthResponse, error) {
+	return &proto.HealthResponse{Healthy: true, Message: "ok"}, nil
+}
+
+func (p *{{.NamePascal}}Plugin) OnEvent(ctx context.Context, event *proto.Event) error {
+	return nil
+}
+
+func (p *{{.NamePascal}}Plugin) CallPlugin(ctx context.Context, req *proto.CallPluginRequest) (*proto.CallPluginResponse, error) {
+	return &proto.CallPluginResponse{Payload: []byte(`{}`)}, nil
+}
+
+func main() {
+	helper.Serve(&{{.NamePascal}}Plugin{})
+}

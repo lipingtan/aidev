@@ -16,6 +16,7 @@ import (
 	"go-admin/app/game/models"
 	adminModels "go-admin/app/admin/models"
 	jobModels "go-admin/app/jobs/models"
+	pluginModels "go-admin/app/plugin/models"
 	tenantModels "go-admin/app/tenant/models"
 	commonModels "go-admin/common/models"
 )
@@ -307,6 +308,13 @@ func runMigrations(db *gorm.DB) error {
 		&tenantModels.Tenant{},
 	); err != nil {
 		return fmt.Errorf("游戏管理表迁移失败: %w", err)
+	}
+
+	// 插件管理表
+	if err := db.AutoMigrate(
+		&pluginModels.SysPlugin{},
+	); err != nil {
+		return fmt.Errorf("插件管理表迁移失败: %w", err)
 	}
 
 	return nil

@@ -2,6 +2,7 @@
 import Cookies from "js-cookie";
 import { getConfig } from "@/config";
 import NProgress from "@/utils/progress";
+import { loadPlugins } from "@/utils/plugin-loader";
 import { buildHierarchyTree } from "@/utils/tree";
 import remainingRouter from "./modules/remaining";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
@@ -114,6 +115,9 @@ export function resetRouter() {
   resetLoadedPaths();
 }
 
+/** 插件是否已加载标志，避免重复加载 */
+let pluginsLoaded = false;
+
 /** 路由白名单 */
 const whiteList = ["/login"];
 
@@ -195,6 +199,11 @@ router.beforeEach(async (to: ToRouteType, _from, next) => {
         to.path !== "/login"
       ) {
         initRouter().then((router: Router) => {
+          // 插件前端加载（异步，不阻塞路由跳转）
+          if (!pluginsLoaded) {
+            pluginsLoaded = true;
+            loadPlugins();
+          }
           if (!useMultiTagsStoreHook().getMultiTagsCache) {
             const { path } = to;
             const route = findRouteByPath(
