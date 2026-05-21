@@ -1,6 +1,9 @@
 package plugin
 
-import "game-server/plugin-sdk/proto"
+import (
+	goplugin "github.com/hashicorp/go-plugin"
+	"game-server/plugin-sdk/proto"
+)
 
 // PluginStatus 插件运行状态
 type PluginStatus int
@@ -19,4 +22,5 @@ type PluginInstance struct {
 	Info    *proto.PluginInfo
 	Service proto.PluginService
 	Status  PluginStatus
+	client  *goplugin.Client // go-plugin client（子进程模式时非 nil）
 }

@@ -1,6 +1,6 @@
 {
   "Version": "6.2.0",
-  "Title": "游戏管理平台",
+  "Title": "管理平台开发底座",
   "FixedHeader": true,
   "HiddenSideBar": false,
   "MultiTagsCache": false,

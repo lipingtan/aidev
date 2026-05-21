@@ -207,7 +207,7 @@ func doInstall(c *gin.Context) {
 	}
 	appName := req.AppName
 	if appName == "" {
-		appName = "游戏管理平台"
+		appName = "管理平台开发底座"
 	}
 	appPort := req.AppPort
 	if appPort == 0 {
@@ -299,7 +299,6 @@ func runMigrations(db *gorm.DB) error {
 	// 游戏管理表
 	if err := db.AutoMigrate(
 		&models.Game{},
-		&models.Dlc{},
 		&models.Player{},
 		&models.Save{},
 		&models.Order{},

@@ -37,6 +37,10 @@ function convertMenuToRoute(menus: any[]): any[] {
             return;
           }
           route.children = children;
+          // 目录类型：给第一个子菜单加 showParent，强制显示父级目录
+          if (m.menuType === "M" && children[0]?.meta) {
+            children[0].meta.showParent = true;
+          }
         }
       }
       if (m.path) result.push(route);

@@ -16,21 +16,6 @@ func withTenant(authMiddleware *jwt.GinJWTMiddleware) []gin.HandlerFunc {
 	}
 }
 
-func registerDlcRouter(v1 *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddleware) {
-	api := apis.Dlc{}
-	r := v1.Group("/game-dlc").Use(withTenant(authMiddleware)...)
-	{
-		r.GET("", api.GetPage)
-		r.GET("/:id", api.Get)
-		r.POST("", api.Insert)
-		r.PUT("/:id", api.Update)
-		r.DELETE("/:id", api.Delete)
-		r.POST("/:id/upload", api.UploadPck)
-		r.GET("/:id/download", api.Download)
-		r.GET("/stats", api.Stats)
-	}
-}
-
 func registerPlayerRouter(v1 *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddleware) {
 	api := apis.Player{}
 	r := v1.Group("/game-player").Use(withTenant(authMiddleware)...)

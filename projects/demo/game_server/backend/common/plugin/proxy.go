@@ -15,16 +15,17 @@ import (
 // 集成方式：在主路由中调用 RegisterRoutes 注册代理路由
 //
 //	mgr := plugin.NewPluginManager()
-//	proxy := plugin.NewPluginProxy(mgr)
+//	proxy := plugin.NewPluginProxy(mgr, dbDsn)
 //	apiV1 := r.Group("/api/v1")
 //	proxy.RegisterRoutes(apiV1)
 type PluginProxy struct {
-	mgr *PluginManager
+	mgr   *PluginManager
+	dbDsn string // 数据库连接串，注入到插件请求中
 }
 
 // NewPluginProxy 创建插件代理实例
-func NewPluginProxy(mgr *PluginManager) *PluginProxy {
-	return &PluginProxy{mgr: mgr}
+func NewPluginProxy(mgr *PluginManager, dbDsn string) *PluginProxy {
+	return &PluginProxy{mgr: mgr, dbDsn: dbDsn}
 }
 
 // RegisterRoutes 注册插件代理路由到指定路由组
@@ -69,11 +70,11 @@ func (p *PluginProxy) Handler() gin.HandlerFunc {
 			Headers:     headers,
 			Body:        body,
 			Query:       c.Request.URL.RawQuery,
-			UserID:      getUserIDFromContext(c),
-			TenantID:    getTenantIDFromContext(c),
+			UserId:      getUserIDFromContext(c),
+			TenantId:    getTenantIDFromContext(c),
 			Roles:       getRolesFromContext(c),
 			Permissions: getPermissionsFromContext(c),
-			DbDsn:       "", // TODO: 从全局配置注入
+			DbDsn:       p.dbDsn,
 		}
 
 		// 调用插件处理请求

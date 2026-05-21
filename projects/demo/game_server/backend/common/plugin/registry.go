@@ -10,17 +10,17 @@ import (
 // Registry 插件路由/菜单/权限注册表
 type Registry struct {
 	mu     sync.RWMutex
-	routes map[string]string             // routePrefix → pluginName
-	menus  map[string][]proto.MenuItem   // pluginName → menus
-	perms  map[string][]proto.Permission // pluginName → permissions
+	routes map[string]string               // routePrefix → pluginName
+	menus  map[string][]*proto.MenuItem    // pluginName → menus
+	perms  map[string][]*proto.Permission  // pluginName → permissions
 }
 
 // NewRegistry 创建注册表
 func NewRegistry() *Registry {
 	return &Registry{
 		routes: make(map[string]string),
-		menus:  make(map[string][]proto.MenuItem),
-		perms:  make(map[string][]proto.Permission),
+		menus:  make(map[string][]*proto.MenuItem),
+		perms:  make(map[string][]*proto.Permission),
 	}
 }
 
@@ -70,12 +70,12 @@ func (r *Registry) FindPluginByRoute(path string) (pluginName string, found bool
 }
 
 // GetAllMenus 获取所有插件的菜单
-func (r *Registry) GetAllMenus() map[string][]proto.MenuItem {
+func (r *Registry) GetAllMenus() map[string][]*proto.MenuItem {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	// 返回副本避免外部修改
-	result := make(map[string][]proto.MenuItem, len(r.menus))
+	result := make(map[string][]*proto.MenuItem, len(r.menus))
 	for k, v := range r.menus {
 		result[k] = v
 	}
@@ -83,11 +83,11 @@ func (r *Registry) GetAllMenus() map[string][]proto.MenuItem {
 }
 
 // GetAllPermissions 获取所有插件的权限（合并为一个列表）
-func (r *Registry) GetAllPermissions() []proto.Permission {
+func (r *Registry) GetAllPermissions() []*proto.Permission {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var all []proto.Permission
+	var all []*proto.Permission
 	for _, perms := range r.perms {
 		all = append(all, perms...)
 	}

@@ -160,6 +160,8 @@ async function onStart(row: any) {
   await startPlugin(row.name);
   ElMessage.success("启动成功");
   loadData();
+  // 刷新侧边栏菜单（插件启动后会注册新菜单）
+  setTimeout(() => window.location.reload(), 500);
 }
 
 /** 停止插件 */
@@ -167,6 +169,8 @@ async function onStop(row: any) {
   await stopPlugin(row.name);
   ElMessage.success("停止成功");
   loadData();
+  // 刷新侧边栏菜单（插件停止后会注销菜单）
+  setTimeout(() => window.location.reload(), 500);
 }
 
 /** 卸载插件 */

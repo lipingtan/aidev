@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -249,9 +250,18 @@ func registerStaticFiles(r *gin.Engine) {
 
 	fileServer := http.FileServer(http.FS(distFS))
 
-	// pure-admin Vite 构建产物：静态资源在 /static/ 子目录下
+	// pure-admin Vite 构建产物 + 插件前端 bundle
+	// /static/plugins/* 从磁盘读取，其他从嵌入 FS 读取
 	r.GET("/static/*filepath", func(c *gin.Context) {
-		c.Request.URL.Path = "/static" + c.Param("filepath")
+		fp := c.Param("filepath")
+		// 插件前端 bundle 从磁盘读取
+		if strings.HasPrefix(fp, "/plugins/") {
+			filePath := "./static" + fp
+			c.Header("Content-Type", "application/javascript")
+			c.File(filePath)
+			return
+		}
+		c.Request.URL.Path = "/static" + fp
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 	r.GET("/favicon.ico", func(c *gin.Context) {

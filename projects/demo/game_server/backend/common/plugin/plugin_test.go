@@ -43,10 +43,10 @@ func (p *mockPlugin) Register(ctx context.Context) (*proto.PluginInfo, error) {
 		Version:     p.version,
 		Description: p.name + " 测试插件",
 		RoutePrefix: p.routePrefix,
-		Menus: []proto.MenuItem{
+		Menus: []*proto.MenuItem{
 			{Title: p.name, Icon: "ep/box", Path: "/plugin/" + p.name, Sort: 1},
 		},
-		Perms: []proto.Permission{
+		Perms: []*proto.Permission{
 			{Key: p.name + ":list", Title: p.name + "列表"},
 		},
 	}, nil
@@ -54,7 +54,7 @@ func (p *mockPlugin) Register(ctx context.Context) (*proto.PluginInfo, error) {
 
 func (p *mockPlugin) HandleRequest(ctx context.Context, req *proto.HttpRequest) (*proto.HttpResponse, error) {
 	body := fmt.Sprintf(`{"plugin":"%s","method":"%s","path":"%s","userId":%d,"tenantId":%d}`,
-		p.name, req.Method, req.Path, req.UserID, req.TenantID)
+		p.name, req.Method, req.Path, req.UserId, req.TenantId)
 	return &proto.HttpResponse{
 		StatusCode: int32(http.StatusOK),
 		Headers:    map[string]string{"Content-Type": "application/json", "X-Plugin": p.name},
@@ -330,7 +330,7 @@ func TestPluginProxy(t *testing.T) {
 
 	// 创建 gin 路由并注册代理
 	r := gin.New()
-	proxy := NewPluginProxy(mgr)
+	proxy := NewPluginProxy(mgr, "")
 	v1 := r.Group("/api/v1")
 	proxy.RegisterRoutes(v1)
 
@@ -356,7 +356,7 @@ func TestPluginProxy(t *testing.T) {
 		c.Set("permissions", []string{"demo:list"})
 		c.Next()
 	})
-	proxy2 := NewPluginProxy(mgr)
+	proxy2 := NewPluginProxy(mgr, "")
 	v1_2 := r2.Group("/api/v1")
 	proxy2.RegisterRoutes(v1_2)
 

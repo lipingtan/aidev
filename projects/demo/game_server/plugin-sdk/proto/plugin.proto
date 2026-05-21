@@ -1,5 +1,5 @@
 syntax = "proto3";
-package plugin;
+package gameserver_plugin;
 option go_package = "game-server/plugin-sdk/proto";
 
 // 插件注册信息

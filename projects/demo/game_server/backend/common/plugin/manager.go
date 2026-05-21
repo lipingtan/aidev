@@ -3,9 +3,12 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"sync"
 
+	goplugin "github.com/hashicorp/go-plugin"
 	"game-server/plugin-sdk/proto"
+	"game-server/plugin-sdk/shared"
 )
 
 // PluginManager 插件生命周期管理器
@@ -86,6 +89,66 @@ func (m *PluginManager) Start(name string) error {
 	return nil
 }
 
+// StartProcess 启动插件子进程（生产模式）
+func (m *PluginManager) StartProcess(name, binaryPath string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if inst, exists := m.plugins[name]; exists {
+		if inst.Status == StatusRunning {
+			return fmt.Errorf("插件 %s 已在运行", name)
+		}
+	}
+
+	// 创建 go-plugin client
+	client := goplugin.NewClient(&goplugin.ClientConfig{
+		HandshakeConfig:  shared.Handshake,
+		Plugins:          shared.PluginMap,
+		Cmd:              exec.Command(binaryPath),
+		AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
+	})
+
+	// 连接插件
+	rpcClient, err := client.Client()
+	if err != nil {
+		client.Kill()
+		return fmt.Errorf("连接插件 %s 失败: %w", name, err)
+	}
+
+	// 获取 PluginService 实例
+	raw, err := rpcClient.Dispense("plugin_service")
+	if err != nil {
+		client.Kill()
+		return fmt.Errorf("获取插件 %s 服务失败: %w", name, err)
+	}
+
+	svc, ok := raw.(proto.PluginService)
+	if !ok {
+		client.Kill()
+		return fmt.Errorf("插件 %s 服务类型断言失败", name)
+	}
+
+	// 调用 Register 获取插件信息
+	info, err := svc.Register(context.Background())
+	if err != nil {
+		client.Kill()
+		return fmt.Errorf("插件 %s 注册失败: %w", name, err)
+	}
+
+	// 存储实例
+	m.plugins[name] = &PluginInstance{
+		Info:    info,
+		Service: svc,
+		Status:  StatusRunning,
+		client:  client,
+	}
+
+	// 注册路由/菜单/权限
+	m.registry.RegisterPlugin(info)
+
+	return nil
+}
+
 // Stop 停止指定插件，从 Registry 注销
 func (m *PluginManager) Stop(name string) error {
 	m.mu.Lock()
@@ -105,6 +168,12 @@ func (m *PluginManager) Stop(name string) error {
 	// 注销事件订阅
 	m.eventBus.Unsubscribe(name)
 
+	// 终止子进程（如果是子进程模式）
+	if inst.client != nil {
+		inst.client.Kill()
+		inst.client = nil
+	}
+
 	inst.Status = StatusStopped
 	return nil
 }
@@ -118,6 +187,11 @@ func (m *PluginManager) StopAll() {
 		if inst.Status == StatusRunning {
 			m.registry.UnregisterPlugin(name)
 			m.eventBus.Unsubscribe(name)
+			// 终止子进程（如果是子进程模式）
+			if inst.client != nil {
+				inst.client.Kill()
+				inst.client = nil
+			}
 			inst.Status = StatusStopped
 		}
 	}

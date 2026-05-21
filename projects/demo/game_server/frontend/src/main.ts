@@ -8,6 +8,9 @@ import { createApp, type Directive } from "vue";
 import { useElementPlus } from "@/plugins/elementPlus";
 import { injectResponsiveStorage } from "@/utils/responsive";
 
+// 暴露 Vue 和 Element Plus 到 window，供插件前端 bundle 使用
+import "@/utils/plugin-globals";
+
 import Table from "@pureadmin/table";
 // import PureDescriptions from "@pureadmin/descriptions";
 

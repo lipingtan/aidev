@@ -1,0 +1,5 @@
+{
+  "name": "dlc",
+  "version": "1.0.0",
+  "description": "DLC 管理插件 - 提供 DLC 包的 CRUD、文件上传下载、统计功能"
+}

@@ -1,13 +1,17 @@
 import { usePluginStoreHook } from "@/store/modules/plugin";
 import { getPluginList } from "@/api/plugin";
+import { getToken } from "@/utils/auth";
 import { router } from "@/router";
 import type { RouteRecordRaw } from "vue-router";
 
 /**
  * 加载所有运行中插件的前端 bundle
- * 在应用初始化时调用（路由守卫中）
+ * 在应用初始化时调用（路由守卫中，用户已登录后）
  */
 export async function loadPlugins(): Promise<void> {
+  // 未登录时不请求插件列表
+  if (!getToken()) return;
+
   const pluginStore = usePluginStoreHook();
 
   try {
@@ -26,7 +30,7 @@ export async function loadPlugins(): Promise<void> {
       runningPlugins.map((p: any) => loadSinglePlugin(p.name))
     );
   } catch (err) {
-    console.error("[PluginLoader] 获取插件列表失败:", err);
+    // 未登录时请求会失败，静默忽略
   }
 }
 

@@ -29,6 +29,10 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
           target: "http://localhost:8000",
           changeOrigin: true
         },
+        "/static/plugins": {
+          target: "http://localhost:8000",
+          changeOrigin: true
+        },
         // 把 pure-admin 的 /login 转发到 go-admin 的 /api/v1/login
         "/login": {
           target: "http://localhost:8000",

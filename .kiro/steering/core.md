@@ -294,6 +294,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | **Go 安全编码**（认证/SQL安全/敏感数据/输入验证） | `AIDOC/global-info/knowledge/steering/software/go/go-security.md` |
 | **Go 代码审查**（审查维度/问题级别/检查清单） | `AIDOC/global-info/knowledge/steering/software/go/go-code-review.md` |
 | **Go 排查方法论**（排查优先级/高频陷阱/经验教训） | `AIDOC/global-info/knowledge/steering/software/go/go-debugging.md` |
+| **Go 插件开发**（插件工程结构/打包规范/前端bundle/构建脚本） | `AIDOC/global-info/knowledge/steering/software/go/go-plugin-development.md` |
 
 #### Go 项目适用规则
 

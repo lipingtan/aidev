@@ -11,12 +11,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"go-admin/app/plugin/models"
+	"game-server/plugin-sdk/proto"
 	"gorm.io/gorm"
 )
 
@@ -50,6 +52,17 @@ func NewInstaller(pluginsDir, staticDir string, db *gorm.DB) *Installer {
 func (ins *Installer) InstallFromFile(ctx context.Context, name string, file io.Reader, filename string) error {
 	destDir := filepath.Join(ins.pluginsDir, name)
 
+	// 安装前先 kill 可能残留的同名插件进程
+	binaryName := name
+	if runtime.GOOS == "windows" {
+		binaryName = name + ".exe"
+	}
+	killPluginProcess(binaryName)
+	time.Sleep(500 * time.Millisecond)
+
+	// 清理旧目录（覆盖安装）
+	_ = os.RemoveAll(destDir)
+
 	// 创建插件目录
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("创建插件目录失败: %w", err)
@@ -71,10 +84,6 @@ func (ins *Installer) InstallFromFile(ctx context.Context, name string, file io.
 	}
 
 	// 查找二进制文件
-	binaryName := name
-	if runtime.GOOS == "windows" {
-		binaryName = name + ".exe"
-	}
 	binaryPath := filepath.Join(destDir, binaryName)
 	if _, statErr := os.Stat(binaryPath); statErr != nil {
 		// 二进制文件不存在不阻断安装，记录相对路径即可
@@ -158,6 +167,16 @@ func (ins *Installer) InstallFromURL(ctx context.Context, name string, url strin
 // Uninstall 卸载插件
 // cleanData: 是否清除插件相关数据表（{name}_* 表）
 func (ins *Installer) Uninstall(ctx context.Context, name string, cleanData bool) error {
+	// 尝试 kill 可能残留的插件进程（Windows 上 exe 被占用时无法删除）
+	binaryName := name
+	if runtime.GOOS == "windows" {
+		binaryName = name + ".exe"
+	}
+	killPluginProcess(binaryName)
+
+	// 短暂等待进程退出
+	time.Sleep(500 * time.Millisecond)
+
 	// 删除插件目录
 	pluginDir := filepath.Join(ins.pluginsDir, name)
 	if err := os.RemoveAll(pluginDir); err != nil {
@@ -211,6 +230,117 @@ func (ins *Installer) UpdateStatus(name string, status int) error {
 		return fmt.Errorf("插件 %s 不存在", name)
 	}
 	return nil
+}
+
+// RegisterMenus 将插件菜单写入 sys_menu 表（挂在"扩展功能"目录下）
+func (ins *Installer) RegisterMenus(pluginName string, menus []*proto.MenuItem) error {
+	if len(menus) == 0 {
+		return nil
+	}
+
+	// 确保"扩展功能"父目录存在
+	extensionParentId := ins.ensureExtensionMenu()
+	if extensionParentId == 0 {
+		return fmt.Errorf("创建扩展功能菜单失败")
+	}
+
+	// 使用 plugin_{name} 作为唯一标识
+	parentMenuName := "plugin_" + pluginName
+
+	// 检查是否已注册
+	var existCount int64
+	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", parentMenuName).Count(&existCount)
+	if existCount > 0 {
+		return nil
+	}
+
+	firstMenu := menus[0]
+
+	// 情况 1：只有一个菜单项且无子菜单 → 直接作为叶子菜单
+	if len(menus) == 1 && len(firstMenu.Children) == 0 {
+		return ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'C', '无', '', ?, false, '', 'plugin/container', ?, '0', '0', 1, 1, NOW(), NOW())`,
+			parentMenuName, firstMenu.Title, firstMenu.Icon, firstMenu.Path,
+			fmt.Sprintf("/0/%d/", extensionParentId), extensionParentId, firstMenu.Sort,
+		).Error
+	}
+
+	// 情况 2：有子菜单 → 创建目录 + 子菜单
+	if len(menus) == 1 && len(firstMenu.Children) > 0 {
+		// 创建插件目录（M 类型）
+		err := ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'M', '无', '', ?, false, '', '', ?, '0', '0', 1, 1, NOW(), NOW())`,
+			parentMenuName, firstMenu.Title, firstMenu.Icon, firstMenu.Path,
+			fmt.Sprintf("/0/%d/", extensionParentId), extensionParentId, firstMenu.Sort,
+		).Error
+		if err != nil {
+			return err
+		}
+
+		// 获取插件目录 ID
+		var pluginDirId int
+		ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", parentMenuName).Select("menu_id").Scan(&pluginDirId)
+		if pluginDirId == 0 {
+			return nil
+		}
+
+		// 插入子菜单
+		for i, child := range firstMenu.Children {
+			childName := fmt.Sprintf("plugin_%s_%d", pluginName, i)
+			ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'C', '无', '', ?, false, '', 'plugin/container', ?, '0', '0', 1, 1, NOW(), NOW())`,
+				childName, child.Title, child.Icon, child.Path,
+				fmt.Sprintf("/0/%d/%d/", extensionParentId, pluginDirId), pluginDirId, child.Sort,
+			)
+		}
+		return nil
+	}
+
+	// 情况 3：多个顶级菜单项 → 创建目录 + 每个作为子菜单
+	err := ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'M', '无', '', ?, false, '', '', ?, '0', '0', 1, 1, NOW(), NOW())`,
+		parentMenuName, firstMenu.Title, firstMenu.Icon, "/plugin/"+pluginName,
+		fmt.Sprintf("/0/%d/", extensionParentId), extensionParentId, firstMenu.Sort,
+	).Error
+	if err != nil {
+		return err
+	}
+
+	var pluginDirId int
+	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", parentMenuName).Select("menu_id").Scan(&pluginDirId)
+	if pluginDirId == 0 {
+		return nil
+	}
+
+	for i, m := range menus {
+		childName := fmt.Sprintf("plugin_%s_%d", pluginName, i)
+		ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'C', '无', '', ?, false, '', 'plugin/container', ?, '0', '0', 1, 1, NOW(), NOW())`,
+			childName, m.Title, m.Icon, m.Path,
+			fmt.Sprintf("/0/%d/%d/", extensionParentId, pluginDirId), pluginDirId, m.Sort,
+		)
+	}
+
+	return nil
+}
+
+// ensureExtensionMenu 确保"扩展功能"顶级目录存在，返回其 menu_id
+func (ins *Installer) ensureExtensionMenu() int {
+	const menuName = "PluginExtensions"
+	var menuId int
+	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", menuName).Select("menu_id").Scan(&menuId)
+	if menuId > 0 {
+		return menuId
+	}
+
+	// 创建"扩展功能"顶级目录
+	ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, '扩展功能', 'ep:grid', '/extensions', '/0/', 'M', '无', '', 0, false, '', 'Layout', 100, '0', '0', 1, 1, NOW(), NOW())`,
+		menuName,
+	)
+
+	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", menuName).Select("menu_id").Scan(&menuId)
+	return menuId
+}
+
+// UnregisterMenus 从 sys_menu 表中删除插件菜单（软删除）
+func (ins *Installer) UnregisterMenus(pluginName string) error {
+	prefix := "plugin_" + pluginName + "%"
+	return ins.db.Exec("UPDATE sys_menu SET deleted_at = NOW() WHERE menu_name LIKE ? AND deleted_at IS NULL", prefix).Error
 }
 
 // dropPluginTables 删除以 {name}_ 为前缀的所有数据表
@@ -384,4 +514,15 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return out.Sync()
+}
+
+// killPluginProcess 尝试终止插件进程（通过进程名匹配）
+func killPluginProcess(binaryName string) {
+	if runtime.GOOS == "windows" {
+		// Windows: taskkill /F /IM {name}.exe
+		_ = exec.Command("taskkill", "/F", "/IM", binaryName).Run()
+	} else {
+		// Linux/Mac: pkill -f {name}
+		_ = exec.Command("pkill", "-f", binaryName).Run()
+	}
 }

@@ -14,7 +14,6 @@ var routerCheckRole = make([]func(*gin.RouterGroup, *jwt.GinJWTMiddleware), 0)
 func init() {
 	routerCheckRole = append(routerCheckRole,
 		registerGameRouter,
-		registerDlcRouter,
 		registerPlayerRouter,
 		registerOrderRouter,
 		registerPaymentConfigRouter,

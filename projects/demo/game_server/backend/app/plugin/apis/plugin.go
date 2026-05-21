@@ -90,9 +90,26 @@ func (p Plugin) Start(c *gin.Context) {
 		return
 	}
 
-	if err := service.Manager.Start(name); err != nil {
+	// 从数据库获取插件记录，读取二进制路径
+	record, err := service.Installer.GetPluginRecord(name)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 404, "msg": "插件未安装: " + err.Error()})
+		return
+	}
+
+	// 使用子进程模式启动插件
+	if err := service.Manager.StartProcess(name, record.BinaryPath); err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "启动插件失败: " + err.Error()})
 		return
+	}
+
+	// 注册插件菜单到 sys_menu 表
+	if inst, ok := service.Manager.GetPlugin(name); ok && inst.Info != nil && len(inst.Info.Menus) > 0 {
+		if err := service.Installer.RegisterMenus(name, inst.Info.Menus); err != nil {
+			// 菜单注册失败不阻断启动，但记录错误
+			c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "插件启动成功，但菜单注册失败: " + err.Error(), "data": gin.H{"name": name}})
+			return
+		}
 	}
 
 	// 更新数据库状态为运行中
@@ -113,10 +130,13 @@ func (p Plugin) Stop(c *gin.Context) {
 		return
 	}
 
-	if err := service.Manager.Stop(name); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "停止插件失败: " + err.Error()})
-		return
+	// 尝试停止子进程（如果 Manager 中有实例）
+	if inst, exists := service.Manager.GetPlugin(name); exists && inst.Status == 1 {
+		_ = service.Manager.Stop(name)
 	}
+
+	// 注销插件菜单
+	_ = service.Installer.UnregisterMenus(name)
 
 	// 更新数据库状态为已停止
 	if err := service.Installer.UpdateStatus(name, models.PluginStatusStopped); err != nil {
@@ -137,14 +157,21 @@ func (p Plugin) Uninstall(c *gin.Context) {
 		return
 	}
 
-	// 如果插件正在运行，先停止
+	// 如果插件正在运行，先停止子进程
 	if inst, exists := service.Manager.GetPlugin(name); exists && inst.Status == 1 {
 		_ = service.Manager.Stop(name)
 	}
 
+	// 注销插件菜单
+	_ = service.Installer.UnregisterMenus(name)
+
+	// 先更新数据库状态，再尝试删除文件
+	_ = service.Installer.UpdateStatus(name, models.PluginStatusStopped)
+
 	cleanData := c.Query("clean_data") == "true"
 	if err := service.Installer.Uninstall(c.Request.Context(), name, cleanData); err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "卸载插件失败: " + err.Error()})
+		// 如果是文件占用错误，提示用户手动停止
+		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "卸载插件失败: " + err.Error() + "（如果插件进程仍在运行，请先停止插件）"})
 		return
 	}
 
