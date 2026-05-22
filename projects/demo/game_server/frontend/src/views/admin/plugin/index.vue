@@ -33,7 +33,7 @@
             <el-radio value="url">远程 URL</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="插件名称">
+        <el-form-item v-if="installForm.mode === 'url'" label="插件名称">
           <el-input v-model="installForm.name" placeholder="请输入插件名称" />
         </el-form-item>
         <el-form-item v-if="installForm.mode === 'file'" label="插件文件">
@@ -119,13 +119,13 @@ function onFileChange(file: UploadFile) {
 
 /** 安装插件 */
 async function onInstall() {
-  if (!installForm.name) {
-    ElMessage.warning("请输入插件名称");
-    return;
-  }
   installing.value = true;
   try {
     if (installForm.mode === "url") {
+      if (!installForm.name) {
+        ElMessage.warning("请输入插件名称");
+        return;
+      }
       if (!installForm.url) {
         ElMessage.warning("请输入远程 URL");
         return;
@@ -136,12 +136,15 @@ async function onInstall() {
         ElMessage.warning("请选择插件文件");
         return;
       }
-      await installPluginByFile(installForm.name, installForm.file);
+      // 本地上传不需要填写名称，后端自动从 plugin.json 提取
+      await installPluginByFile("auto", installForm.file);
     }
     ElMessage.success("安装成功");
     installDialogVisible.value = false;
     resetInstallForm();
     loadData();
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || "安装失败");
   } finally {
     installing.value = false;
   }
@@ -157,11 +160,13 @@ function resetInstallForm() {
 
 /** 启动插件 */
 async function onStart(row: any) {
-  await startPlugin(row.name);
-  ElMessage.success("启动成功");
+  const res: any = await startPlugin(row.name);
+  if (res?.code === 200) {
+    ElMessage.success(res.msg || "启动成功，请手动刷新页面查看菜单");
+  } else {
+    ElMessage.error(res?.msg || "启动失败");
+  }
   loadData();
-  // 刷新侧边栏菜单（插件启动后会注册新菜单）
-  setTimeout(() => window.location.reload(), 500);
 }
 
 /** 停止插件 */

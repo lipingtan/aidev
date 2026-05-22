@@ -46,11 +46,52 @@ func NewInstaller(pluginsDir, staticDir string, db *gorm.DB) *Installer {
 }
 
 // InstallFromFile 从文件流安装插件
-// name: 插件名称
+// 自动从 plugin.json 提取插件名，不需要外部传入
 // file: 文件内容读取器
 // filename: 原始文件名，用于判断压缩格式（.zip 或 .tar.gz）
-func (ins *Installer) InstallFromFile(ctx context.Context, name string, file io.Reader, filename string) error {
-	destDir := filepath.Join(ins.pluginsDir, name)
+func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Reader, filename string) error {
+	// 先解压到临时目录
+	tempDir := filepath.Join(ins.pluginsDir, "_temp_install")
+	_ = os.RemoveAll(tempDir)
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		return fmt.Errorf("创建临时目录失败: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// 根据文件后缀选择解压方式
+	var err error
+	if strings.HasSuffix(filename, ".tar.gz") || strings.HasSuffix(filename, ".tgz") {
+		err = extractTarGz(file, tempDir)
+	} else if strings.HasSuffix(filename, ".zip") {
+		err = extractZip(file, tempDir)
+	} else {
+		return fmt.Errorf("不支持的文件格式: %s（仅支持 .zip 和 .tar.gz）", filename)
+	}
+	if err != nil {
+		return fmt.Errorf("解压文件失败: %w", err)
+	}
+
+	// 从 plugin.json 读取插件名
+	pjPath := filepath.Join(tempDir, "plugin.json")
+	pjData, readErr := os.ReadFile(pjPath)
+	if readErr != nil {
+		return fmt.Errorf("插件包中缺少 plugin.json 文件")
+	}
+	var pj pluginJSON
+	if jsonErr := json.Unmarshal(pjData, &pj); jsonErr != nil {
+		return fmt.Errorf("plugin.json 格式错误: %w", jsonErr)
+	}
+	if pj.Name == "" {
+		return fmt.Errorf("plugin.json 中 name 字段不能为空")
+	}
+	name := pj.Name
+
+	// 检查是否已安装同名插件
+	var existCount int64
+	ins.db.Model(&models.SysPlugin{}).Where("name = ?", name).Count(&existCount)
+	if existCount > 0 {
+		return fmt.Errorf("插件 %s 已安装，请先卸载后再安装", name)
+	}
 
 	// 安装前先 kill 可能残留的同名插件进程
 	binaryName := name
@@ -60,37 +101,23 @@ func (ins *Installer) InstallFromFile(ctx context.Context, name string, file io.
 	killPluginProcess(binaryName)
 	time.Sleep(500 * time.Millisecond)
 
-	// 清理旧目录（覆盖安装）
+	// 移动到正式目录
+	destDir := filepath.Join(ins.pluginsDir, name)
 	_ = os.RemoveAll(destDir)
-
-	// 创建插件目录
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return fmt.Errorf("创建插件目录失败: %w", err)
-	}
-
-	// 根据文件后缀选择解压方式
-	var err error
-	if strings.HasSuffix(filename, ".tar.gz") || strings.HasSuffix(filename, ".tgz") {
-		err = extractTarGz(file, destDir)
-	} else if strings.HasSuffix(filename, ".zip") {
-		err = extractZip(file, destDir)
-	} else {
-		return fmt.Errorf("不支持的文件格式: %s（仅支持 .zip 和 .tar.gz）", filename)
-	}
-	if err != nil {
-		// 解压失败时清理目录
-		_ = os.RemoveAll(destDir)
-		return fmt.Errorf("解压文件失败: %w", err)
+	if err := os.Rename(tempDir, destDir); err != nil {
+		// Rename 跨分区可能失败，用 copy 兜底
+		if cpErr := copyDir(tempDir, destDir); cpErr != nil {
+			return fmt.Errorf("移动插件文件失败: %w", cpErr)
+		}
 	}
 
 	// 查找二进制文件
 	binaryPath := filepath.Join(destDir, binaryName)
 	if _, statErr := os.Stat(binaryPath); statErr != nil {
-		// 二进制文件不存在不阻断安装，记录相对路径即可
 		binaryPath = destDir
 	}
 
-	// 处理前端 bundle：如果存在 frontend/dist/ 目录，复制到 staticDir/{name}/
+	// 处理前端 bundle
 	var frontendPath string
 	frontendSrc := filepath.Join(destDir, "frontend", "dist")
 	if info, statErr := os.Stat(frontendSrc); statErr == nil && info.IsDir() {
@@ -101,28 +128,16 @@ func (ins *Installer) InstallFromFile(ctx context.Context, name string, file io.
 		frontendPath = frontendDest
 	}
 
-	// 读取 plugin.json 获取版本和描述信息
-	version := "0.0.1"
-	description := ""
-	pjPath := filepath.Join(destDir, "plugin.json")
-	if data, readErr := os.ReadFile(pjPath); readErr == nil {
-		var pj pluginJSON
-		if jsonErr := json.Unmarshal(data, &pj); jsonErr == nil {
-			if pj.Version != "" {
-				version = pj.Version
-			}
-			if pj.Description != "" {
-				description = pj.Description
-			}
-		}
-	}
-
 	// 写入数据库记录
+	version := pj.Version
+	if version == "" {
+		version = "0.0.1"
+	}
 	now := time.Now()
 	record := &models.SysPlugin{
 		Name:         name,
 		Version:      version,
-		Description:  description,
+		Description:  pj.Description,
 		Status:       models.PluginStatusInstalled,
 		BinaryPath:   binaryPath,
 		FrontendPath: frontendPath,

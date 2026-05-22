@@ -35,9 +35,16 @@ async function loadPluginPage() {
     const url = `/static/plugins/${pluginName}/index.js`;
     const module = await import(/* @vite-ignore */ url);
 
-    // 插件 bundle 导出的第一个路由的 component
+    // 根据当前路由路径匹配对应的插件页面组件
     if (module.routes && module.routes.length > 0) {
-      pluginComponent.value = module.routes[0].component;
+      const currentPath = route.path;
+      const matched = module.routes.find((r: any) => r.path === currentPath);
+      if (matched) {
+        pluginComponent.value = matched.component;
+      } else {
+        // 没有精确匹配时取第一个
+        pluginComponent.value = module.routes[0].component;
+      }
     } else if (module.default) {
       pluginComponent.value = module.default;
     }

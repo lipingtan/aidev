@@ -13,7 +13,6 @@ import (
 	"gorm.io/gorm"
 	"gopkg.in/yaml.v3"
 
-	"go-admin/app/game/models"
 	adminModels "go-admin/app/admin/models"
 	jobModels "go-admin/app/jobs/models"
 	pluginModels "go-admin/app/plugin/models"
@@ -296,17 +295,11 @@ func runMigrations(db *gorm.DB) error {
 		return fmt.Errorf("系统表迁移失败: %w", err)
 	}
 
-	// 游戏管理表
+	// 租户表
 	if err := db.AutoMigrate(
-		&models.Game{},
-		&models.Player{},
-		&models.Save{},
-		&models.Order{},
-		&models.PaymentConfig{},
-		&models.H5Page{},
 		&tenantModels.Tenant{},
 	); err != nil {
-		return fmt.Errorf("游戏管理表迁移失败: %w", err)
+		return fmt.Errorf("租户表迁移失败: %w", err)
 	}
 
 	// 插件管理表
