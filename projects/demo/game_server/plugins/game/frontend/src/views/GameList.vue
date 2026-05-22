@@ -10,11 +10,11 @@
     <el-table v-loading="loading" :data="list" border stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="游戏名称" />
-      <el-table-column prop="appId" label="AppID" />
-      <el-table-column prop="platform" label="平台" />
+      <el-table-column prop="appKey" label="AppKey" width="120" />
+      <el-table-column prop="version" label="版本" width="80" />
       <el-table-column label="状态" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '上线' : '下线' }}</el-tag>
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="createdAt" label="创建时间" width="160" />
@@ -41,19 +41,12 @@
     <el-dialog v-model="dialogVisible" :title="form.id ? '编辑游戏' : '新增游戏'" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="游戏名称" prop="name"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="平台" prop="platform">
-          <el-select v-model="form.platform" style="width:100%">
-            <el-option label="PC" value="pc" />
-            <el-option label="Android" value="android" />
-            <el-option label="iOS" value="ios" />
-            <el-option label="全平台" value="all" />
-          </el-select>
-        </el-form-item>
+        <el-form-item label="版本"><el-input v-model="form.version" placeholder="1.0.0" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="form.description" type="textarea" /></el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
-            <el-radio :value="1">上线</el-radio>
-            <el-radio :value="0">下线</el-radio>
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="2">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -80,20 +73,28 @@ const dialogVisible = ref(false);
 const formRef = ref<FormInstance>();
 
 const query = reactive({ name: "", pageIndex: 1, pageSize: 10 });
-const form = reactive<any>({ id: null, name: "", platform: "all", description: "", status: 1 });
+const form = reactive<any>({ id: null, name: "", version: "1.0.0", description: "", status: 1 });
 const rules = {
-  name: [{ required: true, message: "请输入游戏名称", trigger: "blur" }],
-  platform: [{ required: true, message: "请选择平台", trigger: "change" }]
+  name: [{ required: true, message: "请输入游戏名称", trigger: "blur" }]
 };
 
 // 获取 token
 function getToken(): string {
   try {
-    const data = JSON.parse(localStorage.getItem("user-info") || "{}");
-    return data?.accessToken || "";
-  } catch {
-    return "";
-  }
+    // 优先从 Cookie 获取
+    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
+    if (cookieMatch) {
+      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
+      return data?.accessToken || "";
+    }
+    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
+    const stored = localStorage.getItem("responsive-user-info");
+    if (stored) {
+      const data = JSON.parse(stored);
+      return data?.accessToken || "";
+    }
+  } catch {}
+  return "";
 }
 
 // 通用请求
@@ -114,13 +115,13 @@ async function loadData() {
   loading.value = true;
   try {
     const params = new URLSearchParams();
-    params.set("pageIndex", String(query.pageIndex));
+    params.set("page", String(query.pageIndex));
     params.set("pageSize", String(query.pageSize));
     if (query.name) params.set("name", query.name);
     const res = await request("GET", `${API_BASE}?${params.toString()}`);
     if (res.code === 200) {
-      list.value = res.data?.list || res.data || [];
-      total.value = res.data?.count || res.count || 0;
+      list.value = res.data?.list || [];
+      total.value = res.data?.total || 0;
     }
   } finally {
     loading.value = false;
@@ -131,7 +132,7 @@ function onSearch() { query.pageIndex = 1; loadData(); }
 function onReset() { Object.assign(query, { name: "", pageIndex: 1 }); loadData(); }
 
 function openDialog(row?: any) {
-  Object.assign(form, { id: null, name: "", platform: "all", description: "", status: 1 });
+  Object.assign(form, { id: null, name: "", version: "1.0.0", description: "", status: 1 });
   if (row) Object.assign(form, row);
   dialogVisible.value = true;
 }

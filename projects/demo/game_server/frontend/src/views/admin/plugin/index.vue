@@ -162,11 +162,12 @@ function resetInstallForm() {
 async function onStart(row: any) {
   const res: any = await startPlugin(row.name);
   if (res?.code === 200) {
-    ElMessage.success(res.msg || "启动成功，请手动刷新页面查看菜单");
+    ElMessage.success("启动成功，正在刷新...");
+    loadData();
+    setTimeout(() => window.location.reload(), 800);
   } else {
     ElMessage.error(res?.msg || "启动失败");
   }
-  loadData();
 }
 
 /** 停止插件 */

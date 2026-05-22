@@ -123,11 +123,20 @@ const rules = {
 // 获取 token
 function getToken(): string {
   try {
-    const data = JSON.parse(localStorage.getItem("user-info") || "{}");
-    return data?.accessToken || "";
-  } catch {
-    return "";
-  }
+    // 优先从 Cookie 获取
+    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
+    if (cookieMatch) {
+      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
+      return data?.accessToken || "";
+    }
+    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
+    const stored = localStorage.getItem("responsive-user-info");
+    if (stored) {
+      const data = JSON.parse(stored);
+      return data?.accessToken || "";
+    }
+  } catch {}
+  return "";
 }
 
 // 通用请求

@@ -67,7 +67,6 @@ func handleGameGet(req *proto.HttpRequest, id int) (*proto.HttpResponse, error) 
 // GameInsertReq 创建游戏请求
 type GameInsertReq struct {
 	Name        string `json:"name"`
-	AppKey      string `json:"appKey"`
 	Description string `json:"description"`
 	Icon        string `json:"icon"`
 	Version     string `json:"version"`
@@ -83,9 +82,11 @@ func handleGameInsert(req *proto.HttpRequest) (*proto.HttpResponse, error) {
 	if body.Name == "" {
 		return jsonResp(400, "游戏名称不能为空", nil)
 	}
-	if body.AppKey == "" {
-		return jsonResp(400, "游戏标识不能为空", nil)
-	}
+
+	// 自动生成 AppKey（8字符随机 hex）
+	appKeyBytes := make([]byte, 4)
+	rand.Read(appKeyBytes)
+	appKey := hex.EncodeToString(appKeyBytes)
 
 	// 生成 AppSecret
 	secret, err := generateSecret()
@@ -96,7 +97,7 @@ func handleGameInsert(req *proto.HttpRequest) (*proto.HttpResponse, error) {
 	now := time.Now()
 	game := Game{
 		Name:        body.Name,
-		AppKey:      body.AppKey,
+		AppKey:      appKey,
 		AppSecret:   secret,
 		Description: body.Description,
 		Icon:        body.Icon,
