@@ -1,5 +1,9 @@
 <template>
-  <div class="game-plugin-page" style="padding: 20px">
+  <div class="plugin-page">
+    <div class="page-header">
+      <h3>DLC管理</h3>
+      <div></div>
+    </div>
     <el-tabs v-model="activeTab" @tab-change="onTabChange">
       <el-tab-pane label="列表管理" name="list">
         <el-form :inline="true" :model="query" style="margin-bottom: 16px">
@@ -14,7 +18,7 @@
         <div style="margin-bottom: 16px">
           <el-button type="primary" @click="openDialog()">新增DLC</el-button>
         </div>
-        <el-table v-loading="loading" :data="list" border stripe>
+        <el-table v-loading="loading" :data="list" stripe>
           <el-table-column prop="id" label="ID" width="60" />
           <el-table-column prop="gameId" label="游戏ID" width="80" />
           <el-table-column prop="name" label="DLC名称" />
@@ -67,7 +71,7 @@
             <el-statistic title="总收入(元)" :value="statsData.totalRevenue / 100" :precision="2" />
           </el-card>
         </div>
-        <el-table :data="statsData.ranking" border stripe>
+        <el-table :data="statsData.ranking" stripe>
           <el-table-column prop="productName" label="DLC名称" />
           <el-table-column prop="downloads" label="下载次数" width="120" />
           <el-table-column label="收入(元)" width="120">
@@ -352,3 +356,26 @@ onMounted(() => {
   loadData();
 });
 </script>
+
+<style scoped>
+.plugin-page {
+  padding: 20px;
+}
+.plugin-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
+}
+.plugin-page .page-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.plugin-page .el-table {
+  border-radius: 8px;
+}
+</style>

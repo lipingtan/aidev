@@ -1,9 +1,13 @@
 <template>
   <div class="main">
-    <div class="flex justify-between mb-3">
-      <el-button type="primary" @click="installDialogVisible = true">安装插件</el-button>
-    </div>
-    <el-table v-loading="loading" :data="list" border stripe>
+    <el-card shadow="never" class="mb-4">
+      <template #header>
+        <div class="flex justify-between items-center">
+          <span class="text-lg font-medium">插件管理</span>
+          <el-button type="primary" @click="installDialogVisible = true">安装插件</el-button>
+        </div>
+      </template>
+      <el-table v-loading="loading" :data="list" stripe style="width: 100%">
       <el-table-column prop="name" label="名称" width="160" />
       <el-table-column prop="version" label="版本" width="100" />
       <el-table-column prop="status" label="状态" width="100">
@@ -23,6 +27,7 @@
         </template>
       </el-table-column>
     </el-table>
+    </el-card>
 
     <!-- 安装插件对话框 -->
     <el-dialog v-model="installDialogVisible" title="安装插件" width="500px">

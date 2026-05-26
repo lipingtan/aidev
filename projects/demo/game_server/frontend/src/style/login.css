@@ -44,13 +44,11 @@
 }
 
 .login-form h2 {
-  text-transform: uppercase;
   margin: 15px 0;
-  color: #999;
-  font:
-    bold 200% Consolas,
-    Monaco,
-    monospace;
+  color: #1e293b;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 @media screen and (max-width: 1180px) {

@@ -1,0 +1,21 @@
+docker pull dep0jn2qzb53xkcb3q.xuanyuan.run/lscr.io/linuxserver/winegui:latest
+
+docker pull dep0jn2qzb53xkcb3q.xuanyuan.run/linuxserver/winegui:latest
+
+
+
+docker pull dep0jn2qzb53xkcb3q-ghcr.xuanyuan.run/linuxserver/winegui:latest
+
+docker tag dep0jn2qzb53xkcb3q-ghcr.xuanyuan.run/linuxserver/winegui:latest linuxserver/winegui:latest
+
+
+# 启动时限制内存
+docker run -d \
+  --name=winegui \
+  --memory="2g" \
+  --memory-reservation="1.5g" \
+  -e PUID=1000 -e PGID=1000 \
+  -e TZ=Asia/Shanghai \
+  -p 3001:3001 \
+  -v /home/liping/wine-data:/config \
+  linuxserver/winegui:latest

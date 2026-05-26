@@ -1,5 +1,9 @@
 <template>
-  <div class="game-plugin-page" style="padding: 20px">
+  <div class="plugin-page">
+    <div class="page-header">
+      <h3>玩家管理</h3>
+      <div></div>
+    </div>
     <el-form :inline="true" :model="query" style="margin-bottom: 16px">
       <el-form-item label="游戏ID"><el-input v-model="query.gameId" placeholder="游戏ID" clearable /></el-form-item>
       <el-form-item label="UID"><el-input v-model="query.uid" placeholder="UID" clearable /></el-form-item>
@@ -16,7 +20,7 @@
       </el-form-item>
     </el-form>
 
-    <el-table v-loading="loading" :data="list" border stripe>
+    <el-table v-loading="loading" :data="list" stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="gameId" label="游戏ID" width="80" />
       <el-table-column prop="uid" label="UID" width="120" />
@@ -212,3 +216,26 @@ async function onUnban(row: any) {
 
 onMounted(loadData);
 </script>
+
+<style scoped>
+.plugin-page {
+  padding: 20px;
+}
+.plugin-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
+}
+.plugin-page .page-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.plugin-page .el-table {
+  border-radius: 8px;
+}
+</style>

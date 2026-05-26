@@ -1,5 +1,11 @@
 <template>
-  <div class="game-plugin-page" style="padding: 20px">
+  <div class="plugin-page">
+    <div class="page-header">
+      <h3>订单管理</h3>
+      <div>
+        <el-button type="success" @click="onExport">导出 CSV</el-button>
+      </div>
+    </div>
     <el-form :inline="true" :model="query" style="margin-bottom: 16px">
       <el-form-item label="游戏ID"><el-input v-model="query.gameId" placeholder="请输入游戏ID" clearable /></el-form-item>
       <el-form-item label="订单号"><el-input v-model="query.orderNo" placeholder="请输入订单号" clearable /></el-form-item>
@@ -16,10 +22,7 @@
         <el-button @click="onReset">重置</el-button>
       </el-form-item>
     </el-form>
-    <div style="margin-bottom: 16px">
-      <el-button type="success" @click="onExport">导出 CSV</el-button>
-    </div>
-    <el-table v-loading="loading" :data="list" border stripe>
+    <el-table v-loading="loading" :data="list" stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="orderNo" label="订单号" min-width="180" />
       <el-table-column prop="gameId" label="游戏ID" width="80" />
@@ -171,3 +174,26 @@ function onExport() {
 
 onMounted(loadData);
 </script>
+
+<style scoped>
+.plugin-page {
+  padding: 20px;
+}
+.plugin-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
+}
+.plugin-page .page-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.plugin-page .el-table {
+  border-radius: 8px;
+}
+</style>

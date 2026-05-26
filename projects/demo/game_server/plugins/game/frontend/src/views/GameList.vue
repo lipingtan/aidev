@@ -1,13 +1,16 @@
 <template>
-  <div class="game-plugin-page" style="padding: 20px">
+  <div class="plugin-page">
+    <div class="page-header">
+      <h3>游戏管理</h3>
+      <div>
+        <el-button type="primary" @click="openDialog()">新增游戏</el-button>
+      </div>
+    </div>
     <el-form :inline="true" :model="query" style="margin-bottom: 16px">
       <el-form-item label="游戏名称"><el-input v-model="query.name" placeholder="请输入游戏名称" clearable /></el-form-item>
       <el-form-item><el-button type="primary" @click="onSearch">查询</el-button><el-button @click="onReset">重置</el-button></el-form-item>
     </el-form>
-    <div style="margin-bottom: 16px">
-      <el-button type="primary" @click="openDialog()">新增游戏</el-button>
-    </div>
-    <el-table v-loading="loading" :data="list" border stripe>
+    <el-table v-loading="loading" :data="list" stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="游戏名称" />
       <el-table-column prop="appKey" label="AppKey" width="120" />
@@ -178,3 +181,26 @@ async function onRegenSecret(row: any) {
 
 onMounted(loadData);
 </script>
+
+<style scoped>
+.plugin-page {
+  padding: 20px;
+}
+.plugin-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
+}
+.plugin-page .page-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.plugin-page .el-table {
+  border-radius: 8px;
+}
+</style>
