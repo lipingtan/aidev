@@ -390,5 +390,5 @@ func createDatabaseIfNotExists(user, password, host string, port int, dbName, ch
 
 // generateSecret 生成随机 JWT 密钥
 func generateSecret() string {
-	return fmt.Sprintf("game-server-%d", time.Now().UnixNano())
+	return fmt.Sprintf("platform-%d", time.Now().UnixNano())
 }

@@ -1,12 +1,12 @@
-docker pull dep0jn2qzb53xkcb3q.xuanyuan.run/lscr.io/linuxserver/winegui:latest
+docker pull dep0jn2qzb53xkcb3q.xuanyuan.run@/lscr.io/linuxserver/winegui:latest
 
-docker pull dep0jn2qzb53xkcb3q.xuanyuan.run/linuxserver/winegui:latest
+docker pull dep0jn2qzb53xkcb3q.xuanyuan.run@/linuxserver/winegui:latest
 
 
 
-docker pull dep0jn2qzb53xkcb3q-ghcr.xuanyuan.run/linuxserver/winegui:latest
+docker pull dep0jn2qzb53xkcb3q-ghcr.xuanyuan.run@/linuxserver/winegui:latest
 
-docker tag dep0jn2qzb53xkcb3q-ghcr.xuanyuan.run/linuxserver/winegui:latest linuxserver/winegui:latest
+docker tag dep0jn2qzb53xkcb3q-ghcr.xuanyuan.run@/linuxserver/winegui:latest linuxserver/winegui:latest
 
 
 # 启动时限制内存

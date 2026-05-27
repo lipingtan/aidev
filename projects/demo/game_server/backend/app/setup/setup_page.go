@@ -7,7 +7,7 @@ const setupPageHTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>游戏管理平台 - 初始化安装</title>
+<title>管理平台开发底座 - 初始化安装</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -54,7 +54,7 @@ const setupPageHTML = `<!DOCTYPE html>
 <div class="container">
   <div class="card">
     <div class="logo">
-      <h1>🎮 游戏管理平台</h1>
+      <h1>⚡ 管理平台开发底座</h1>
       <p>首次运行，请完成初始化配置</p>
     </div>
 
@@ -80,7 +80,7 @@ const setupPageHTML = `<!DOCTYPE html>
         </div>
         <div class="form-group">
           <label>数据库名</label>
-          <input type="text" id="dbName" placeholder="game_server" value="game_server">
+          <input type="text" id="dbName" placeholder="platform_base" value="platform_base">
           <div class="hint">数据库需要提前创建，或确保用户有创建数据库的权限</div>
         </div>
         <div class="form-row">
@@ -113,7 +113,7 @@ const setupPageHTML = `<!DOCTYPE html>
         <div class="form-row">
           <div class="form-group">
             <label>平台名称</label>
-            <input type="text" id="appName" value="游戏管理平台" placeholder="游戏管理平台">
+            <input type="text" id="appName" value="管理平台开发底座" placeholder="管理平台开发底座">
           </div>
           <div class="form-group">
             <label>服务端口</label>

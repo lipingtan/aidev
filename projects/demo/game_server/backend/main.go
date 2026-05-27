@@ -6,10 +6,9 @@ import (
 
 //go:generate swag init --parseDependency --parseDepth=6 --instanceName admin -o ./docs/admin
 
-// @title go-admin API
-// @version 2.0.0
-// @description 基于Gin + Vue + Element UI的前后端分离权限管理系统的接口文档
-// @description 添加qq群: 521386980 进入技术交流群 请先star，谢谢！
+// @title 管理平台开发底座 API
+// @version 1.0.0
+// @description 管理平台开发底座 - 支持插件化扩展的 SaaS 管理系统
 // @license.name MIT
 // @license.url https://github.com/go-admin-team/go-admin/blob/master/LICENSE.md
 
