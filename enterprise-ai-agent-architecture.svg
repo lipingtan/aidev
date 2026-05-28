@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900">
+<style>
+  text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+  .title { font-size: 20px; font-weight: 600; fill: #111827; }
+  .layer-title { font-size: 14px; font-weight: 600; fill: #374151; }
+  .node-label { font-size: 13px; fill: #111827; }
+  .sub-label { font-size: 11px; fill: #6b7280; }
+  .legend-text { font-size: 11px; fill: #6b7280; }
+</style>
+<defs>
+  <marker id="arr-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0,10 3.5,0 7" fill="#2563eb"/>
+  </marker>
+  <marker id="arr-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0,10 3.5,0 7" fill="#16a34a"/>
+  </marker>
+  <marker id="arr-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0,10 3.5,0 7" fill="#ea580c"/>
+  </marker>
+  <marker id="arr-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <polygon points="0 0,10 3.5,0 7" fill="#9333ea"/>
+  </marker>
+</defs>
+<rect width="1280" height="900" fill="#ffffff"/>
+<text x="640" y="36" text-anchor="middle" class="title">Enterprise AI Agent Platform Architecture</text>
+<rect x="30" y="55" width="1220" height="90" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+<text x="50" y="75" class="layer-title">Touchpoints / Channels</text>
+<rect x="100" y="85" width="120" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="160" y="111" text-anchor="middle" class="node-label">Web App</text>
+<rect x="260" y="85" width="120" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="320" y="111" text-anchor="middle" class="node-label">Mobile App</text>
+<rect x="420" y="85" width="120" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="480" y="111" text-anchor="middle" class="node-label">API Client</text>
+<rect x="580" y="85" width="120" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="640" y="111" text-anchor="middle" class="node-label">IM/Chat</text>
+<rect x="740" y="85" width="120" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="800" y="111" text-anchor="middle" class="node-label">Voice/IVR</text>
+<rect x="900" y="85" width="120" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="960" y="111" text-anchor="middle" class="node-label">IoT Device</text>
+<rect x="1060" y="85" width="120" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="1120" y="111" text-anchor="middle" class="node-label">Admin Console</text>
+<rect x="30" y="160" width="1220" height="90" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+<text x="50" y="180" class="layer-title">API Gateway / Access Layer</text>
+<rect x="100" y="190" width="130" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="165" y="216" text-anchor="middle" class="node-label">Auth & Token</text>
+<rect x="260" y="190" width="130" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="325" y="216" text-anchor="middle" class="node-label">Rate Limit</text>
+<rect x="420" y="190" width="130" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="485" y="216" text-anchor="middle" class="node-label">Protocol Adapt</text>
+<rect x="580" y="190" width="130" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="645" y="216" text-anchor="middle" class="node-label">Load Balance</text>
+<rect x="740" y="190" width="130" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="805" y="216" text-anchor="middle" class="node-label">Session Mgmt</text>
+<rect x="900" y="190" width="130" height="44" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="965" y="216" text-anchor="middle" class="node-label">Routing Rules</text>
+<rect x="30" y="265" width="1220" height="100" rx="8" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1"/>
+<text x="50" y="285" class="layer-title">Orchestration / Workflow Engine</text>
+<rect x="100" y="295" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="165" y="325" text-anchor="middle" class="node-label">Flow Engine</text>
+<rect x="260" y="295" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="325" y="325" text-anchor="middle" class="node-label">Intent Router</text>
+<rect x="420" y="295" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="485" y="325" text-anchor="middle" class="node-label">Context Mgr</text>
+<rect x="580" y="295" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="645" y="318" text-anchor="middle" class="node-label">Multi-Agent</text>
+<text x="645" y="333" text-anchor="middle" class="sub-label">Coordinator</text>
+<rect x="740" y="295" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="805" y="318" text-anchor="middle" class="node-label">Fallback &</text>
+<text x="805" y="333" text-anchor="middle" class="sub-label">Escalation</text>
+<rect x="900" y="295" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="965" y="318" text-anchor="middle" class="node-label">Memory</text>
+<text x="965" y="333" text-anchor="middle" class="sub-label">Manager</text>
+<rect x="30" y="380" width="750" height="110" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+<text x="50" y="400" class="layer-title">AI Agents</text>
+<rect x="80" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="140" y="435" text-anchor="middle" class="node-label">Dialogue</text>
+<text x="140" y="452" text-anchor="middle" class="sub-label">Agent</text>
+<rect x="220" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="280" y="435" text-anchor="middle" class="node-label">Task</text>
+<text x="280" y="452" text-anchor="middle" class="sub-label">Agent</text>
+<rect x="360" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="420" y="435" text-anchor="middle" class="node-label">RAG</text>
+<text x="420" y="452" text-anchor="middle" class="sub-label">Agent</text>
+<rect x="500" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="560" y="435" text-anchor="middle" class="node-label">Decision</text>
+<text x="560" y="452" text-anchor="middle" class="sub-label">Agent</text>
+<rect x="640" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="700" y="435" text-anchor="middle" class="node-label">Code</text>
+<text x="700" y="452" text-anchor="middle" class="sub-label">Agent</text>
+<rect x="800" y="380" width="450" height="110" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+<text x="820" y="400" class="layer-title">Palantir Ontology Layer</text>
+<rect x="830" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="890" y="435" text-anchor="middle" class="node-label">Object Types</text>
+<text x="890" y="452" text-anchor="middle" class="sub-label">& Relations</text>
+<rect x="970" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="1030" y="435" text-anchor="middle" class="node-label">Actions &</text>
+<text x="1030" y="452" text-anchor="middle" class="sub-label">Functions</text>
+<rect x="1110" y="410" width="120" height="60" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="1170" y="435" text-anchor="middle" class="node-label">Ontology</text>
+<text x="1170" y="452" text-anchor="middle" class="sub-label">APIs</text>
+<rect x="30" y="510" width="1220" height="100" rx="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1"/>
+<text x="50" y="530" class="layer-title">Foundation Systems / Infrastructure</text>
+<rect x="70" y="540" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="135" y="563" text-anchor="middle" class="node-label">LLM Service</text>
+<text x="135" y="578" text-anchor="middle" class="sub-label">(GPT/Claude)</text>
+<rect x="230" y="540" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="295" y="563" text-anchor="middle" class="node-label">Vector DB</text>
+<text x="295" y="578" text-anchor="middle" class="sub-label">(Milvus)</text>
+<rect x="390" y="540" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="455" y="563" text-anchor="middle" class="node-label">Knowledge</text>
+<text x="455" y="578" text-anchor="middle" class="sub-label">Graph</text>
+<rect x="550" y="540" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="615" y="563" text-anchor="middle" class="node-label">Data Lake</text>
+<text x="615" y="578" text-anchor="middle" class="sub-label">(S3/HDFS)</text>
+<rect x="710" y="540" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="775" y="563" text-anchor="middle" class="node-label">Message Queue</text>
+<text x="775" y="578" text-anchor="middle" class="sub-label">(Kafka)</text>
+<rect x="870" y="540" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="935" y="563" text-anchor="middle" class="node-label">Cache</text>
+<text x="935" y="578" text-anchor="middle" class="sub-label">(Redis)</text>
+<rect x="1030" y="540" width="130" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="1095" y="563" text-anchor="middle" class="node-label">Object Store</text>
+<text x="1095" y="578" text-anchor="middle" class="sub-label">(MinIO)</text>
+<rect x="30" y="630" width="380" height="100" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+<text x="50" y="650" class="layer-title">Security</text>
+<rect x="60" y="660" width="100" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="110" y="683" text-anchor="middle" class="node-label">IAM &</text>
+<text x="110" y="698" text-anchor="middle" class="sub-label">RBAC</text>
+<rect x="180" y="660" width="100" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="230" y="683" text-anchor="middle" class="node-label">Data</text>
+<text x="230" y="698" text-anchor="middle" class="sub-label">Encryption</text>
+<rect x="300" y="660" width="100" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="350" y="683" text-anchor="middle" class="node-label">Prompt</text>
+<text x="350" y="698" text-anchor="middle" class="sub-label">Firewall</text>
+<rect x="430" y="630" width="380" height="100" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+<text x="450" y="650" class="layer-title">Audit & Compliance</text>
+<rect x="460" y="660" width="100" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="510" y="683" text-anchor="middle" class="node-label">Operation</text>
+<text x="510" y="698" text-anchor="middle" class="sub-label">Log</text>
+<rect x="580" y="660" width="100" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="630" y="683" text-anchor="middle" class="node-label">Decision</text>
+<text x="630" y="698" text-anchor="middle" class="sub-label">Trace</text>
+<rect x="700" y="660" width="100" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="750" y="683" text-anchor="middle" class="node-label">Compliance</text>
+<text x="750" y="698" text-anchor="middle" class="sub-label">Report</text>
+<rect x="830" y="630" width="420" height="100" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+<text x="850" y="650" class="layer-title">Ops & Monitoring</text>
+<rect x="860" y="660" width="120" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="920" y="683" text-anchor="middle" class="node-label">Metrics &</text>
+<text x="920" y="698" text-anchor="middle" class="sub-label">Alerts</text>
+<rect x="990" y="660" width="120" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="1050" y="683" text-anchor="middle" class="node-label">Tracing</text>
+<text x="1050" y="698" text-anchor="middle" class="sub-label">(OpenTelemetry)</text>
+<rect x="1130" y="660" width="120" height="52" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="1190" y="683" text-anchor="middle" class="node-label">Auto</text>
+<text x="1190" y="698" text-anchor="middle" class="sub-label">Scaling</text>
+<line x1="160" y1="145" x2="160" y2="160" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="420" y1="145" x2="420" y2="160" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="640" y1="145" x2="640" y2="160" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="900" y1="145" x2="900" y2="160" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="160" y1="250" x2="160" y2="265" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="420" y1="250" x2="420" y2="265" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="640" y1="250" x2="640" y2="265" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="900" y1="250" x2="900" y2="265" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="160" y1="365" x2="160" y2="380" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="420" y1="365" x2="420" y2="380" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="640" y1="365" x2="640" y2="380" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<line x1="960" y1="365" x2="960" y2="380" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+<line x1="160" y1="490" x2="160" y2="510" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+<line x1="420" y1="490" x2="420" y2="510" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+<line x1="640" y1="490" x2="640" y2="510" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+<line x1="960" y1="490" x2="960" y2="510" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+<line x1="200" y1="610" x2="200" y2="630" stroke="#ea580c" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-orange)"/>
+<line x1="620" y1="610" x2="620" y2="630" stroke="#ea580c" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-orange)"/>
+<line x1="1040" y1="610" x2="1040" y2="630" stroke="#ea580c" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-orange)"/>
+<rect x="1260" y="55" width="6" height="680" rx="3" fill="#ea580c" opacity="0.3"/>
+<text x="1258" y="750" text-anchor="end" class="sub-label" transform="rotate(-90,1258,750)">Cross-Cutting Concerns</text>
+<rect x="30" y="760" width="500" height="50" rx="6" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+<text x="50" y="778" class="layer-title">Legend</text>
+<line x1="50" y1="796" x2="80" y2="796" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+<text x="88" y="800" class="legend-text">Request Flow</text>
+<line x1="180" y1="796" x2="210" y2="796" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+<text x="218" y="800" class="legend-text">Data Access</text>
+<line x1="310" y1="796" x2="340" y2="796" stroke="#9333ea" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+<text x="348" y="800" class="legend-text">Ontology Binding</text>
+<line x1="460" y1="796" x2="490" y2="796" stroke="#ea580c" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-orange)"/>
+<text x="498" y="800" class="legend-text">Cross-Cutting</text>
+</svg>
