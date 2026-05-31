@@ -115,22 +115,25 @@ oversaturated, busy background, text, watermark
 |------|------|
 | 构图 | 全身站立，展示完整服装 |
 | 背景 | 纯色或极简环境 |
+| 模特 | **无脸模特**（faceless mannequin），不含面部特征 |
 | 姿势 | 自然站立，双手可见 |
 | 角度 | 正面或3/4侧面 |
 | 重点 | 服装细节清晰（材质、颜色、配饰位置） |
 | 分辨率 | ≥ 1024×1024 |
 
+> **核心原则**：服装元素不包含角色面部信息。使用时通过 `@素体 @服装` 组合，KLING 从素体提取面部/体型，从服装提取穿着。
+
 ### 提示词模板
 
 ```
-Full body shot of [角色素体描述],
-[服装描述 from characters/*.md Wardrobe 对应条目],
+Full body shot of a [体型描述] figure wearing [服装描述 from characters/*.md Wardrobe],
 natural standing pose, hands visible,
+faceless mannequin with [肤色] skin tone,
 simple background, soft even lighting,
-photorealistic, cinematic quality, full body visible head to toe
+photorealistic, cinematic quality, clothing focus, full body visible head to toe
 
 Negative: blur, distort, low quality, cropped body,
-anime style, busy background
+face details, facial features, portrait, anime style, busy background
 ```
 
 ---
