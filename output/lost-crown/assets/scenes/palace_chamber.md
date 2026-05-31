@@ -7,7 +7,7 @@ dim torches on walls casting long shadows, cold damp air,
 the feeling of something ancient and forbidden,
 faint purple glow from cracks in the floor,
 no people, empty scene, wide shot,
-cinematic, photorealistic, dramatic lighting, dark fantasy, 16:9 aspect ratio
+photorealistic, high detail, 16:9 aspect ratio
 
 Negative: people, characters, figures, anime style, low quality,
-blur, text, watermark, oversaturated, bright, cheerful
+blur, text, watermark, oversaturated

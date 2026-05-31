@@ -15,15 +15,15 @@
 
 | 注册 | 元素名称 | 标识 | 参考图 | 使用范围 |
 |:----:|----------|------|--------|----------|
-| | 艾伦·素体 | `alan_body` | alan-body.png | 全系列 |
-| | 艾薇儿·素体（16岁） | `avira_16yr_body` | avira-16-body.png | 序幕~第三幕 |
+| Y | 艾伦·素体 | `alan_body` | alan-body.png | 全系列 |
+| Y | 艾薇儿·素体（16岁） | `avira_16yr_body` | avira-16-body.png | 序幕~第三幕 |
 | | 艾薇儿·素体（19岁） | `avira_19yr_body` | avira-19-body.png | 第四幕~尾声 |
 | | 莉娅娜·素体 | `liana_body` | liana-body.png | 全系列 |
 | | 瑟琳·素体 | `sylphina_body` | sylphina-body.png | 第一幕~尾声 |
 | | 格雷·素体 | `gray_body` | gray-body.png | 序幕~第三幕 |
-| | 维克多·素体 | `victor_body` | victor-body.png | 序幕~第五幕 |
-| | 雷欧王·素体 | `king_leo_body` | king-leo-body.png | 序幕~第五幕 |
-| | 扎克里·素体 | `zachary_body` | zachary-body.png | 序幕~第五幕 |
+| Y | 维克多·素体 | `victor_body` | victor-body.png | 序幕~第五幕 |
+| Y | 雷欧王·素体 | `king_leo_body` | king-leo-body.png | 序幕~第五幕 |
+| Y | 扎克里·素体 | `zachary_body` | zachary-body.png | 序幕~第五幕 |
 | | 卡斯帕·素体 | `caspar_body` | caspar-body.png | 第二幕~尾声 |
 | | 哈维尔·素体 | `harvel_body` | harvel-body.png | 第一幕~第五幕 |
 | | 莱恩·素体 | `lyen_body` | lyen-body.png | 第二幕~尾声 |
@@ -50,15 +50,15 @@
 |----------|------|--------|----------|:----------:|
 | | 艾伦·W1 日常服 | `alan_w1` | alan-outfit-casual.png | 王都日常 |
 | | 艾伦·W2 战斗甲 | `alan_w2` | alan-outfit-combat.png | 战斗场景 |
-| | 艾伦·W3 斗殴后（破损） | `alan_w3` | alan-outfit-torn.png | 序幕第1章 |
-| | 艾伦·W4 怪物化边缘 | `alan_w4` | alan-outfit-monster.png | 闪前/高潮 |
+| Y | 艾伦·W3 斗殴后（破损） | `alan_w3` | alan-outfit-torn.png | 序幕第1章 |
+| Y | 艾伦·W4 怪物化边缘 | `alan_w4` | alan-outfit-monster.png | 闪前/高潮 |
 | | 艾伦·W5 和平期 | `alan_w5` | alan-outfit-peace.png | 尾声 |
 
 ### 艾薇儿服装
 
 | 注册 | 元素名称 | 标识 | 参考图 | 适用场景 |
 |----------|------|--------|----------|:----------:|
-| | 艾薇儿·W1 白裙 | `avira_w1` | avira-outfit-dress.png | 日常/居所 |
+| Y | 艾薇儿·W1 白裙 | `avira_w1` | avira-outfit-dress.png | 日常/居所 |
 | | 艾薇儿·W2 外出斗篷 | `avira_w2` | avira-outfit-cloak.png | 外出 |
 | | 艾薇儿·W3 战斗袍 | `avira_w3` | avira-outfit-battle.png | 战斗 |
 | | 艾薇儿·W4 导师袍 | `avira_w4` | avira-outfit-mentor.png | 尾声 |
@@ -132,7 +132,7 @@
 
 | 注册 | 元素名称 | 标识 | 参考图 | 所属角色 | 备注 |
 |----------|------|--------|----------|------|:----------:|
-| | 艾伦·黑色大剑 | `alan_sword` | alan-sword.png | 艾伦 | 全程 |
+| Y | 艾伦·黑色大剑 | `alan_sword` | alan-sword.png | 艾伦 | 全程 |
 | | 格雷·圣剑 | `gray_holy_sword` | gray-holy-sword.png | 格雷→艾伦 | 第三幕后转交 |
 | | 格雷·圣剑（觉醒） | `gray_holy_sword_awakened` | gray-holy-sword-awakened.png | 艾伦 | 第四幕起发光 |
 
@@ -191,15 +191,15 @@
 
 | 注册 | 元素名称 | 标识 | 参考图 | 使用范围 | 备注 |
 |:----:|----------|------|--------|----------|------|
-| | 王都全景（夜） | `royal_city_night` | royal-city-night.png | 序幕 | 俯瞰视角 |
-| | 王都街巷（夜） | `royal_city_alley` | royal-city-alley.png | 序幕 | 石板路+火把 |
+| Y | 王都全景（夜） | `royal_city_night` | royal-city-night.png | 序幕 | 俯瞰视角 |
+| Y | 王都街巷（夜） | `city_alley_night` | city-alley-night.png | 序幕 | 石板路+火把 |
 | | 酒馆外部 | `tavern_ext` | tavern-exterior.png | 序幕 ch01 | |
 | | 酒馆内部 | `tavern_int` | tavern-interior.png | 序幕 ch01 | 壁炉+木桌 |
-| | 艾伦居所（内部） | `alan_home_int` | alan-home-interior.png | 序幕 ch01/ch05 | 壁炉+窗户 |
+| Y | 艾伦居所（内部） | `alan_home_int` | alan-home-interior.png | 序幕 ch01/ch05 | 壁炉+窗户 |
 | | 王宫外景（夜） | `palace_ext_night` | palace-exterior-night.png | 序幕 ch02 | |
-| | 王宫密室 | `palace_chamber` | palace-chamber.png | 序幕 ch01/ch02 | 祭坛+紫光 |
+| Y | 王宫密室 | `palace_chamber` | palace-chamber.png | 序幕 ch01/ch02 | 祭坛+紫光 |
 | | 王宫召见大厅 | `palace_throne_hall` | palace-throne-hall.png | 序幕 ch02 | |
-| | 封印塔（外观） | `seal_tower_ext` | seal-tower-exterior.png | 序幕~第三幕 | 裂缝逐步恶化 |
+| Y | 封印塔（外观） | `seal_tower_ext` | seal-tower-exterior.png | 序幕~第三幕 | 裂缝逐步恶化 |
 | | 封印塔（内部） | `seal_tower_int` | seal-tower-interior.png | 序幕 ch04 | |
 | | 王都城墙 | `royal_city_wall` | royal-city-wall.png | 序幕 ch03 | |
 | | 王都市场（白天） | `royal_city_market` | royal-city-market.png | 序幕 ch03 | 托姆出场 |
@@ -296,7 +296,7 @@
 
 | 注册 | 元素名称 | 标识 | 参考图 | 所属 | 备注 |
 |:----:|----------|------|--------|------|------|
-| | 龙鳞纹身发光 | `fx_dragon_tattoo_glow` | fx-dragon-tattoo-glow.png | 艾伦 | 战斗/情绪激动 |
+| Y | 龙鳞纹身发光 | `fx_tattoo_glow` | fx-tattoo-glow.png | 艾伦 | 战斗/情绪激动 |
 | | 星辰魔法光效 | `fx_starlight_hands` | fx-starlight-hands.png | 艾薇儿 | 施法基础 |
 | | 星辰终焉（天空星河） | `fx_star_finale` | fx-star-finale.png | 艾薇儿 | 第五幕高潮 |
 | | 火焰指尖 | `fx_flame_fingers` | fx-flame-fingers.png | 莉娅娜 | 日常/情绪 |
@@ -304,7 +304,7 @@
 | | 藤蔓治愈光效 | `fx_vine_heal` | fx-vine-heal.png | 瑟琳 | 治疗场景 |
 | | 藤蔓巨龙 | `fx_vine_dragon` | fx-vine-dragon.png | 瑟琳 | 大型战斗 |
 | | 四色光柱 | `fx_four_color_pillar` | fx-four-color-pillar.png | 四人共鸣 | 第五幕高潮 |
-| | 黑雾基础 | `fx_black_mist` | fx-black-mist.png | 影龙系 | 全系列 |
+| Y | 黑雾基础 | `fx_black_mist` | fx-black-mist.png | 影龙系 | 全系列 |
 | | 圣光护盾 | `fx_holy_shield` | fx-holy-shield.png | 格雷 | 序幕~第三幕 |
 | | 霜刃剑气 | `fx_frost_slash` | fx-frost-slash.png | 卡斯帕 | 战斗 |
 

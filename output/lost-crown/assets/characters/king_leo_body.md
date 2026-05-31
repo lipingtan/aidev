@@ -7,7 +7,7 @@ slumped posture, once-regal features now gaunt and exhausted,
 an aura of fading authority,
 looking directly at camera, upper body shot,
 simple dark background, soft even lighting,
-photorealistic, high detail, cinematic quality, dark fantasy
+photorealistic, high detail
 
 Negative: blur, distort, low quality, anime style, cartoon,
 oversaturated, busy background, text, watermark

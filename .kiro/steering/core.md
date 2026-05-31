@@ -167,6 +167,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 分镜/运镜规范 | `AIDOC/global-info/knowledge/steering/video/cinematography.md` |
 | 节奏控制 | `AIDOC/global-info/knowledge/steering/video/pacing.md` |
 | 角色一致性 | `AIDOC/global-info/knowledge/steering/video/character-consistency.md` |
+| **空间视觉一致性（场景 DNA 体系）** | `AIDOC/global-info/knowledge/steering/video/spatial-consistency.md` |
 | AI 视频提示词工程 | `AIDOC/global-info/knowledge/steering/video/prompt-engineering.md` |
 | 负面提示词 | `AIDOC/global-info/knowledge/steering/video/negative-prompts.md` |
 | 风格关键词 | `AIDOC/global-info/knowledge/steering/video/style-keywords.md` |

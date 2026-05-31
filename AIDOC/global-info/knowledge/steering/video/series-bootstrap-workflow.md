@@ -202,14 +202,16 @@ output/{系列名}/
 | 序号 | 文件 | 输入依赖（必须读取） |
 |------|------|---------------------|
 | 1 | style-bible.md | Phase 0 README（风格偏好）+ worldview（色调氛围） |
-| 2 | characters/*.md | style-bible（风格锚定词）+ foundation/characters（中文设定）+ foundation/scripts（出场场景） |
-| 3 | scenes/*.md | style-bible（色彩方案）+ worldview（地理气候）+ foundation/scripts（场景出现时机） |
-| 4 | props-registry.md | characters/*.md（角色武器）+ scenes/*.md（环境道具）+ worldview（魔法体系）+ foundation/scripts（道具出现时机） |
-| 5 | visual-direction.md | 以上全部 + foundation/scripts/大纲（伏笔的视觉符号）|
-| 6 | cinematography-guide.md | visual-direction + foundation/scripts/故事细化（场景类型决定镜头模板）+ 叙事审查补充（情感表达约束） |
-| 7 | audio-design.md | cinematography-guide + foundation/characters（角色语气）+ foundation/scripts（情绪节奏） |
-| 8 | production-constraints.md | foundation/ 全部文件 + 以上所有 library 文件（提取所有影响制作的约束） |
+| 2 | **scenes/_spatial-dna.md** | worldview（地理/建筑/材质描述）+ style-bible（色彩方案） |
+| 3 | characters/*.md | style-bible（风格锚定词）+ foundation/characters（中文设定）+ foundation/scripts（出场场景） |
+| 4 | scenes/*.md | style-bible（色彩方案）+ **_spatial-dna.md（区域/场所 DNA 词）** + worldview（地理气候）+ foundation/scripts（场景出现时机） |
+| 5 | props-registry.md | characters/*.md（角色武器）+ scenes/*.md（环境道具）+ worldview（魔法体系）+ foundation/scripts（道具出现时机） |
+| 6 | visual-direction.md | 以上全部 + foundation/scripts/大纲（伏笔的视觉符号）|
+| 7 | cinematography-guide.md | visual-direction + foundation/scripts/故事细化（场景类型决定镜头模板）+ 叙事审查补充（情感表达约束） |
+| 8 | audio-design.md | cinematography-guide + foundation/characters（角色语气）+ foundation/scripts（情绪节奏） |
+| 9 | production-constraints.md | foundation/ 全部文件 + 以上所有 library 文件（提取所有影响制作的约束） |
 
+> 步骤 2（_spatial-dna.md）定义世界级和区域级视觉 DNA，后续所有 scenes/*.md 必须引用其中的 DNA 词。详见 `spatial-consistency.md`。
 > 每完成一个文件，立即生成对应的 output/assets/ 提示词（如完成 characters/alan.md 后立即生成 output/assets/characters/alan-body.md）。
 
 ### 核心链路
@@ -257,34 +259,49 @@ output/assets/（提示词层，纯英文）
 
 按 `reference-generation-guide.md` 的模板，将设计文档组装为 output/assets/ 中的提示词文件。
 
+> **风格分离原则**：assets/ 提示词禁止包含 style-bible 风格渲染词（cinematic, dark fantasy, dramatic lighting 等）。只允许质量词（photorealistic, high detail）和中性光线（soft even lighting）。详见 `reference-generation-guide.md` 和 `structure.md`。
+
 **角色素体提示词模板**：
 ```
 [素体描述]
 neutral expression, looking directly at camera,
 simple grey background, soft even lighting,
-photorealistic, high detail, cinematic quality, upper body shot
+photorealistic, high detail, upper body shot
 
 Negative: blur, distort, low quality, anime style, cartoon,
 oversaturated, busy background, text, watermark
 ```
 
+**服装提示词模板**：
+```
+[体型描述] figure wearing [服装描述],
+full body shot, standing pose,
+faceless mannequin with [肤色] skin tone,
+simple background, soft even lighting,
+photorealistic, high detail, clothing focus
+
+Negative: blur, distort, low quality, anime style, cartoon,
+face details, facial features, portrait, busy background, text, watermark
+```
+
 **场景提示词模板**：
 ```
-[场景描述]
+[场景描述，包含区域 DNA 词],
 no people, empty scene, establishing shot,
-cinematic, photorealistic, dramatic lighting, 16:9 aspect ratio
+photorealistic, high detail, 16:9 aspect ratio
 
-Negative: people, characters, figures, anime style, low quality
+Negative: people, characters, figures, anime style, low quality,
+blur, text, watermark, oversaturated
 ```
 
 **道具提示词模板**：
 ```
 [道具描述]
 product photography style, centered composition,
-dark background, dramatic lighting highlighting details,
+dark background, even lighting highlighting details,
 photorealistic, high detail, no hands, isolated object
 
-Negative: blur, low quality, hands, people, busy background
+Negative: blur, low quality, hands, people, busy background, anime style, text, watermark
 ```
 
 ### 产出文件清单

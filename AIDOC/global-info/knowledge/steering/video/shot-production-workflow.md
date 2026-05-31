@@ -47,6 +47,7 @@ series-bootstrap-workflow 全部 Phase 通过
 | `tech.md` | 提示词组装 | output/ 最终格式 | 按引擎格式组装（KLING 自包含 / WAN 时间戳） |
 | `post-production.md` | chapter_design | 转场表 | 标注每对镜头的衔接方式 |
 | `post-production.md` | shot_plan | 衔接字段 | 指定与前后镜头的具体衔接手法 |
+| `spatial-consistency.md` | shot_design | Scene 字段 | 从 _spatial-dna.md 提取该场所的 DNA 词融入场景描述 |
 | `iteration-protocol.md` | 视频生成后 | iterations/ | 效果不满意时触发归因和迭代 |
 
 ### 各步骤必读清单
@@ -66,6 +67,7 @@ series-bootstrap-workflow 全部 Phase 通过
 
 **shot_design**：
 - `character-consistency.md` → 角色描述逐词复制 + 元素绑定
+- `spatial-consistency.md` → Scene 字段中包含该场所的 DNA 词
 - `style-keywords.md`（通过 style-bible）→ 风格锚定词
 - `negative-prompts.md` → 组装负面提示词
 - `tech.md` → 引擎限制（镜头数/时长/对话字数）+ 生成参数选择

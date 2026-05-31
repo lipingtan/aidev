@@ -18,47 +18,48 @@
 
 所有标识使用 snake_case 英文，规则如下：
 
+**硬性限制：标识总长度 ≤ 20 个字符**（KLING 平台限制）。超过时使用缩写。
+
 ### 角色素体
 
 ```
-{角色英文简写}_body              # 单一年龄版本
-{角色英文简写}_{年龄}yr_body     # 多年龄版本
+{角色简写}_body              # 单一年龄版本（如 alan_body）
+{角色简写}_{年龄}y_body      # 多年龄版本（如 avira_16y_body）
 ```
-
-示例：`alan_body`、`avira_16yr_body`、`avira_19yr_body`、`tom_10yr_body`
 
 ### 服装
 
 ```
-{角色英文简写}_w{N}              # 按衣橱编号 W1~W5
+{角色简写}_w{N}              # 按衣橱编号 W1~W5（如 alan_w3）
 ```
-
-示例：`alan_w1`、`alan_w2`、`avira_w1`
 
 ### 武器/道具
 
 ```
-{角色英文简写}_{武器描述}        # 主武器用描述性名称
-{角色英文简写}_item{N}           # 次要道具用编号
+{角色简写}_{武器缩写}        # 主武器（如 alan_sword, gray_sword）
+{角色简写}_item{N}           # 次要道具用编号
 ```
-
-示例：`alan_sword`、`gray_holy_sword`、`gray_holy_sword_awakened`
 
 ### 场景
 
 ```
-{场景描述性名称}                 # 全小写 snake_case，不带角色前缀
+{场景缩写}                   # 全小写 snake_case（如 city_alley_night）
 ```
-
-示例：`royal_city_night`、`palace_chamber`、`seal_tower_ext`
 
 ### 魔法效果/特效
 
 ```
-fx_{效果描述}
+fx_{效果缩写}                # 如 fx_tattoo_glow, fx_black_mist
 ```
 
-示例：`fx_dragon_tattoo_glow`、`fx_starlight_hands`、`fx_black_mist`
+### 缩写规则（当全名超 20 字符时）
+
+| 缩写策略 | 示例 |
+|----------|------|
+| 去掉 `royal_` 前缀（场景已知属于王都） | `royal_city_alley_night` → `city_alley_night` |
+| 用 `y` 替代 `yr` | `avira_16yr_body` → `avira_16y_body` |
+| 去掉状态后缀，用编号 | `gray_holy_sword_awakened` → `gray_sword_v2` |
+| 缩写描述词 | `fx_dragon_tattoo_glow` → `fx_tattoo_glow` |
 
 ### 元素注册表列格式约定
 

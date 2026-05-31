@@ -6,7 +6,7 @@ dark purple-black mist seeping from the cracks,
 surrounded by dead vegetation, an ominous aura radiating outward,
 cold moonlight on grey stone, faint purple glow from cracks,
 no people, establishing shot, full tower visible,
-cinematic, photorealistic, dramatic lighting, dark fantasy, 16:9 aspect ratio
+photorealistic, high detail, 16:9 aspect ratio
 
 Negative: people, characters, figures, anime style, low quality,
-blur, text, watermark, oversaturated, bright, cheerful
+blur, text, watermark, oversaturated

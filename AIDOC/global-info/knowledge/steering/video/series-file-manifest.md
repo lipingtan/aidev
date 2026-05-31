@@ -25,14 +25,15 @@
 
 | # | 文件 | 生成步骤 | 对应规范 | 输入依赖 | 说明 |
 |---|------|----------|----------|----------|------|
-| P1 | `style-bible.md` | Phase 4-1 | `series-bootstrap-workflow.md` Phase 4 步骤A | README(风格偏好) + F1(色调氛围) | 风格锚定词、色彩方案、负面提示词、对话语言 |
-| P2 | `characters/*.md` (21个) | Phase 4-2 | `series-bootstrap-workflow.md` Phase 4 步骤A(角色转化) | P1(风格锚定词) + F5(中文设定) + F4(出场场景) | 素体描述(英文)+服装衣橱W1~W5+配饰+语气关键词 |
-| P3 | `scenes/*.md` (18个) | Phase 4-3 | `series-bootstrap-workflow.md` Phase 4 步骤A(场景转化) | P1(色彩方案) + F1(地理气候) + F4(场景出现时机) | 场景英文描述+光线设定+环境锚点 |
-| P4 | `props-registry.md` | Phase 4-4 | `series-bootstrap-workflow.md` Phase 4 步骤A(道具转化) | P2(角色武器) + P3(环境道具) + F1(魔法体系) + F4(道具出现时机) | 武器/护符/剧情道具/魔法效果视觉描述+出现时间线 |
-| P5 | `visual-direction.md` | Phase 4-5 | `series-bootstrap-workflow.md` Phase 4 | P1~P4全部 + F3(伏笔的视觉符号) | 标志性视觉符号+规模感镜头+色彩策略+时间流逝视觉化 |
-| P6 | `cinematography-guide.md` | Phase 4-6 | `series-bootstrap-workflow.md` Phase 4 | P5 + F4(场景类型) + F5+审查补充(情感约束) | 按场景类型的镜头模板+浪漫线专属风格+魔法处理+禁忌清单 |
-| P7 | `audio-design.md` | Phase 4-7 | `series-bootstrap-workflow.md` Phase 4 | P6 + F5(角色语气) + F4(情绪节奏) | 音乐主题+音效清单+对话语气规范+静默策略 |
-| P8 | `production-constraints.md` | Phase 4-8 | `series-bootstrap-workflow.md` Phase 4 | foundation/全部 + P1~P7全部 | 世界观约束+角色行为约束+叙事约束+代价时间线+红鲱鱼清单 |
+| P1 | `style-bible.md` | Phase 4-1 | `series-bootstrap-workflow.md` Phase 4 | README(风格偏好) + F1(色调氛围) | 风格锚定词、色彩方案、负面提示词、对话语言 |
+| P1b | `scenes/_spatial-dna.md` | Phase 4-2 | `spatial-consistency.md` | F1(地理/建筑/材质) + P1(色彩方案) | 世界级+区域级视觉 DNA 定义 |
+| P2 | `characters/*.md` (21个) | Phase 4-3 | `series-bootstrap-workflow.md` Phase 4 步骤A(角色转化) | P1(风格锚定词) + F5(中文设定) + F4(出场场景) | 素体描述(英文)+服装衣橱W1~W5+配饰+语气关键词 |
+| P3 | `scenes/*.md` (18个) | Phase 4-4 | `series-bootstrap-workflow.md` Phase 4 步骤A(场景转化) | P1(色彩方案) + P1b(DNA词) + F1(地理气候) + F4(场景出现时机) | 场景英文描述+光线设定+环境锚点(含DNA词) |
+| P4 | `props-registry.md` | Phase 4-5 | `series-bootstrap-workflow.md` Phase 4 步骤A(道具转化) | P2(角色武器) + P3(环境道具) + F1(魔法体系) + F4(道具出现时机) | 武器/护符/剧情道具/魔法效果视觉描述+出现时间线 |
+| P5 | `visual-direction.md` | Phase 4-6 | `series-bootstrap-workflow.md` Phase 4 | P1~P4全部 + F3(伏笔的视觉符号) | 标志性视觉符号+规模感镜头+色彩策略+时间流逝视觉化 |
+| P6 | `cinematography-guide.md` | Phase 4-7 | `series-bootstrap-workflow.md` Phase 4 | P5 + F4(场景类型) + F5+审查补充(情感约束) | 按场景类型的镜头模板+浪漫线专属风格+魔法处理+禁忌清单 |
+| P7 | `audio-design.md` | Phase 4-8 | `series-bootstrap-workflow.md` Phase 4 | P6 + F5(角色语气) + F4(情绪节奏) | 音乐主题+音效清单+对话语气规范+静默策略 |
+| P8 | `production-constraints.md` | Phase 4-9 | `series-bootstrap-workflow.md` Phase 4 | foundation/全部 + P1~P7全部 | 世界观约束+角色行为约束+叙事约束+代价时间线+红鲱鱼清单 |
 
 ### Phase 5 产出（制作准备）
 
@@ -129,13 +130,14 @@ Phase 3 → F5 角色设定
 ★ 叙事审查 → F5 追加"叙事深化补充"章节
     ↓
 Phase 4-1 → P1 style-bible
-Phase 4-2 → P2 characters/*.md + O1/O2 assets/characters/*.md
-Phase 4-3 → P3 scenes/*.md + O3 assets/scenes/*.md
-Phase 4-4 → P4 props-registry + O4/O5 assets/props+enemies/*.md
-Phase 4-5 → P5 visual-direction
-Phase 4-6 → P6 cinematography-guide
-Phase 4-7 → P7 audio-design
-Phase 4-8 → P8 production-constraints
+Phase 4-2 → _spatial-dna.md（世界级+区域级视觉 DNA）
+Phase 4-3 → P2 characters/*.md + O1/O2 assets/characters/*.md
+Phase 4-4 → P3 scenes/*.md（引用 DNA 词）+ O3 assets/scenes/*.md
+Phase 4-5 → P4 props-registry + O4/O5 assets/props+enemies/*.md
+Phase 4-6 → P5 visual-direction
+Phase 4-7 → P6 cinematography-guide
+Phase 4-8 → P7 audio-design
+Phase 4-9 → P8 production-constraints
     ↓
 Phase 5-1 → P9 series-bible
 Phase 5-2 → P10 elements-registry

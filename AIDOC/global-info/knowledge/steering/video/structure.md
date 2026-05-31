@@ -141,6 +141,11 @@ output/
 - `kling/` = 给 KLING 视频生成的提示词
 - 不含任何设计说明或注释，纯提示词
 
+**assets/ 与 kling/ 的风格分离（强制）**：
+- `assets/` 提示词**禁止**包含 style-bible 风格渲染词（如 cinematic, dark fantasy, dramatic lighting, epic）。只允许质量词（photorealistic, high detail）和中性光线（soft even lighting）。参考图越干净中性，KLING 创建元素时提取特征越准确。
+- `kling/` 提示词**必须**以 style-bible 风格锚定词开头，统一控制画面风格。
+- 素体参考图包含面部/体型，不含服装；服装参考图使用无脸模特，不含角色面部。使用时 `@素体 + @服装` 组合。
+
 ---
 
 ## 资产生命周期

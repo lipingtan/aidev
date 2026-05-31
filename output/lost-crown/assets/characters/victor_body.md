@@ -6,8 +6,8 @@ wearing a luxurious dark fur-trimmed cloak over black armor,
 elegant yet cold expression, an air of calculated menace,
 bear-fur pauldrons on his shoulders,
 looking directly at camera, upper body shot,
-simple dark background, dramatic side lighting,
-photorealistic, high detail, cinematic quality, dark fantasy
+simple dark background, soft even lighting,
+photorealistic, high detail
 
 Negative: blur, distort, low quality, anime style, cartoon,
 oversaturated, busy background, text, watermark
