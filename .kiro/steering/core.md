@@ -156,7 +156,6 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 短剧目录结构规范 | `AIDOC/global-info/knowledge/steering/video/structure.md` |
 | 视频引擎技术规格（KLING/WAN） | `AIDOC/global-info/knowledge/steering/video/tech.md` |
 | 产出文件位置规范 | `AIDOC/global-info/knowledge/steering/video/spec-output-location.md` |
-| 叙事/剧情策划工作流 | `AIDOC/global-info/knowledge/steering/video/narrative-workflow.md` |
 | 叙事质量审查 | `AIDOC/global-info/knowledge/steering/video/narrative-quality-review.md` |
 | 启动全新短剧系列 | `AIDOC/global-info/knowledge/steering/video/series-bootstrap-workflow.md` |
 | **镜头制作工作流（逐镜头制作）** | `AIDOC/global-info/knowledge/steering/video/shot-production-workflow.md` |
@@ -194,6 +193,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 | 资产管线（导入/生成/集成） | `AIDOC/global-info/knowledge/steering/game/asset-pipeline.md` |
 | 迭代优化（调试/性能/平衡） | `AIDOC/global-info/knowledge/steering/game/iteration-workflow.md` |
 | 多平台性能/画质预算 | `AIDOC/global-info/knowledge/steering/game/performance-budget.md` |
+| RPG 叙事策划工作流（对话/任务/触发器） | `AIDOC/global-info/knowledge/steering/game/narrative-workflow.md` |
 
 #### Godot 引擎特定
 

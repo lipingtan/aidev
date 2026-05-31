@@ -69,6 +69,7 @@ series-bootstrap-workflow 全部 Phase 通过
 - `style-keywords.md`（通过 style-bible）→ 风格锚定词
 - `negative-prompts.md` → 组装负面提示词
 - `tech.md` → 引擎限制（镜头数/时长/对话字数）+ 生成参数选择
+- `engines/kling/patterns/` → 按场景类型查验证有效的提示词模式（对话/动作/情绪/运镜/转场）
 
 **提示词组装**（shot_design → output/）：
 - `prompt-engineering.md` → 组装流程和格式
@@ -296,6 +297,8 @@ C. 混合——内心独白用旁白，角色互动用对话
 - story_plan 中的澄清问题全部回答 → 生成 story_design
 - 用户确认 story_design → 逐章节进入 chapter_plan
 
+**快捷规则**：如果 story_plan 中的澄清问题已在创建时直接回答（无需用户额外输入），且用户确认 plan 内容无误，可跳过独立的 story_design 文件，直接以 story_plan 作为执行依据进入 chapter_plan。
+
 ---
 
 ## 五、第二层：章节策划与定稿（chapter_plan → chapter_design）
@@ -459,47 +462,39 @@ AIDOC/series/{系列名}/production/{NNN}-{单集名}/{章节名}/
     └── v{N}.md
 ```
 
-### 6.3 shot_plan 模板
+### 6.3 shot_plan 模板（精简版）
+
+> shot_plan 只做策划层概述，不展开镜头分解。确认后由 shot_design 展开完整设计。
 
 ```markdown
 ## Shot Plan: ep-{NNN}
 
-### 叙事目的
-本镜头要传达什么信息/情绪？
+| 属性 | 值 |
+|------|-----|
+| 叙事目的 | {本段要传达什么信息/情绪} |
+| 画面概述 | {一句话描述核心画面} |
+| 时长 | {X}秒 / {N}镜头 |
+| 角色 | {角色A(服装)} + {角色B(服装)}（如有） |
+| 场景 | {场景名} |
+| 情绪 | {关键词} |
+| 衔接 | 承接：{上一段结束状态} → 过渡：{下一段开始状态} |
+| 对话 | "{台词}"（如有）/ 无 |
+```
 
-### 画面概述（中文）
-一句话描述画面内容。
+**示例：**
+```markdown
+## Shot Plan: ep-003
 
-### 时长
-{X} 秒
-
-### 镜头数
-{N} 镜头（KLING 多镜头模式）
-
-### 各镜头分解
-| 镜头 | 时长 | 景别 | 运镜 | 画面内容 |
-|------|------|------|------|----------|
-| ① | {X}s | {景别} | {运镜} | {描述} |
-| ② | {X}s | {景别} | {运镜} | {描述} |
-| ... | | | | |
-
-### 角色
-- 角色A（服装）：动作描述
-- 角色B（服装）：动作描述（如有）
-
-### 环境/光线
-场景名 + 光线状态
-
-### 情绪基调
-{关键词}
-
-### 与前后镜头的衔接
-- 承接上一镜头：{动作/视线/情绪}
-- 过渡到下一镜头：{动作/视线/情绪}
-
-### 对话/音效
-- 台词："{内容}"（如有）
-- 环境音：{描述}
+| 属性 | 值 |
+|------|-----|
+| 叙事目的 | 展现艾伦发现龙纹纹身发光的震惊 |
+| 画面概述 | 艾伦在街巷中低头看手臂，纹身开始发出金黑色光芒 |
+| 时长 | 8秒 / 3镜头 |
+| 角色 | 艾伦(W3-斗殴后) |
+| 场景 | 王都街巷（夜） |
+| 情绪 | 震惊、恐惧、好奇交织 |
+| 衔接 | 承接：ep-002 艾伦跌坐在地 → 过渡：ep-004 艾伦抬头看到远处人影 |
+| 对话 | 无 |
 ```
 
 **门控**：用户确认 shot_plan 后进入 shot_design。
@@ -570,7 +565,7 @@ KLING AI / WAN 2.5
 | story_plan | 必须逐项确认 | 无（首次必须） |
 | chapter_plan | 必须确认（含澄清） | 无 |
 | chapter_design | 必须确认 | 无（这是执行依据） |
-| shot_plan | 逐个确认 | 氛围/建立镜头可批量确认 |
+| shot_plan | 逐个确认 | 氛围/建立镜头可批量确认（plan 已精简为概述表格） |
 | shot_design | 逐个确认 | 用户明确说"按 plan 直接出 design"时可跳过 |
 | 提示词生成 | 无需确认 | design 确认即可自动生成 |
 
@@ -657,3 +652,28 @@ AIDOC/series/{系列名}/production/{NNN}-{单集名}/
 │
 └── README.md
 ```
+
+
+---
+
+## 十二、修改传播规则
+
+> 制作过程中如需修改 foundation/ 或 library/ 的设定，按以下规则评估影响范围。
+
+### 修改源 → 影响范围
+
+| 修改位置 | 影响的下游文件 | 处理方式 |
+|----------|---------------|----------|
+| `foundation/worldview/` | library/scenes/*.md + production-constraints.md | 更新受影响的场景描述和约束 |
+| `foundation/characters/` | library/characters/*.md + elements-registry.md | 更新视觉档案；如外貌变化需新建元素 |
+| `foundation/scripts/` | pacing-map + 已生成的 story_plan/chapter_plan | 评估节奏和片段拆分是否需要调整 |
+| `library/characters/*.md` | 所有引用该角色的 shot_design + output/ 提示词 | 重新生成受影响的提示词 |
+| `library/scenes/*.md` | 所有引用该场景的 shot_design + output/ 提示词 | 重新生成受影响的提示词 |
+| `style-bible.md` | 所有 shot_design + 所有 output/ 提示词 | 全量更新（影响面大，慎改） |
+
+### 操作原则
+
+1. **向下传播，不向上**：修改 foundation/ 后更新 library/ 和 output/，但不因 output/ 的问题反向修改 foundation/
+2. **最小影响**：只更新直接引用了被修改内容的文件，不全量重建
+3. **已生成视频不受影响**：已完成的视频不需要重新生成，除非视觉一致性被破坏
+4. **记录变更**：在 production-tracker.md 中标注哪些片段因设定变更需要重新生成

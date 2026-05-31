@@ -46,11 +46,33 @@ KLING 和 WAN 都推荐先建立环境上下文，再描述主体和动作。这
 > 下方的"Master Prompt"概念指的是**每个镜头提示词中都要包含的风格/场景/角色基础描述**，
 > 不是一个单独的输入框。
 
+### KLING 提示词要素顺序（官方推荐）
+
+> 严格按以下顺序组织，这是 KLING 物理引擎的计算逻辑。
+
+```
+Subject（主体细节）→ Movement（运动物理）→ Scene（场景背景）
+→ Cinematic Language（镜头语言）→ Lighting（光线）→ Atmosphere（氛围）
+```
+
+| 要素 | 作用 | 示例术语 |
+|------|------|----------|
+| **Subject** | 定义主体的物理属性和身份 | @alan_body @alan_w3, dragon scale tattoo on left arm |
+| **Movement** | 定义运动的物理规律 | gravity-affected smoke, wind-blown flames |
+| **Scene** | 建立空间上下文 | dark medieval alley, cobblestone wet with rain |
+| **Cinematic Language** | 控制景别、视角、运镜 | close-up, slow push in |
+| **Lighting** | 定义光线交互方式 | volumetric moonlight, warm lantern glow |
+| **Atmosphere** | 建立情绪基调 | tense, foreboding silence |
+
 ### 每镜头自包含提示词模板
 
 ```
-[风格锚定], [环境描述], [角色视觉特征（@元素ID 或文字）]. 
-[景别 + 运镜]: [主体动作描述]. [光线]. [情绪/氛围].
+[Subject: 角色视觉特征（@元素ID 或文字）].
+[Movement: 主体动作描述].
+[Scene: 环境描述].
+[Cinematic Language: 景别 + 运镜].
+[Lighting: 光线].
+[Atmosphere: 情绪/氛围].
 Negative: [负面提示词]
 (Duration: Xs)
 ```

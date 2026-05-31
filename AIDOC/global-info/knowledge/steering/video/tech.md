@@ -38,34 +38,10 @@
 
 **建议工作流**：先用"标准"模式测试 → 确认满意后用"高质量/专业"模式重新生成最终版。
 
-### KLING 提示词公式（官方推荐顺序）
+### 提示词编写
 
-> KLING 多镜头模式中，每个镜头各自一个完整提示词，没有独立的 Master Prompt。
-> 提示词要素严格按以下顺序组织，这是 KLING 物理引擎的计算逻辑。
-
-```
-Subject（主体细节）→ Movement（运动物理）→ Scene（场景背景）
-→ Cinematic Language（镜头语言）→ Lighting（光线）→ Atmosphere（氛围）
-```
-
-| 要素 | 作用 | 示例术语 |
-|------|------|----------|
-| **Subject** | 定义主体的物理属性和身份 | swirling blue energy particles, weathered leather jacket |
-| **Movement** | 定义运动的物理规律 | gravity-affected smoke, wind-blown flames, upward spiraling |
-| **Scene** | 建立空间上下文 | European villa terrace, bustling cyberpunk market |
-| **Cinematic Language** | 控制景别、视角、运镜 | low angle stabilizer movement, push-in tracking shot |
-| **Lighting** | 定义光线交互方式 | volumetric light, Tyndall effect, golden hour glow |
-| **Atmosphere** | 建立情绪基调 | atmospheric mist, ethereal glow, poetic realism |
-
-### 多镜头格式
-
-```
-Shot 1 (Duration: Xs): [Subject]. [Movement]. [Scene]. [Cinematic Language]. [Lighting]. [Atmosphere].
-Negative: [负面提示词]
-
-Shot 2 (Duration: Ys): [Subject]. [Movement]. [Scene]. [Cinematic Language]. [Lighting]. [Atmosphere].
-Negative: [负面提示词]
-```
+> 提示词格式、编写原则、组装流程统一参见 `prompt-engineering.md`。
+> 本文件只记录引擎参数规格和能力边界。
 
 ### Elements 3.0 元素系统
 
@@ -83,16 +59,12 @@ Negative: [负面提示词]
 
 ### 对话语法
 
+> 完整对话格式和示例参见 `prompt-engineering.md`。
+
 ```
-单人对话（使用元素绑定的声音）：
-@角色元素ID says: "台词内容"
-
-多人对话：
-@角色A_ID says: "第一句台词"
-Immediately, @角色B_ID says: "回应台词"
-
-无元素绑定时的对话格式：
-[角色A: 身份, 语气描述]: "台词内容"
+单人对话：@角色元素ID says: "台词内容"
+多人对话：@角色A_ID says: "台词" / Immediately, @角色B_ID says: "回应"
+无元素绑定：[角色A: 身份, 语气描述]: "台词内容"
 ```
 
 ### KLING 对话时长限制
@@ -218,27 +190,10 @@ Shot 5 [12-15s]: [镜头5内容描述]
 
 ---
 
-## 通用负面提示词（Negative Prompts）
+## 负面提示词
 
-> KLING 没有独立的 Negative Prompt 输入框，直接写在 Master Prompt 末尾，用 `Negative:` 前缀。
-> **数量控制在 5~8 个**，超过 20 个会让画面变平。
-
-### KLING 3.0 推荐基础集（6 个，每次必加）
-
-```
-Negative: blur, distort, low quality, warping fingers, jittery eyes, character drift between shots
-```
-
-> KLING 3.0 已改善 frozen lips 和 plastic skin 问题，可不加。但多镜头模式需要加 `character drift between shots`。
-
-### 按场景追加（选 2~3 个）
-
-| 场景类型 | 追加项 |
-|----------|--------|
-| 有对话 | audio desync, garbled speech, mouth not matching words |
-| 多角色 | face swap, character merge, identity drift |
-| 电影感 | unnatural motion, stuttered movement, flickering highlights |
-| 多镜头 | tonal shift between cuts, lighting inconsistency |
+> 完整负面提示词规范参见 `negative-prompts.md`。
+> 基础集（6个）：`blur, distort, low quality, warping fingers, jittery eyes, character drift between shots`
 
 ---
 
