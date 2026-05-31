@@ -88,6 +88,42 @@ Negative: blur, distort, low quality, warping fingers, jittery eyes, character d
 (Duration: 4 seconds)
 ```
 
+### KLING 元素引用规范
+
+> 在 KLING 平台创建元素后，提示词中通过 `@标识` 引用。素体和服装分离绑定。
+
+**引用语法**：
+
+素体 + 服装的组合方式根据上下文自然表达，不拘泥于固定句式：
+
+```
+# 基本组合（素体 + 服装）
+@alan_body wearing @alan_w3, ...
+@alan_body in @alan_w2, ...
+@alan_body dressed in @alan_w1, ...
+
+# 结合场景
+@alan_body in @alan_w3, walking through @royal_city_alley_night, ...
+@avira_16yr_body in @avira_w1, sitting by the fireplace in @alan_home_int, ...
+
+# 结合道具/特效
+@alan_body in @alan_w2, gripping @alan_sword, @fx_dragon_tattoo_glow
+@alan_body in @alan_w3, @alan_sword strapped to his back, ...
+
+# 多角色
+@alan_body in @alan_w3 stands facing @avira_16yr_body in @avira_w1, ...
+```
+
+**核心原则**：用自然英文连接元素 ID，选择符合当前动作/状态的动词和介词（wearing/in/dressed in/holding/gripping/strapped to 等），让提示词读起来像一句完整的英文描述。
+
+**规则**：
+- 素体和服装**必须分开引用**，不要合并为一个元素
+- 同一角色在所有镜头中使用相同的素体 ID（保证面部一致性）
+- 服装 ID 按场景切换（同一场景内服装不变）
+- 无元素绑定的临时对象用文字描述（如路人、动物、天气）
+
+---
+
 ### 多镜头衔接技巧
 
 1. **动作衔接**：上一镜头的结束动作 = 下一镜头的开始状态
