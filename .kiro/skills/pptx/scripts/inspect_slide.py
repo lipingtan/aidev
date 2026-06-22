@@ -558,7 +558,8 @@ if __name__ == "__main__":
     # Prevent BrokenPipeError when output is piped to head/less/closed reader
     import signal
 
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    if hasattr(signal, "SIGPIPE"):
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
     if len(sys.argv) < 2:
         print(
