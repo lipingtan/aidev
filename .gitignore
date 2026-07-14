@@ -112,3 +112,5 @@ projects/**/exported/
 # 日志
 # ----------------------------------------
 projects/**/logs/
+
+projects/**/bak/
