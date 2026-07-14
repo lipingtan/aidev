@@ -126,6 +126,18 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 6. 设计阶段必须先创建 `design_plan.md` 提出设计相关澄清问题，用户确认后再输出 `design.md`
 7. **每个阶段切换时（Requirement → Design → Task → 执行），必须重新读取 `go-development-workflow.md` 中对应阶段的流程步骤，确认该阶段的产出物格式和前置条件，不得凭记忆行动**
 
+### 软件开发强制流程规范（对所有 AI 实体生效）
+
+> **本规范对主代理、子代理、任何被委托执行软件开发任务的 AI 实体均具有约束力。**
+> 子代理不得以"已由上级代理确认"为由跳过用户确认步骤。
+
+**核心规则：**
+- 复杂 CR（逻辑复杂/跨多模块/涉及 DDL+业务/安全相关/完整 CRUD/第三方集成）必须走完整流程
+- 完整流程：需求计划 → 用户确认 → 需求 → 用户确认 → 设计计划 → 用户确认 → 设计 → 用户确认 → 任务 → 用户确认 → 执行
+- **每个阶段产出物必须经用户明确确认后才能进入下一阶段，违反即回退**
+- 不确定复杂度时按复杂 CR 处理
+- 详细判定标准、门控规则、模板见 `go-development-workflow.md`
+
 ### 游戏开发任务
 1. 读取 `AIDOC/global-info/knowledge/steering/game/execution-protocol.md` 执行门控检查
 2. 读取对应功能的规范文件（见下方知识库索引）
@@ -135,6 +147,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 - **禁止**将过程文档（requirements.md / design.md / tasks.md）放到 `.kiro/specs/` 目录
 - `.kiro/specs/` 仅用于 Kiro 工作流内部控制文件（.config.kiro 等）
 - **禁止**跳过 plan 文件直接输出正式文档（requirements_plan → requirements、design_plan → design）
+- **禁止**子代理跳过门控确认步骤直接执行开发任务
 
 ---
 
