@@ -1,3 +1,9 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "kling-ai": {
+      "url": "https://kling.ai/mcp",
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
 }
