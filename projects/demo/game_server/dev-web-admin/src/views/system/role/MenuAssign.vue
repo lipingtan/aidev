@@ -38,7 +38,7 @@ function filterLeafIds(tree: MenuTreeItem[], ids: number[]): number[] {
   function walk(nodes: MenuTreeItem[]) {
     for (const n of nodes) {
       if (!n.children || n.children.length === 0) {
-        if (ids.includes(n.id)) leafIds.push(n.id)
+        if (ids.includes(n.menuId)) leafIds.push(n.menuId)
       } else {
         walk(n.children)
       }

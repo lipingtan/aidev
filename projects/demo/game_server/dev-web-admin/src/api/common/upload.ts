@@ -1,9 +1,10 @@
 /**
- * 公共文件上传 API
+ * 公共文件上传 API（对接 go-admin）
+ * 后端路由：POST /api/v1/public/uploadFile
  */
 import request from '@/utils/request'
 
-const UPLOAD_URL = '/common/files/upload'
+const UPLOAD_URL = '/public/uploadFile'
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_SIZE = 5 * 1024 * 1024
 const MAX_COUNT = 5
@@ -20,7 +21,7 @@ export const UPLOAD_CONSTANTS = {
   ACCEPT: '.jpg,.jpeg,.png,.gif,.webp'
 } as const
 
-export function uploadFile(file: File, category = 'workorder'): Promise<string> {
+export function uploadFile(file: File, category = 'default'): Promise<string> {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('category', category)
@@ -39,7 +40,7 @@ export function validateFile(file: File): string | null {
   return null
 }
 
-export async function uploadFiles(files: File[], category = 'workorder'): Promise<string[]> {
+export async function uploadFiles(files: File[], category = 'default'): Promise<string[]> {
   const urls: string[] = []
   for (const file of files) {
     const error = validateFile(file)

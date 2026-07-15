@@ -1,6 +1,6 @@
 <!--
   登录页
-  - 居中卡片布局，标题「智慧物业管理平台」
+  - 居中卡片布局，标题「快速开发平台」
   - el-form + el-input(用户名/密码/验证码) + el-button
   - 表单校验(非空)，调用 userStore.login()
   - 成功后 router.replace(redirect || '/home')
@@ -37,10 +37,11 @@ const rules: FormRules = {
 async function loadCaptcha() {
   try {
     const res = await userStore.fetchCaptcha()
-    captchaImg.value = res.captchaImage
-    loginForm.captchaKey = res.captchaKey
+    // go-admin 返回的 data 已经是完整的 base64 data URL
+    captchaImg.value = res.data
+    loginForm.captchaKey = res.id
   } catch {
-    // 验证码加载失败不阻塞
+    captchaImg.value = ''
   }
 }
 
@@ -54,9 +55,8 @@ async function handleLogin() {
     await userStore.login({
       username: loginForm.username,
       password: loginForm.password,
-      captchaCode: loginForm.captchaCode,
-      captchaKey: loginForm.captchaKey,
-      clientType: 'admin'
+      code: loginForm.captchaCode,
+      uuid: loginForm.captchaKey
     })
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/home'
@@ -76,7 +76,7 @@ onMounted(loadCaptcha)
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="login-title">智慧物业管理平台</h1>
+      <h1 class="login-title">快速开发平台</h1>
       <p class="login-subtitle">PC 管理端</p>
 
       <el-form ref="formRef" :model="loginForm" :rules="rules" size="large" @keyup.enter="handleLogin">

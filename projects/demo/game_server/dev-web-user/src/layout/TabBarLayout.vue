@@ -1,9 +1,10 @@
 <!--
   底部 Tab 栏布局
   - 顶部 van-nav-bar 显示当前路由 meta.title
-  - 底部 van-tabbar 5 个 Tab（首页、报修、缴费、公告、我的）
+  - 底部 van-tabbar 2 个 Tab（首页、我的）
   - safe-area-inset-bottom 适配
   - 内容区 router-view 包裹 transition 过渡动画（slide-left / slide-right）
+  - PC 端 ≥768px 居中限宽
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -37,9 +38,6 @@ const transitionName = computed(() => appStore.transitionName)
     <!-- 底部 Tab 栏 -->
     <van-tabbar route safe-area-inset-bottom>
       <van-tabbar-item icon="wap-home-o" to="/home">首页</van-tabbar-item>
-      <van-tabbar-item icon="orders-o" to="/workorder">报修</van-tabbar-item>
-      <van-tabbar-item icon="balance-o" to="/billing">缴费</van-tabbar-item>
-      <van-tabbar-item icon="bell" to="/notice">公告</van-tabbar-item>
       <van-tabbar-item icon="contact" to="/mine">我的</van-tabbar-item>
     </van-tabbar>
   </div>
@@ -61,6 +59,16 @@ const transitionName = computed(() => appStore.transitionName)
   overflow-y: auto;
   position: relative;
   padding-bottom: var(--spacing-xs);
+}
+
+/* PC 端响应式增强（≥768px） */
+@media (min-width: 768px) {
+  .tabbar-layout {
+    max-width: 768px;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    height: 100vh;
+  }
 }
 
 .tabbar-layout :deep(.van-tabbar-item__icon .van-icon) {

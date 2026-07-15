@@ -46,9 +46,12 @@ service.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Token 过期或未登录，清除 Token 并跳转登录页
+      // Token 过期或未登录，清除 Token
       localStorage.removeItem('access_token')
-      window.location.href = '/login'
+      // 避免重复跳转：如果当前已在 /login 页不再跳转
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/init')) {
+        window.location.href = '/login'
+      }
       return Promise.reject(error)
     }
     ElMessage.error(error.message || '网络异常')

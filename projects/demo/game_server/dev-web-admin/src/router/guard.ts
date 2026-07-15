@@ -27,12 +27,8 @@ export function setupRouterGuard(router: Router): void {
 
     // 首次访问时检查初始化状态
     if (!initChecked) {
-      try {
-        const status = await checkInitStatus()
-        isInitialized = status.initialized
-      } catch {
-        isInitialized = true
-      }
+      const status = await checkInitStatus()
+      isInitialized = status.initialized
       initChecked = true
     }
 
@@ -67,6 +63,20 @@ export function setupRouterGuard(router: Router): void {
         const userStore = useUserStore()
         await userStore.fetchUserInfo()
         await userStore.fetchMenus()
+        // 登录后加载已启用插件的前端 bundle
+        try {
+          const { loadAllPlugins } = await import('@/core/plugin-loader')
+          const { mergePluginRoutes } = await import('@/core/plugin-router')
+          const { usePluginStore } = await import('@/store/modules/plugin')
+          const pluginStore = usePluginStore()
+          const loadedConfigs = await loadAllPlugins()
+          loadedConfigs.forEach(config => {
+            pluginStore.addLoadedModule(config.manifest.name, config)
+          })
+          mergePluginRoutes(router, loadedConfigs)
+        } catch (e) {
+          console.error('[Guard] 插件加载失败:', e)
+        }
         userInfoLoaded = true
       } catch {
         // 加载失败（Token 过期等），清除状态跳转登录

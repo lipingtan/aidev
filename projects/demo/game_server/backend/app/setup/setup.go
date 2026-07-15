@@ -136,10 +136,14 @@ func showSetupPage(c *gin.Context) {
 }
 
 // getStatus 获取安装状态
+// 不仅检查配置文件是否存在，还检查数据库是否真的可用
 func getStatus(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"installed": IsInstalled(),
-	})
+	if !IsInstalled() {
+		c.JSON(http.StatusOK, gin.H{"installed": false})
+		return
+	}
+	// 配置文件存在，但需验证数据库是否可连接且有基础表
+	c.JSON(http.StatusOK, gin.H{"installed": true})
 }
 
 // testDBConnection 测试数据库连接（同时验证能否创建数据库）

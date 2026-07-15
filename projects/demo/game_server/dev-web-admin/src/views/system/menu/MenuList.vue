@@ -48,7 +48,7 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.menuType !== 'B'" link type="primary" @click="handleAdd(row.id)">新增</el-button>
+            <el-button v-if="row.menuType !== 'B'" link type="primary" @click="handleAdd(row.menuId)">新增</el-button>
             <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
             <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
@@ -83,7 +83,7 @@ function getMenuTypeLabel(menuType: string): string {
 
 async function fetchData() {
   loading.value = true
-  try { menuTree.value = await getMenuTree(queryParams.menuName, queryParams.status) }
+  try { menuTree.value = await getMenuTree({ menuName: queryParams.menuName, status: queryParams.status }) }
   finally { loading.value = false }
 }
 
@@ -92,7 +92,7 @@ function handleEdit(row: MenuTreeItem) { formRef.value?.open(row) }
 
 async function handleDelete(row: MenuTreeItem) {
   await ElMessageBox.confirm(`确认删除菜单「${row.menuName}」？`, '提示', { type: 'warning' })
-  await deleteMenu(row.id)
+  await deleteMenu(row.menuId)
   ElMessage.success('删除成功')
   fetchData()
 }

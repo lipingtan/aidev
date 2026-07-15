@@ -11,8 +11,8 @@ import { useRoute } from 'vue-router'
 import { useAppStore } from '@/store/modules/app'
 import { asyncRoutes } from '@/router/static-routes'
 import {
-  HomeFilled, Setting, User, UserFilled, Tickets, Wallet, Bell, Lock,
-  Menu, Document, Notebook, Avatar, Location, House, School, Key, OfficeBuilding, Stamp, DataAnalysis, Edit, Warning
+  HomeFilled, Setting, User, UserFilled, Tickets, Lock,
+  Menu, Document, Notebook, Avatar, Key, Box, Connection, DataAnalysis, Monitor as MonitorIcon
 } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 
@@ -20,8 +20,8 @@ const route = useRoute()
 const appStore = useAppStore()
 
 const iconMap: Record<string, Component> = {
-  HomeFilled, Setting, User, UserFilled, Tickets, Wallet, Bell, Lock,
-  Menu, Document, Notebook, Avatar, Location, House, School, Key, OfficeBuilding, Stamp, DataAnalysis, Edit, Warning
+  HomeFilled, Setting, User, UserFilled, Tickets, Lock,
+  Menu, Document, Notebook, Avatar, Key, Box, Connection, DataAnalysis, Monitor: MonitorIcon
 }
 
 /** 菜单分组定义 */
@@ -30,41 +30,20 @@ const menuGroups = computed(() => {
   if (!layoutRoute?.children) return []
   const children = layoutRoute.children.filter((r) => !r.meta?.hidden)
 
-  // 分组：基础数据、业主管理、工单管理、公告管理、系统管理、日志管理、其他
-  const baseItems = children.filter(r => r.path?.startsWith('base/'))
-  const ownerItems = children.filter(r => r.path?.startsWith('owner/'))
-  const workorderItems = children.filter(r => r.path?.startsWith('workorder/'))
-  const billingItems = children.filter(r => r.path?.startsWith('billing/'))
-  const noticeItems = children.filter(r => r.path?.startsWith('notice/'))
+  // 分组：系统管理、日志管理、监控、权限演示、其他
   const systemItems = children.filter(r => r.path?.startsWith('system/'))
   const logItems = children.filter(r => r.path?.startsWith('log/'))
+  const monitorItems = children.filter(r => r.path?.startsWith('monitor/'))
+  const permissionItems = children.filter(r => r.path?.startsWith('permission/'))
   const otherItems = children.filter(r =>
     !r.path?.startsWith('system/') &&
     !r.path?.startsWith('log/') &&
-    !r.path?.startsWith('base/') &&
-    !r.path?.startsWith('owner/') &&
-    !r.path?.startsWith('workorder/') &&
-    !r.path?.startsWith('billing/') &&
-    !r.path?.startsWith('notice/')
+    !r.path?.startsWith('monitor/') &&
+    !r.path?.startsWith('permission/')
   )
 
   const groups: any[] = []
   otherItems.forEach(item => groups.push({ type: 'item', item }))
-  if (baseItems.length) {
-    groups.push({ type: 'submenu', title: '基础数据', icon: 'OfficeBuilding', index: 'base', children: baseItems })
-  }
-  if (ownerItems.length) {
-    groups.push({ type: 'submenu', title: '业主管理', icon: 'UserFilled', index: 'owner', children: ownerItems })
-  }
-  if (workorderItems.length) {
-    groups.push({ type: 'submenu', title: '工单管理', icon: 'Tickets', index: 'workorder', children: workorderItems })
-  }
-  if (billingItems.length) {
-    groups.push({ type: 'submenu', title: '缴费管理', icon: 'Wallet', index: 'billing', children: billingItems })
-  }
-  if (noticeItems.length) {
-    groups.push({ type: 'submenu', title: '公告管理', icon: 'Bell', index: 'notice', children: noticeItems })
-  }
   // 系统管理子菜单
   if (systemItems.length) {
     groups.push({ type: 'submenu', title: '系统管理', icon: 'Setting', index: 'system', children: systemItems })
@@ -72,6 +51,14 @@ const menuGroups = computed(() => {
   // 日志管理子菜单
   if (logItems.length) {
     groups.push({ type: 'submenu', title: '日志管理', icon: 'Document', index: 'log', children: logItems })
+  }
+  // 服务监控子菜单
+  if (monitorItems.length) {
+    groups.push({ type: 'submenu', title: '服务监控', icon: 'DataAnalysis', index: 'monitor', children: monitorItems })
+  }
+  // 权限演示子菜单
+  if (permissionItems.length) {
+    groups.push({ type: 'submenu', title: '权限演示', icon: 'Lock', index: 'permission', children: permissionItems })
   }
   return groups
 })

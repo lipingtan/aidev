@@ -1,11 +1,12 @@
 /**
- * 菜单管理 API
+ * 菜单管理 API（对接 go-admin）
  */
 import request from '@/utils/request'
 
 export interface MenuTreeItem {
-  id: number
+  menuId: number
   menuName: string
+  title: string
   parentId: number
   menuType: string
   path: string
@@ -13,52 +14,34 @@ export interface MenuTreeItem {
   permission: string
   icon: string
   sort: number
-  status: number
-  children: MenuTreeItem[]
+  visible: string
+  children?: MenuTreeItem[]
 }
 
-export interface MenuCreateParams {
-  menuName: string
-  parentId: number
-  menuType: string
-  path?: string
-  component?: string
-  permission?: string
-  icon?: string
-  sort: number
-}
-
-export interface MenuUpdateParams {
-  menuName?: string
-  path?: string
-  component?: string
-  permission?: string
-  icon?: string
-  sort?: number
-  status?: number
-}
-
-/** 菜单树查询 */
-export function getMenuTree(menuName?: string, status?: number): Promise<MenuTreeItem[]> {
-  return request.get('/user/menus/tree', { params: { menuName, status } })
-}
-
-/** 当前用户菜单树 */
+/** 获取当前用户角色菜单（侧边栏用） */
 export function getUserMenuTree(): Promise<MenuTreeItem[]> {
-  return request.get('/user/menus/user-tree')
+  return request.get('/menurole')
 }
+
+/** 菜单列表（管理用） */
+export function getMenuList(params?: { menuName?: string; status?: number }): Promise<MenuTreeItem[]> {
+  return request.get('/menu', { params })
+}
+
+/** 菜单列表（兼容旧引用） */
+export const getMenuTree = getMenuList
 
 /** 新增菜单 */
-export function createMenu(data: MenuCreateParams): Promise<void> {
-  return request.post('/user/menus', data)
+export function createMenu(data: any): Promise<void> {
+  return request.post('/menu', data)
 }
 
 /** 编辑菜单 */
-export function updateMenu(id: number, data: MenuUpdateParams): Promise<void> {
-  return request.put(`/user/menus/${id}`, data)
+export function updateMenu(id: number, data: any): Promise<void> {
+  return request.put(`/menu/${id}`, data)
 }
 
 /** 删除菜单 */
 export function deleteMenu(id: number): Promise<void> {
-  return request.delete(`/user/menus/${id}`)
+  return request.delete(`/menu/${id}`)
 }

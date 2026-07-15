@@ -30,14 +30,8 @@ export const useUserStore = defineStore('user', () => {
   /** 登录 */
   async function login(params: LoginParams): Promise<TokenResult> {
     const result = await loginApi(params)
-    token.value = result.accessToken
-    refreshTokenVal.value = result.refreshToken
-    localStorage.setItem('access_token', result.accessToken)
-    localStorage.setItem('refresh_token', result.refreshToken)
-    userId.value = result.userId
-    username.value = result.username
-    realName.value = result.realName
-    avatar.value = result.avatar || ''
+    token.value = result.token
+    localStorage.setItem('access_token', result.token)
     return result
   }
 

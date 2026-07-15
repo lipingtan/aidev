@@ -7,7 +7,7 @@
         <el-descriptions-item label="用户名">{{ profile.username }}</el-descriptions-item>
         <el-descriptions-item label="姓名">{{ profile.realName }}</el-descriptions-item>
         <el-descriptions-item label="手机号">{{ profile.phone }}</el-descriptions-item>
-        <el-descriptions-item label="数据权限">{{ profile.dataPermissionLevel }}</el-descriptions-item>
+        <el-descriptions-item label="角色">{{ profile.roles?.join(', ') || '-' }}</el-descriptions-item>
         <el-descriptions-item label="角色">
           <el-tag v-for="r in profile.roles" :key="r" size="small" class="role-tag">{{ r }}</el-tag>
         </el-descriptions-item>
@@ -62,7 +62,7 @@ import { ElMessage } from 'element-plus'
 import { getProfile, updateProfile, updatePassword } from '@/api/profile'
 import type { ProfileInfo } from '@/api/profile'
 
-const profile = ref<ProfileInfo>({ userId: 0, username: '', realName: '', phone: '', avatar: '', roles: [], permissions: [], dataPermissionLevel: '' })
+const profile = ref<ProfileInfo>({ userId: 0, username: '', realName: '', phone: '', avatar: '', roles: [], permissions: [] })
 
 const showEditDialog = ref(false)
 const editLoading = ref(false)

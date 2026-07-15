@@ -1,5 +1,8 @@
 /**
- * 用户管理 API
+ * 用户管理 API（对接 go-admin）
+ * 后端路由：/api/v1/sys-user（CRUD）
+ *          /api/v1/user/status（状态切换）
+ *          /api/v1/user/pwd/reset（重置密码）
  */
 import request from '@/utils/request'
 
@@ -39,35 +42,35 @@ export interface UserUpdateParams {
 
 /** 用户分页查询 */
 export function listUsers(params: UserQuery) {
-  return request.get('/user/users', { params })
+  return request.get('/sys-user', { params })
 }
 
 /** 新增用户 */
 export function createUser(data: UserCreateParams): Promise<void> {
-  return request.post('/user/users', data)
+  return request.post('/sys-user', data)
 }
 
 /** 编辑用户 */
 export function updateUser(id: number, data: UserUpdateParams): Promise<void> {
-  return request.put(`/user/users/${id}`, data)
+  return request.put('/sys-user', { ...data, userId: id })
 }
 
 /** 删除用户 */
 export function deleteUser(id: number): Promise<void> {
-  return request.delete(`/user/users/${id}`)
+  return request.delete('/sys-user', { data: { ids: [id] } })
 }
 
 /** 批量删除 */
 export function batchDeleteUsers(ids: number[]): Promise<void> {
-  return request.delete('/user/users/batch', { data: ids })
+  return request.delete('/sys-user', { data: { ids } })
 }
 
 /** 状态切换 */
 export function updateUserStatus(id: number, status: number): Promise<void> {
-  return request.put(`/user/users/${id}/status?status=${status}`)
+  return request.put('/user/status', { userId: id, status: String(status) })
 }
 
 /** 重置密码 */
 export function resetPassword(id: number): Promise<void> {
-  return request.put(`/user/users/${id}/reset-password`)
+  return request.put('/user/pwd/reset', { userId: id })
 }

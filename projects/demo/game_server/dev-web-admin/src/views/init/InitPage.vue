@@ -1,8 +1,8 @@
 <template>
   <div class="init-container">
     <div class="init-card">
-      <h2 class="init-title">SPMP 系统初始化</h2>
-      <p class="init-desc">首次部署，请填写基础设施连接信息完成系统初始化</p>
+      <h2 class="init-title">系统初始化</h2>
+      <p class="init-desc">首次部署，请填写数据库连接信息完成系统初始化</p>
 
       <el-steps :active="currentStep" finish-status="success" align-center style="margin-bottom: 32px">
         <el-step title="填写配置" />
@@ -21,54 +21,68 @@
         <h3>数据库配置</h3>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="地址" prop="database.host">
-              <el-input v-model="configForm.database.host" placeholder="127.0.0.1" />
+            <el-form-item label="地址" prop="dbHost">
+              <el-input v-model="configForm.dbHost" placeholder="127.0.0.1" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="端口" prop="database.port">
-              <el-input-number v-model="configForm.database.port" :min="1" :max="65535" />
+            <el-form-item label="端口" prop="dbPort">
+              <el-input-number v-model="configForm.dbPort" :min="1" :max="65535" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="数据库名" prop="database.databaseName">
-              <el-input v-model="configForm.database.databaseName" placeholder="spmp" />
+            <el-form-item label="数据库名" prop="dbName">
+              <el-input v-model="configForm.dbName" placeholder="admindb" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="用户名" prop="database.username">
-              <el-input v-model="configForm.database.username" placeholder="root" />
+            <el-form-item label="用户名" prop="dbUser">
+              <el-input v-model="configForm.dbUser" placeholder="root" />
             </el-form-item>
           </el-col>
         </el-row>
-        <el-form-item label="密码" prop="database.password">
-          <el-input v-model="configForm.database.password" type="password" show-password placeholder="请输入数据库密码" />
+        <el-form-item label="密码" prop="dbPassword">
+          <el-input v-model="configForm.dbPassword" type="password" show-password placeholder="请输入数据库密码" />
         </el-form-item>
 
-        <h3 style="margin-top: 24px">Redis 配置</h3>
+        <h3 style="margin-top: 24px">Redis 配置（可选）</h3>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="地址" prop="redis.host">
-              <el-input v-model="configForm.redis.host" placeholder="127.0.0.1" />
+            <el-form-item label="地址">
+              <el-input v-model="configForm.redisHost" placeholder="127.0.0.1" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="端口" prop="redis.port">
-              <el-input-number v-model="configForm.redis.port" :min="1" :max="65535" />
+            <el-form-item label="端口">
+              <el-input-number v-model="configForm.redisPort" :min="1" :max="65535" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="密码" prop="redis.password">
-              <el-input v-model="configForm.redis.password" type="password" show-password placeholder="可选" />
+            <el-form-item label="密码">
+              <el-input v-model="configForm.redisPassword" type="password" show-password placeholder="无密码可留空" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="数据库编号" prop="redis.database">
-              <el-input-number v-model="configForm.redis.database" :min="0" :max="15" />
+            <el-form-item label="数据库编号">
+              <el-input-number v-model="configForm.redisDb" :min="0" :max="15" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <h3 style="margin-top: 24px">服务配置（可选）</h3>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="应用名称">
+              <el-input v-model="configForm.appName" placeholder="管理平台" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="服务端口">
+              <el-input-number v-model="configForm.appPort" :min="1" :max="65535" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -80,16 +94,17 @@
 
       <!-- 步骤 2：测试连接 -->
       <div v-if="currentStep === 1" class="test-result">
+        <div v-if="testing" style="text-align: center; padding: 40px">
+          <el-icon class="is-loading" :size="48"><Loading /></el-icon>
+          <p>正在测试连接...</p>
+        </div>
         <el-result
-          v-if="!testing"
+          v-else
           :icon="testPassed ? 'success' : 'error'"
           :title="testPassed ? '连接测试通过' : '连接测试未通过'"
         >
           <template #sub-title>
-            <div>
-              <p>数据库：{{ testResult?.databaseConnected ? '✅ ' + testResult.databaseMessage : '❌ ' + testResult?.databaseMessage }}</p>
-              <p>Redis：{{ testResult?.redisConnected ? '✅ ' + testResult.redisMessage : '❌ ' + testResult?.redisMessage }}</p>
-            </div>
+            <p>{{ testMessage }}</p>
           </template>
           <template #extra>
             <el-button @click="currentStep = 0">返回修改</el-button>
@@ -97,10 +112,6 @@
             <el-button v-else type="warning" @click="handleTestConnection">重新测试</el-button>
           </template>
         </el-result>
-        <div v-else style="text-align: center; padding: 40px">
-          <el-icon class="is-loading" :size="48"><Loading /></el-icon>
-          <p>正在测试连接...</p>
-        </div>
       </div>
 
       <!-- 步骤 3：执行初始化 -->
@@ -109,21 +120,14 @@
           <el-icon class="is-loading" :size="48"><Loading /></el-icon>
           <p>正在执行初始化，请稍候...</p>
         </div>
-        <el-result v-else-if="initResult?.success" icon="success" title="初始化完成">
+        <el-result v-else-if="initSuccess" icon="success" title="初始化完成">
           <template #sub-title>
-            <div>
-              <p>数据库：{{ initResult.summary.databaseHost }} / {{ initResult.summary.databaseName }}</p>
-              <p>Redis：{{ initResult.summary.redisHost }}</p>
-              <p>已执行脚本：{{ initResult.summary.scriptsExecuted }} 个</p>
-              <el-alert :type="initResult.modeSwitched ? 'success' : 'warning'" :closable="false" style="margin-top: 16px">
-                {{ initResult.modeSwitched ? '运行态已切换成功，正在进入登录页' : '初始化完成，但运行态尚未切换成功' }}
-              </el-alert>
-            </div>
+            <p>{{ initMessage }}</p>
           </template>
         </el-result>
         <el-result v-else icon="error" title="初始化失败">
           <template #sub-title>
-            <p>{{ initError }}</p>
+            <p>{{ initMessage }}</p>
           </template>
           <template #extra>
             <el-button @click="currentStep = 0">返回修改配置</el-button>
@@ -135,67 +139,65 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { testConnection, executeInit } from '@/api/init'
-import type { ConnectionTestResult, InitResult } from '@/api/init'
+import { testDBConnection, executeInit } from '@/api/init'
+import type { SetupConfig } from '@/api/init'
 
 const configFormRef = ref<FormInstance>()
 const currentStep = ref(0)
 const testing = ref(false)
 const initializing = ref(false)
-const testResult = ref<ConnectionTestResult | null>(null)
-const initResult = ref<InitResult | null>(null)
-const initError = ref('')
+const testPassed = ref(false)
+const testMessage = ref('')
+const initSuccess = ref(false)
+const initMessage = ref('')
 
-const configForm = reactive({
-  database: {
-    host: '127.0.0.1',
-    port: 3306,
-    databaseName: 'spmp',
-    username: 'root',
-    password: ''
-  },
-  redis: {
-    host: '127.0.0.1',
-    port: 6379,
-    password: '',
-    database: 0
-  }
+const configForm = reactive<SetupConfig>({
+  dbHost: '127.0.0.1',
+  dbPort: 3306,
+  dbName: 'admindb',
+  dbUser: 'root',
+  dbPassword: '',
+  redisHost: '127.0.0.1',
+  redisPort: 6379,
+  redisPassword: '',
+  redisDb: 0,
+  appName: '管理平台',
+  appPort: 8000
 })
 
 const formRules: FormRules = {
-  'database.host': [{ required: true, message: '请输入数据库地址', trigger: 'blur' }],
-  'database.port': [{ required: true, message: '请输入数据库端口', trigger: 'blur' }],
-  'database.databaseName': [{ required: true, message: '请输入数据库名称', trigger: 'blur' }],
-  'database.username': [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  'redis.host': [{ required: true, message: '请输入 Redis 地址', trigger: 'blur' }],
-  'redis.port': [{ required: true, message: '请输入 Redis 端口', trigger: 'blur' }]
+  dbHost: [{ required: true, message: '请输入数据库地址', trigger: 'blur' }],
+  dbPort: [{ required: true, message: '请输入端口', trigger: 'blur' }],
+  dbName: [{ required: true, message: '请输入数据库名称', trigger: 'blur' }],
+  dbUser: [{ required: true, message: '请输入用户名', trigger: 'blur' }]
 }
-
-const testPassed = computed(() => {
-  return testResult.value?.databaseConnected && testResult.value?.redisConnected
-})
 
 async function handleTestConnection() {
   if (configFormRef.value) {
     const valid = await configFormRef.value.validate().catch(() => false)
     if (!valid) return
   }
-
   testing.value = true
   currentStep.value = 1
+  testPassed.value = false
+  testMessage.value = ''
   try {
-    testResult.value = await testConnection(configForm)
+    const res = await testDBConnection({
+      dbHost: configForm.dbHost,
+      dbPort: configForm.dbPort,
+      dbName: configForm.dbName,
+      dbUser: configForm.dbUser,
+      dbPassword: configForm.dbPassword
+    })
+    testPassed.value = res.code === 200
+    testMessage.value = res.msg
   } catch (e: any) {
-    testResult.value = {
-      databaseConnected: false,
-      databaseMessage: '请求失败',
-      redisConnected: false,
-      redisMessage: e.message || '网络异常'
-    }
+    testPassed.value = false
+    testMessage.value = e.message || '请求失败'
   } finally {
     testing.value = false
   }
@@ -204,20 +206,19 @@ async function handleTestConnection() {
 async function handleExecuteInit() {
   initializing.value = true
   currentStep.value = 2
-  initError.value = ''
+  initSuccess.value = false
+  initMessage.value = ''
   try {
-    initResult.value = await executeInit(configForm)
-    if (initResult.value.modeSwitched) {
-      ElMessage.success('初始化完成，正在进入登录页')
-      window.setTimeout(() => {
-        window.location.href = '/login'
-      }, 1200)
-    } else {
-      ElMessage.warning('初始化完成，但运行态切换未完成')
+    const res = await executeInit(configForm)
+    initSuccess.value = res.code === 200
+    initMessage.value = res.msg
+    if (initSuccess.value) {
+      ElMessage.success('初始化完成，正在跳转登录页')
+      setTimeout(() => { window.location.href = '/login' }, 1500)
     }
   } catch (e: any) {
-    initResult.value = null
-    initError.value = e.message || '初始化失败'
+    initSuccess.value = false
+    initMessage.value = e.message || '初始化失败'
   } finally {
     initializing.value = false
   }
@@ -233,7 +234,7 @@ async function handleExecuteInit() {
   background: #f0f2f5;
 }
 .init-card {
-  width: 720px;
+  width: 680px;
   padding: 40px;
   background: #fff;
   border-radius: 8px;
@@ -249,9 +250,5 @@ async function handleExecuteInit() {
   color: #909399;
   margin-bottom: 32px;
 }
-h3 {
-  color: #606266;
-  margin-bottom: 16px;
-  font-size: 15px;
-}
+h3 { color: #606266; margin-bottom: 16px; font-size: 15px; }
 </style>
