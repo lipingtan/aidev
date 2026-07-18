@@ -56,7 +56,7 @@ function switchTheme(mode: 'business' | 'luxury-dark' | 'aurora-local') {
     <!-- 左侧区域 -->
     <div class="app-header__left">
       <div class="app-header__logo">
-        <span class="app-header__title">智慧物业管理平台</span>
+        <span class="app-header__title">极速开发平台</span>
       </div>
       <el-icon
         class="app-header__collapse-btn"

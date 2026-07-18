@@ -1,5 +1,5 @@
 /**
- * SPMP PC 端 TypeScript 类型定义
+ * PC 端 TypeScript 类型定义
  * 包含 API 响应、分页、用户、菜单、标签页、应用状态等通用类型
  */
 

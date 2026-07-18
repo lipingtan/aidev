@@ -1,18 +1,23 @@
 /**
  * 用户状态管理
  * - token / 用户信息 / 权限 / 菜单
- * - 对接后端认证和个人中心 API
+ * - 对接后端 auth-rbac 认证和个人中心 API
  */
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { login as loginApi, logout as logoutApi, getCaptcha as getCaptchaApi } from '@/api/auth'
 import { getProfile } from '@/api/profile'
 import { getUserMenuTree } from '@/api/menu'
-import type { LoginParams, TokenResult, CaptchaResult } from '@/api/auth'
 import type { ProfileInfo } from '@/api/profile'
 import type { MenuTreeItem } from '@/api/menu'
+import request from '@/utils/request'
+
+/** 验证码结果 */
+export interface CaptchaResult {
+  captcha_key: string
+  captcha_image: string  // base64 图片
+}
 
 export const useUserStore = defineStore('user', () => {
   const router = useRouter()
@@ -26,14 +31,6 @@ export const useUserStore = defineStore('user', () => {
   const roles = ref<string[]>([])
   const permissions = ref<string[]>([])
   const menus = ref<MenuTreeItem[]>([])
-
-  /** 登录 */
-  async function login(params: LoginParams): Promise<TokenResult> {
-    const result = await loginApi(params)
-    token.value = result.token
-    localStorage.setItem('access_token', result.token)
-    return result
-  }
 
   /** 获取用户信息 */
   async function fetchUserInfo(): Promise<ProfileInfo> {
@@ -54,18 +51,13 @@ export const useUserStore = defineStore('user', () => {
     return tree
   }
 
-  /** 获取验证码 */
+  /** 获取验证码（新 auth-rbac 接口） */
   async function fetchCaptcha(): Promise<CaptchaResult> {
-    return getCaptchaApi()
+    return request.get('/auth/captcha')
   }
 
   /** 登出 */
   async function logout(): Promise<void> {
-    try {
-      await logoutApi()
-    } catch {
-      // 忽略登出接口错误
-    }
     resetState()
     router.push('/login')
   }
@@ -93,6 +85,6 @@ export const useUserStore = defineStore('user', () => {
   return {
     token, refreshTokenVal, userId, username, realName, avatar,
     roles, permissions, menus,
-    login, fetchUserInfo, fetchMenus, fetchCaptcha, logout, resetState, hasPermission
+    fetchUserInfo, fetchMenus, fetchCaptcha, logout, resetState, hasPermission
   }
 })

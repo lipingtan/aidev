@@ -15,7 +15,7 @@ const route = useRoute()
 const appStore = useAppStore()
 
 /** 当前页面标题 */
-const currentTitle = computed(() => (route.meta.title as string) || '智慧物业')
+const currentTitle = computed(() => (route.meta.title as string) || '极速开发平台')
 
 /** 过渡动画名称（由路由守卫设置） */
 const transitionName = computed(() => appStore.transitionName)

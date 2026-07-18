@@ -176,8 +176,8 @@ onMounted(() => {
     <!-- 顶部 Logo 区域 -->
     <div class="login-header">
       <div class="logo-icon">🏠</div>
-      <div class="app-name">智慧物业</div>
-      <div class="app-desc">Smart Property Experience</div>
+      <div class="app-name">极速开发平台</div>
+      <div class="app-desc">Rapid Development Platform</div>
     </div>
 
     <!-- 登录方式切换 -->

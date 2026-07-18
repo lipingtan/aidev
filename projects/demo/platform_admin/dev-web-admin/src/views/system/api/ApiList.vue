@@ -49,8 +49,15 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { listSysApis } from '@/api/sys-api'
-import type { SysApiItem } from '@/api/sys-api'
+import request from '@/utils/request'
+
+interface SysApiItem {
+  id: number
+  path: string
+  method: string
+  title: string
+  group: string
+}
 
 const loading = ref(false)
 const tableData = ref<SysApiItem[]>([])
@@ -71,9 +78,10 @@ function methodTagType(method: string) {
 async function fetchData() {
   loading.value = true
   try {
-    const { list, total: t } = await listSysApis(queryParams)
+    const res: any = await request.get('/api/v1/sys-apis', { params: queryParams })
+    const list = res?.list || []
     tableData.value = list
-    total.value = t
+    total.value = res?.total || list.length
   } finally {
     loading.value = false
   }

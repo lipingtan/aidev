@@ -1,9 +1,9 @@
 <!--
   登录页
-  - 居中卡片布局，标题「快速开发平台」
+  - 居中卡片布局，标题「极速开发平台」
   - el-form + el-input(用户名/密码/验证码) + el-button
   - 表单校验(非空)，调用 authStore.login()
-  - 单租户：自动调用 selectTenant 后跳转首页
+  - 单租户：自动跳转首页
   - 多租户：跳转 /tenant-select 选择页
 -->
 <script setup lang="ts">
@@ -33,15 +33,17 @@ const loginForm = reactive({
 
 const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 }
 
-/** 加载验证码（如后端启用验证码则使用） */
+/** 加载验证码 */
 async function loadCaptcha() {
   try {
     const res = await userStore.fetchCaptcha()
-    captchaImg.value = res.data
-    loginForm.captchaKey = res.id
+    captchaImg.value = res.captcha_image
+    loginForm.captchaKey = res.captcha_key
+    loginForm.captchaCode = ''
   } catch {
     captchaImg.value = ''
   }
@@ -54,18 +56,20 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const result = await authStore.login(loginForm.username, loginForm.password)
+    const result = await authStore.login(
+      loginForm.username,
+      loginForm.password,
+      loginForm.captchaKey,
+      loginForm.captchaCode
+    )
 
     if (result.tenants.length === 1) {
-      // 单租户：后端已直接返回 access_token，无需再调 selectTenant
       ElMessage.success('登录成功')
       const redirect = (route.query.redirect as string) || '/home'
       router.replace(redirect)
     } else if (result.tenants.length > 1) {
-      // 多租户：跳转租户选择页
       router.replace('/tenant-select')
     } else {
-      // 无租户（异常情况）
       ElMessage.warning('当前账号无可用租户，请联系管理员')
       authStore.logout()
     }
@@ -86,7 +90,7 @@ onMounted(loadCaptcha)
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="login-title">快速开发平台</h1>
+      <h1 class="login-title">极速开发平台</h1>
       <p class="login-subtitle">PC 管理端</p>
 
       <el-form ref="formRef" :model="loginForm" :rules="rules" size="large" @keyup.enter="handleLogin">
@@ -96,10 +100,11 @@ onMounted(loadCaptcha)
         <el-form-item prop="password">
           <el-input ref="passwordRef" v-model="loginForm.password" type="password" placeholder="请输入密码" prefix-icon="Lock" show-password />
         </el-form-item>
-        <el-form-item v-if="captchaImg" prop="captchaCode">
+        <el-form-item prop="captchaCode">
           <div class="captcha-row">
             <el-input v-model="loginForm.captchaCode" placeholder="请输入验证码" style="flex: 1" />
-            <img :src="captchaImg" class="captcha-img" alt="验证码" @click="loadCaptcha" />
+            <img v-if="captchaImg" :src="captchaImg" class="captcha-img" alt="验证码" @click="loadCaptcha" />
+            <el-button v-else size="small" @click="loadCaptcha">获取验证码</el-button>
           </div>
         </el-form-item>
         <el-form-item>

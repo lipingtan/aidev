@@ -13,7 +13,7 @@ export default {
     noData: '暂无数据'
   },
   login: {
-    title: '智慧物业管理平台',
+    title: '极速开发平台',
     username: '用户名',
     password: '密码',
     submit: '登录'

@@ -84,7 +84,7 @@ function goLogin() {
     <van-nav-bar title="注册" left-arrow @click-left="goLogin" />
 
     <div class="register-header">
-      <h1 class="register-title">智慧物业</h1>
+      <h1 class="register-title">极速开发平台</h1>
       <p class="register-subtitle">业主注册</p>
     </div>
 

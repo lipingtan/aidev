@@ -138,7 +138,7 @@ onMounted(fetchDashboard)
       <div class="home-header">
         <div>
           <div class="home-welcome__text">你好，{{ userStore.username || '用户' }}！</div>
-          <div class="home-welcome__hint">欢迎使用智慧物业管理平台 Dashboard</div>
+          <div class="home-welcome__hint">欢迎使用极速开发平台 Dashboard</div>
         </div>
         <el-select v-model="timeRange" style="width: 140px" @change="fetchDashboard">
           <el-option label="本月" value="MONTH" />
