@@ -125,6 +125,7 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 5. 需求阶段必须先创建 `requirements_plan.md` 提出澄清问题，用户确认后再输出 `requirements.md`
 6. 设计阶段必须先创建 `design_plan.md` 提出设计相关澄清问题，用户确认后再输出 `design.md`
 7. **每个阶段切换时（Requirement → Design → Task → 执行），必须重新读取 `go-development-workflow.md` 中对应阶段的流程步骤，确认该阶段的产出物格式和前置条件，不得凭记忆行动**
+8. **执行阶段编写测试时，必须遵循 `go-testing.md` 中「自测真实性强制规范」，禁止编写空测试/虚假测试/跳过验收场景的测试。违反即视为任务未完成。**
 
 ### 软件开发强制流程规范（对所有 AI 实体生效）
 

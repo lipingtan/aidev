@@ -1,0 +1,139 @@
+/**
+ * SPMP PC 端全局样式
+ * 包含 CSS 变量引入、盒模型重置、基础排版、滚动条美化
+ */
+
+@import './variables.css';
+
+/* 盒模型重置 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 基础排版与全屏高度 */
+html,
+body,
+#app {
+  height: 100%;
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-regular);
+  background-color: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.28s ease, color 0.28s ease;
+}
+
+/* 链接默认样式 */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+body {
+  background:
+    radial-gradient(120% 80% at 8% -10%, rgba(61, 139, 255, 0.14), transparent 56%),
+    radial-gradient(120% 90% at 100% 0%, rgba(212, 175, 55, 0.1), transparent 60%),
+    var(--color-bg-page);
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-disabled);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Element Plus 主题注入 */
+:root {
+  --el-color-primary: var(--color-primary);
+  --el-bg-color: var(--color-bg-white);
+  --el-bg-color-page: var(--color-bg-page);
+  --el-text-color-primary: var(--color-text-primary);
+  --el-text-color-regular: var(--color-text-regular);
+  --el-text-color-secondary: var(--color-text-secondary);
+  --el-border-color: var(--color-border);
+  --el-border-color-light: color-mix(in oklab, var(--color-border) 70%, transparent);
+  --el-fill-color-blank: var(--color-bg-white);
+  --el-mask-color: rgba(8, 12, 20, 0.52);
+}
+
+.el-card,
+.el-table,
+.el-dialog,
+.el-dropdown-menu,
+.el-menu {
+  border-radius: var(--border-radius-md);
+}
+
+.el-card {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 行内搜索表单控件统一宽度，避免选项变更导致抖动 */
+.el-form--inline .el-select,
+.el-form--inline .el-input,
+.el-form--inline .el-date-editor,
+.el-form--inline .el-cascader {
+  width: 180px;
+}
+
+.el-form--inline .el-select .el-input,
+.el-form--inline .el-cascader .el-input {
+  width: 100%;
+}
+
+/* jsondiffpatch diff 样式 */
+.diff-html .jsondiffpatch-delta { font-family: monospace; font-size: 12px; }
+.diff-html .jsondiffpatch-added { background: #e6ffed; }
+.diff-html .jsondiffpatch-deleted { background: #ffeef0; text-decoration: line-through; }
+.diff-html .jsondiffpatch-modified .jsondiffpatch-left-value { background: #fff3cd; text-decoration: line-through; }
+.diff-html .jsondiffpatch-modified .jsondiffpatch-right-value { background: #e6ffed; }
+.no-diff { color: #909399; font-style: italic; }
+.no-diff-tip { color: #909399; text-align: center; padding: 20px; }
+
+/* 暗色主题 el-transfer 适配 */
+[data-theme='luxury-dark'] .el-transfer {
+  --el-transfer-border-color: var(--color-border);
+}
+[data-theme='luxury-dark'] .el-transfer-panel {
+  background: var(--color-bg-white);
+  border-color: var(--color-border);
+}
+[data-theme='luxury-dark'] .el-transfer-panel__header {
+  background: var(--color-surface-elevated);
+  border-bottom-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+[data-theme='luxury-dark'] .el-transfer-panel__body {
+  background: var(--color-bg-white);
+}
+[data-theme='luxury-dark'] .el-transfer-panel__item {
+  color: var(--color-text-regular);
+}
+[data-theme='luxury-dark'] .el-transfer-panel__item:hover {
+  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+}
+[data-theme='luxury-dark'] .el-transfer-panel__filter .el-input__wrapper {
+  background: var(--color-surface-elevated);
+}
+
+/* 暗色主题 diff 样式 */
+[data-theme='luxury-dark'] .diff-html .jsondiffpatch-added { background: rgba(73, 195, 134, 0.2); }
+[data-theme='luxury-dark'] .diff-html .jsondiffpatch-deleted { background: rgba(255, 107, 128, 0.2); }
+[data-theme='luxury-dark'] .diff-html .jsondiffpatch-modified .jsondiffpatch-left-value { background: rgba(255, 190, 79, 0.2); }
+[data-theme='luxury-dark'] .diff-html .jsondiffpatch-modified .jsondiffpatch-right-value { background: rgba(73, 195, 134, 0.2); }
