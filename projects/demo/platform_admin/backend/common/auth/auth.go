@@ -7,6 +7,7 @@ import (
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/discovery"
 	"go-admin/common/auth/handler"
+	"go-admin/common/auth/middleware"
 	"go-admin/common/auth/model"
 	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
@@ -42,10 +43,19 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	rg := engine.Group("")
 	RegisterRoutes(rg, deps)
 
+	// Seed 初始数据
+	if err := SeedInitialData(db); err != nil {
+		log.Printf("[auth-rbac] Seed 失败: %v", err)
+	}
+
 	// 启动 API 自动发现
 	if cfg.APIDiscovery.Enabled {
 		discovery.AutoDiscover(engine, db, cfg.APIDiscovery.AsyncThreshold)
 	}
+
+	// 加载中间件缓存（AutoDiscover 写入 module_code 后再加载）
+	deps.ModuleCodeCache.Load(db)
+	deps.AppPrefixMap.Load(db)
 
 	log.Printf("[auth-rbac] 模块初始化完成 auth-type=%s cache-type=%s", cfg.AuthType, cfg.CacheType)
 	return nil
@@ -155,5 +165,8 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 
 		LoginLogService: loginLogSvc,
 		LoginLogHandler: loginLogHandler,
+
+		AppPrefixMap:    middleware.NewAppPrefixMap(),
+		ModuleCodeCache: middleware.NewModuleCodeCache(),
 	}
 }

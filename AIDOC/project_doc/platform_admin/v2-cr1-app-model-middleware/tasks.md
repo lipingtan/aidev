@@ -5,11 +5,11 @@
 | 指标 | 值 |
 |------|-----|
 | 总任务数 | 10 |
-| 已完成 | 5 |
+| 已完成 | 10 |
 | 进行中 | 0 |
-| 未开始 | 5 |
-| 完成率 | 5/10 (50%) |
-| 当前阶段 | Step A 完成，Step B: Task 6 待执行 |
+| 未开始 | 0 |
+| 完成率 | 10/10 (100%) |
+| 当前阶段 | CR-1 全部完成 ✅ |
 
 ---
 
@@ -147,7 +147,7 @@
 
 依赖: Task 1-5 全部完成
 
-### Task 6: AppResolveMiddleware 实现 ⬜
+### Task 6: AppResolveMiddleware 实现 ✅
 
 **复杂度**: 高
 
@@ -180,7 +180,7 @@
 
 ---
 
-### Task 7: AuthMiddleware 租户四态 + 自动降级 ⬜
+### Task 7: AuthMiddleware 租户四态 + 自动降级 ✅
 
 **复杂度**: 中
 
@@ -207,7 +207,7 @@
 
 ---
 
-### Task 8: GetUserMenu 增强（platform + modules 过滤） ⬜
+### Task 8: GetUserMenu 增强（platform + modules 过滤） ✅
 
 **复杂度**: 中
 
@@ -234,7 +234,7 @@
 
 ---
 
-### Task 9: SUPER_ADMIN 保护规则 ⬜
+### Task 9: SUPER_ADMIN 保护规则 ✅
 
 **复杂度**: 中
 
@@ -260,7 +260,7 @@
 
 ---
 
-### Task 10: 全链路验证（空库初始化 + E2E 回归） ⬜
+### Task 10: 全链路验证（空库初始化 + E2E 回归） ✅
 
 **复杂度**: 中
 

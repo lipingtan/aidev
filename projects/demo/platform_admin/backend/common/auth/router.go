@@ -46,6 +46,10 @@ type Dependencies struct {
 
 	LoginLogService *service.LoginLogService
 	LoginLogHandler *handler.LoginLogHandler
+
+	// 中间件缓存
+	AppPrefixMap    *middleware.AppPrefixMap
+	ModuleCodeCache *middleware.ModuleCodeCache
 }
 
 // RegisterRoutes 注册 auth 模块所有路由到指定路由组
@@ -61,9 +65,12 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		common.GET("/user-menu", deps.ResourceHandler.GetUserMenu)
 	}
 
-	// 管理端业务路由（认证 + 动态权限检查）
+	// 管理端业务路由（认证 + 应用解析 + 动态权限检查）
 	admin := rg.Group("/api/v1/admin")
 	admin.Use(middleware.AuthMiddleware(deps.AuthService))
+	if deps.AppPrefixMap != nil && deps.ModuleCodeCache != nil {
+		admin.Use(middleware.AppResolveMiddleware(deps.AppPrefixMap, deps.ModuleCodeCache, deps.DB))
+	}
 	admin.Use(middleware.DynamicPermissionMiddleware(deps.DB, deps.Cfg))
 	{
 		deps.TenantHandler.RegisterRoutes(admin)

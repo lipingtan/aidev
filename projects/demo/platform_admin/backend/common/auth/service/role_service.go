@@ -138,9 +138,20 @@ func (s *RoleService) UpdateRole(id int64, req *UpdateRoleRequest) (*model.Role,
 // DeleteRole 软删除角色（检查用户绑定）
 func (s *RoleService) DeleteRole(id int64) error {
 	// 检查角色是否存在
-	_, err := s.roleRepo.FindByID(s.db, id)
+	role, err := s.roleRepo.FindByID(s.db, id)
 	if err != nil {
 		return err
+	}
+
+	// 保护最后一个 SUPER_ADMIN 角色
+	if role.RoleType == "SUPER_ADMIN" {
+		var superCount int64
+		s.db.Model(&model.Role{}).
+			Where("role_type = 'SUPER_ADMIN' AND tenant_id = ? AND id != ?", role.TenantID, id).
+			Count(&superCount)
+		if superCount == 0 {
+			return errors.NewAuthError(errors.ErrProtectedEntity, "无法删除最后一个超级管理员角色")
+		}
 	}
 
 	// 检查是否有用户绑定

@@ -49,7 +49,7 @@ func (h *ResourceHandler) GetTree(c *gin.Context) {
 }
 
 // GetUserMenu 获取用户有权限的菜单树
-// GET /api/v1/common/user-menu
+// GET /api/v1/common/user-menu?platform=admin
 func (h *ResourceHandler) GetUserMenu(c *gin.Context) {
 	authCtx, err := MustGetAuthContext(c)
 	if err != nil {
@@ -57,7 +57,9 @@ func (h *ResourceHandler) GetUserMenu(c *gin.Context) {
 		return
 	}
 
-	tree, err := h.svc.GetUserMenu(authCtx.TenantID, authCtx.UserID)
+	platform := c.DefaultQuery("platform", "admin")
+
+	tree, err := h.svc.GetUserMenu(authCtx.TenantID, authCtx.UserID, platform)
 	if err != nil {
 		Error(c, err)
 		return

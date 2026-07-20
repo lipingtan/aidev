@@ -136,13 +136,37 @@ func (s *UserService) UpdateUser(id int64, req *UpdateUserRequest) (*model.User,
 	return user, nil
 }
 
-// DeleteUser 软删除用户
+// DeleteUser 软删除用户（保护最后一个 SUPER_ADMIN）
 func (s *UserService) DeleteUser(id int64) error {
+	// 检查是否是最后一个 SUPER_ADMIN
+	if s.isLastSuperAdmin(id) {
+		return errors.NewAuthError(errors.ErrProtectedEntity, "无法删除最后一个超级管理员")
+	}
 	if err := s.userRepo.SoftDelete(s.db, id); err != nil {
 		return err
 	}
 	s.logger.Log(0, "delete_user", "user", id, "")
 	return nil
+}
+
+// isLastSuperAdmin 检查该用户是否是最后一个 SUPER_ADMIN
+func (s *UserService) isLastSuperAdmin(userID int64) bool {
+	// 查该用户是否有 SUPER_ADMIN 角色
+	var count int64
+	s.db.Table("admin_user_role ur").
+		Joins("JOIN admin_role r ON r.id = ur.role_id").
+		Where("ur.user_id = ? AND r.role_type = 'SUPER_ADMIN'", userID).
+		Count(&count)
+	if count == 0 {
+		return false
+	}
+	// 查是否还有其他 SUPER_ADMIN 用户
+	var otherCount int64
+	s.db.Table("admin_user_role ur").
+		Joins("JOIN admin_role r ON r.id = ur.role_id").
+		Where("ur.user_id != ? AND r.role_type = 'SUPER_ADMIN'", userID).
+		Count(&otherCount)
+	return otherCount == 0
 }
 
 // UserListResult 用户列表分页结果

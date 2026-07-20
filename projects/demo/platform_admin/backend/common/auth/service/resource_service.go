@@ -1,6 +1,8 @@
 package service
 
 import (
+	"strings"
+
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/errors"
 	"go-admin/common/auth/model"
@@ -201,9 +203,9 @@ func (s *ResourceService) SortResources(items []repository.SortItem) error {
 }
 
 // GetUserMenu 获取用户有权限的菜单树
-// SUPER_ADMIN 角色直接返回所有 MENU 资源
-// 普通角色：查角色绑定应用 → 查角色资源 → 过滤 app_code 范围
-func (s *ResourceService) GetUserMenu(tenantID int64, userID int64) ([]*ResourceNode, error) {
+// SUPER_ADMIN 角色返回对应 platform 的所有菜单
+// 普通角色：查角色绑定应用 → 查角色资源 → 按 platform + enabled_modules 过滤
+func (s *ResourceService) GetUserMenu(tenantID int64, userID int64, platform string) ([]*ResourceNode, error) {
 	// 查询用户在该租户下的角色 ID 列表
 	var roleIDs []int64
 	err := s.db.Model(&model.UserRole{}).
@@ -216,7 +218,7 @@ func (s *ResourceService) GetUserMenu(tenantID int64, userID int64) ([]*Resource
 		return []*ResourceNode{}, nil
 	}
 
-	// 检查是否包含 SUPER_ADMIN 角色 → 直接返回全部菜单
+	// SUPER_ADMIN → 返回对应 platform 的所有菜单
 	if s.cfg != nil && s.cfg.Permission.SuperAdminRole != "" {
 		var superCount int64
 		s.db.Model(&model.Role{}).
@@ -224,9 +226,11 @@ func (s *ResourceService) GetUserMenu(tenantID int64, userID int64) ([]*Resource
 			Count(&superCount)
 		if superCount > 0 {
 			var resources []model.Resource
-			err = s.db.Where("type = ?", "MENU").
-				Order("sort_order ASC, created_at ASC").
-				Find(&resources).Error
+			query := s.db.Where("type = ?", "MENU")
+			if platform != "" {
+				query = query.Where("platform = ?", platform)
+			}
+			err = query.Order("sort_order ASC, created_at ASC").Find(&resources).Error
 			if err != nil {
 				return nil, err
 			}
@@ -258,16 +262,52 @@ func (s *ResourceService) GetUserMenu(tenantID int64, userID int64) ([]*Resource
 		return []*ResourceNode{}, nil
 	}
 
-	// 查询资源详情（仅 MENU 类型，且 app_code 在角色绑定范围内）
+	// 查询资源（按 platform + app_code 过滤）
+	query := s.db.Where("id IN ? AND app_code IN ? AND type = ?", resourceIDs, appCodes, "MENU")
+	if platform != "" {
+		query = query.Where("platform = ?", platform)
+	}
+
+	// enabled_modules 过滤：查租户订阅的应用及其 enabled_modules
+	var tenantApps []model.TenantApp
+	s.db.Where("tenant_id = ? AND app_code IN ?", tenantID, appCodes).Find(&tenantApps)
+	for _, ta := range tenantApps {
+		if ta.EnabledModules != nil && len(ta.EnabledModules) > 2 {
+			// 解析 enabled_modules 为字符串列表
+			modules := parseJSONStringArray(string(ta.EnabledModules))
+			if len(modules) > 0 {
+				query = query.Where("NOT (app_code = ? AND module_code != '' AND module_code NOT IN ?)", ta.AppCode, modules)
+			}
+		}
+	}
+
 	var resources []model.Resource
-	err = s.db.Where("id IN ? AND app_code IN ? AND type = ?", resourceIDs, appCodes, "MENU").
-		Order("sort_order ASC, created_at ASC").
-		Find(&resources).Error
+	err = query.Order("sort_order ASC, created_at ASC").Find(&resources).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return buildTree(resources), nil
+}
+
+// parseJSONStringArray 简单解析 JSON 字符串数组 ["a","b","c"]
+func parseJSONStringArray(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" || s == "null" || s == "[]" {
+		return nil
+	}
+	s = strings.TrimPrefix(s, "[")
+	s = strings.TrimSuffix(s, "]")
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		p = strings.Trim(p, `"`)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
 }
 
 // buildTree 构建资源树（保持 sort_order 排序）

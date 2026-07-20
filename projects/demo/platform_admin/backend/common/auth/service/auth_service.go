@@ -66,6 +66,15 @@ func (s *AuthService) CheckTenantStatus(tenantID int64) (int, error) {
 	return status, err
 }
 
+// AutoDegradeIfExpired 自动降级：如果租户 status=1 且 expired_at 已过期，CAS 更新为 READ_ONLY(2)
+// 返回 true 表示已降级
+func (s *AuthService) AutoDegradeIfExpired(tenantID int64) bool {
+	result := s.db.Table("admin_tenant").
+		Where("id = ? AND status = 1 AND expired_at IS NOT NULL AND expired_at < NOW()", tenantID).
+		Update("status", 2)
+	return result.RowsAffected > 0
+}
+
 // CheckUserStatus 检查用户状态
 func (s *AuthService) CheckUserStatus(userID int64) (int, error) {
 	var status int

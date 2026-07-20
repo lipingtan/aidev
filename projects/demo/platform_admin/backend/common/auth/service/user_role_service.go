@@ -90,6 +90,23 @@ func (s *UserRoleService) ReplaceRoles(userID int64, req *AssignRolesRequest) er
 		}
 	}
 
+	// SUPER_ADMIN 保护：如果用户当前是 SUPER_ADMIN，新角色列表必须包含 SUPER_ADMIN
+	if s.isSuperAdminUser(userID, req.TenantID) {
+		newRoleIDs := make([]int64, 0, len(req.Roles))
+		for _, ra := range req.Roles {
+			newRoleIDs = append(newRoleIDs, ra.RoleID)
+		}
+		if len(newRoleIDs) > 0 {
+			var superCount int64
+			s.db.Model(&model.Role{}).
+				Where("id IN ? AND role_type = 'SUPER_ADMIN'", newRoleIDs).
+				Count(&superCount)
+			if superCount == 0 {
+				return errors.NewAuthError(errors.ErrProtectedEntity, "超级管理员不能移除自身的超级管理员角色")
+			}
+		}
+	}
+
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		// 删除当前租户下所有旧角色
 		if err := tx.Where("user_id = ? AND tenant_id = ?", userID, req.TenantID).
@@ -138,4 +155,14 @@ func (s *UserRoleService) validateRoleBelongsToTenant(roleID, tenantID int64) er
 		return errors.NewAuthError(errors.ErrEntityNotFound, "角色不存在或不属于当前租户")
 	}
 	return nil
+}
+
+// isSuperAdminUser 检查用户是否在指定租户下拥有 SUPER_ADMIN 角色
+func (s *UserRoleService) isSuperAdminUser(userID, tenantID int64) bool {
+	var count int64
+	s.db.Table("admin_user_role ur").
+		Joins("JOIN admin_role r ON r.id = ur.role_id").
+		Where("ur.user_id = ? AND ur.tenant_id = ? AND r.role_type = 'SUPER_ADMIN'", userID, tenantID).
+		Count(&count)
+	return count > 0
 }
