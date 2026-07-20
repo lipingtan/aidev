@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ func setupUserRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewUserService(db, cfg, userRepo)
 	h := NewUserHandler(svc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -42,7 +42,7 @@ func createUserViaAPI(t *testing.T, r *gin.Engine, username, password string) in
 		"password": password,
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -54,7 +54,7 @@ func createUserViaAPI(t *testing.T, r *gin.Engine, username, password string) in
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)
@@ -111,7 +111,7 @@ func TestCreateUser_DuplicateUsername(t *testing.T) {
 		"password": "pass456",
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -131,10 +131,10 @@ func TestAssociateTenant_Creates_UserTenant(t *testing.T) {
 
 	// 关联用户到租户
 	body := map[string]interface{}{
-		"tenant_id": tenantID,
+		"tenant_id": fmt.Sprintf("%d", tenantID),
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/users/%d/tenants", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d/tenants", userID)
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -167,7 +167,7 @@ func TestListUsers_TenantContext(t *testing.T) {
 	db.Create(ut)
 
 	// 按租户上下文查询用户列表（通过 header 设置 tenant）
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/users?page=1&page_size=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users?page=1&page_size=20", nil)
 	req.Header.Set("X-Test-Tenant-ID", fmt.Sprintf("%d", tenantID))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -211,7 +211,7 @@ func TestUpdateUser_OptimisticLock(t *testing.T) {
 		"version":  99,
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/users/%d", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d", userID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -236,7 +236,7 @@ func TestDeleteUser_SoftDelete(t *testing.T) {
 	userID := createUserViaAPI(t, r, "delete_user", "pass123")
 
 	// 软删除
-	url := fmt.Sprintf("/api/v1/users/%d", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d", userID)
 	req := httptest.NewRequest(http.MethodDelete, url, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -291,7 +291,7 @@ func TestDissociateTenant_CascadeDeleteRoles(t *testing.T) {
 	}
 
 	// 解除关联
-	url := fmt.Sprintf("/api/v1/users/%d/tenants/%d", userID, tenantID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d/tenants/%d", userID, tenantID)
 	req := httptest.NewRequest(http.MethodDelete, url, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -328,7 +328,7 @@ func TestListUserTenants(t *testing.T) {
 	db.Create(&model.UserTenant{UserID: userID, TenantID: tenantID2})
 
 	// 查询用户租户列表
-	url := fmt.Sprintf("/api/v1/users/%d/tenants", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d/tenants", userID)
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

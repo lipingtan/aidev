@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 角色管理 API
  * 对接后端 /api/v1/roles 系列接口
  */
@@ -91,84 +91,84 @@ export interface AppItem {
 
 /** 获取角色列表（树形） */
 export function getRoleList(): Promise<RoleItem[]> {
-  return request.get('/api/v1/roles')
+  return request.get('/api/v1/admin/roles')
 }
 
 /** 创建角色 */
 export function createRole(data: RoleCreateParams): Promise<void> {
-  return request.post('/api/v1/roles', data)
+  return request.post('/api/v1/admin/roles', data)
 }
 
 /** 更新角色 */
 export function updateRole(id: string, data: RoleUpdateParams): Promise<void> {
-  return request.put(`/api/v1/roles/${id}`, data)
+  return request.put(`/api/v1/admin/roles/${id}`, data)
 }
 
 /** 删除角色 */
 export function deleteRole(id: string): Promise<void> {
-  return request.delete(`/api/v1/roles/${id}`)
+  return request.delete(`/api/v1/admin/roles/${id}`)
 }
 
 // ==================== 权限分配 ====================
 
 /** 获取资源树 */
 export function getResourceTree(appCode: string): Promise<ResourceTreeNode[]> {
-  return request.get('/api/v1/resources/tree', { params: { app_code: appCode } })
+  return request.get('/api/v1/admin/resources/tree', { params: { app_code: appCode } })
 }
 
 /** 获取角色已分配的资源 ID 列表 */
 export function getRoleResources(roleId: string): Promise<string[]> {
-  return request.get(`/api/v1/roles/${roleId}/resources`)
+  return request.get(`/api/v1/admin/roles/${roleId}/resources`)
 }
 
 /** 分配资源（菜单）权限 */
 export function assignRoleResources(roleId: string, resourceIds: string[]): Promise<void> {
-  return request.put(`/api/v1/roles/${roleId}/resources`, { resource_ids: resourceIds })
+  return request.put(`/api/v1/admin/roles/${roleId}/resources`, { resource_ids: resourceIds })
 }
 
 /** 获取接口权限树 */
 export function getApiPermTree(appCode: string): Promise<ApiPermTreeNode[]> {
-  return request.get('/api/v1/api-permissions/tree', { params: { app_code: appCode } })
+  return request.get('/api/v1/admin/api-permissions/tree', { params: { app_code: appCode } })
 }
 
 /** 获取角色已分配的接口权限 ID 列表 */
 export function getRoleApis(roleId: string): Promise<string[]> {
-  return request.get(`/api/v1/roles/${roleId}/apis`)
+  return request.get(`/api/v1/admin/roles/${roleId}/apis`)
 }
 
 /** 分配接口权限 */
 export function assignRoleApis(roleId: string, apiIds: string[]): Promise<void> {
-  return request.put(`/api/v1/roles/${roleId}/apis`, { api_permission_ids: apiIds })
+  return request.put(`/api/v1/admin/roles/${roleId}/apis`, { api_permission_ids: apiIds })
 }
 
 /** 获取数据权限维度配置选项 */
 export function getDataScopeConfigs(): Promise<DataScopeDimension[]> {
-  return request.get('/api/v1/data-scope-configs')
+  return request.get('/api/v1/admin/data-scope-configs')
 }
 
 /** 获取角色已配置的数据权限 */
 export function getRoleDataScopes(roleId: string): Promise<DataScopeConfig[]> {
-  return request.get(`/api/v1/roles/${roleId}/data-scopes`)
+  return request.get(`/api/v1/admin/roles/${roleId}/data-scopes`)
 }
 
 /** 配置数据权限 */
 export function assignRoleDataScopes(roleId: string, scopes: DataScopeConfig[]): Promise<void> {
-  return request.put(`/api/v1/roles/${roleId}/data-scopes`, { scopes })
+  return request.put(`/api/v1/admin/roles/${roleId}/data-scopes`, { scopes })
 }
 
 /** 获取租户下应用列表 */
 export function getTenantApps(tenantId: string): Promise<AppItem[]> {
-  return request.get(`/api/v1/tenants/${tenantId}/apps`)
+  return request.get(`/api/v1/admin/tenants/${tenantId}/apps`)
 }
 
 /** 获取角色已绑定的应用编码列表 */
 export function getRoleApps(roleId: string): Promise<string[]> {
-  return request.get(`/api/v1/roles/${roleId}/apps`)
+  return request.get(`/api/v1/admin/roles/${roleId}/apps`)
 }
 
 /** 绑定应用（按 app_code） */
 export function assignRoleApps(roleId: string, appCodes: string[]): Promise<void> {
-  return request.put(`/api/v1/roles/${roleId}/apps`, { app_codes: appCodes })
+  return request.put(`/api/v1/admin/roles/${roleId}/apps`, { app_codes: appCodes })
 }
 
 // ==================== 权限汇总 ====================
@@ -185,7 +185,7 @@ export interface AppPermissionSummary {
 
 /** 获取角色权限汇总（每应用统计） */
 export function getRolePermissionSummary(roleId: string): Promise<AppPermissionSummary[]> {
-  return request.get(`/api/v1/roles/${roleId}/permission-summary`)
+  return request.get(`/api/v1/admin/roles/${roleId}/permission-summary`)
 }
 
 // ==================== 兼容旧引用 ====================

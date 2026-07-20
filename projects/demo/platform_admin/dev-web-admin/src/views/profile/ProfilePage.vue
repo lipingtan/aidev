@@ -62,7 +62,7 @@ import { ElMessage } from 'element-plus'
 import { getProfile, updateProfile, updatePassword } from '@/api/profile'
 import type { ProfileInfo } from '@/api/profile'
 
-const profile = ref<ProfileInfo>({ userId: 0, username: '', realName: '', phone: '', avatar: '', roles: [], permissions: [] })
+const profile = ref<ProfileInfo>({ userId: '', username: '', realName: '', avatar: '', roles: [], permissions: [] })
 
 const showEditDialog = ref(false)
 const editLoading = ref(false)

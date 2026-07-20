@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"encoding/json"
@@ -33,7 +33,7 @@ func setupOperationLogRouter(t *testing.T) (*gin.Engine, *service.AsyncOperation
 	querySvc := service.NewOperationLogQueryService(db, repo)
 	h := NewOperationLogHandler(querySvc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r, logger
@@ -59,7 +59,7 @@ func TestAsyncOperationLogger_WriteAndQuery(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// 查询验证
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/operation-logs?module=tenant&action=create", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/operation-logs?module=tenant&action=create", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -135,7 +135,7 @@ func TestOperationLogQuery_FilterByModuleAndAction(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// 按 module=user 筛选
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/operation-logs?module=user", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/operation-logs?module=user", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -157,7 +157,7 @@ func TestOperationLogQuery_FilterByModuleAndAction(t *testing.T) {
 	}
 
 	// 按 module=user&action=create 筛选
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/operation-logs?module=user&action=create", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/operation-logs?module=user&action=create", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -189,7 +189,7 @@ func TestOperationLogQuery_Pagination(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// page=1, page_size=2
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/operation-logs?module=test&page=1&page_size=2", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/operation-logs?module=test&page=1&page_size=2", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 

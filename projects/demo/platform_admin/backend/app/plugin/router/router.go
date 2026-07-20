@@ -49,7 +49,7 @@ func InitPluginRouter() {
 	api := apis.Plugin{}
 
 	// 插件管理 API（使用新 auth-rbac 认证中间件）
-	v1 := r.Group("/api/v1")
+	v1 := r.Group("/api/v1/admin")
 	pluginGroup := v1.Group("/plugins")
 	if authSvc != nil {
 		pluginGroup.Use(authMiddleware.AuthMiddleware(authSvc))

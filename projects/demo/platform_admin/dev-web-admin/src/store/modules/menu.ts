@@ -1,6 +1,6 @@
-/**
+﻿/**
  * 菜单状态管理
- * - 从后端 GET /api/v1/resources/user-menu 动态加载菜单树
+ * - 从后端 GET /api/v1/common/user-menu?platform=admin 动态加载菜单树
  * - 管理侧边栏菜单渲染数据
  */
 

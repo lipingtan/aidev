@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -34,7 +34,7 @@ func setupResourceRouter(t *testing.T) (*gin.Engine, *service.ResourceService) {
 	svc := service.NewResourceService(db, cfg, resourceRepo)
 	h := NewResourceHandler(svc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r, svc
@@ -53,7 +53,7 @@ func TestCreateResource_Success(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -85,7 +85,7 @@ func TestCreateResource_Button(t *testing.T) {
 		"app_code":  "default",
 	}
 	jsonBody, _ := json.Marshal(parentBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -94,7 +94,7 @@ func TestCreateResource_Button(t *testing.T) {
 	var createResp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &createResp)
@@ -110,7 +110,7 @@ func TestCreateResource_Button(t *testing.T) {
 		"app_code":        "default",
 	}
 	jsonBody, _ = json.Marshal(buttonBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
@@ -140,7 +140,7 @@ func TestGetTree_Success(t *testing.T) {
 		"app_code":  "default",
 	}
 	jsonBody, _ := json.Marshal(parentBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -149,7 +149,7 @@ func TestGetTree_Success(t *testing.T) {
 	var createResp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &createResp)
@@ -165,14 +165,14 @@ func TestGetTree_Success(t *testing.T) {
 		"app_code":  "default",
 	}
 	jsonBody, _ = json.Marshal(childBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	// 查询树（通过 header 设置 tenant）
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/resources/tree", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/resources/tree?app_code=default", nil)
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -211,7 +211,7 @@ func TestGetTree_AppCodeFilter(t *testing.T) {
 			"app_code":  app,
 		}
 		jsonBody, _ := json.Marshal(body)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Test-Tenant-ID", "1")
 		w := httptest.NewRecorder()
@@ -219,7 +219,7 @@ func TestGetTree_AppCodeFilter(t *testing.T) {
 	}
 
 	// 过滤 app1（通过 header 设置 tenant）
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/resources/tree?app_code=app1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/resources/tree?app_code=app1", nil)
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -246,7 +246,7 @@ func TestDeleteResource_HasChildren(t *testing.T) {
 		"app_code":  "default",
 	}
 	jsonBody, _ := json.Marshal(parentBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -255,7 +255,7 @@ func TestDeleteResource_HasChildren(t *testing.T) {
 	var createResp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &createResp)
@@ -270,14 +270,14 @@ func TestDeleteResource_HasChildren(t *testing.T) {
 		"app_code":  "default",
 	}
 	jsonBody, _ = json.Marshal(childBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	// 尝试删除父菜单
-	url := fmt.Sprintf("/api/v1/resources/%d", parentID)
+	url := fmt.Sprintf("/api/v1/admin/resources/%d", parentID)
 	req = httptest.NewRequest(http.MethodDelete, url, nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -305,7 +305,7 @@ func TestDeleteResource_NoChildren(t *testing.T) {
 		"app_code":  "default",
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -314,14 +314,14 @@ func TestDeleteResource_NoChildren(t *testing.T) {
 	var createResp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &createResp)
 	resourceID := createResp.Data.ID
 
 	// 删除
-	url := fmt.Sprintf("/api/v1/resources/%d", resourceID)
+	url := fmt.Sprintf("/api/v1/admin/resources/%d", resourceID)
 	req = httptest.NewRequest(http.MethodDelete, url, nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -346,7 +346,7 @@ func TestSortResources(t *testing.T) {
 			"app_code":   "default",
 		}
 		jsonBody, _ := json.Marshal(body)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Test-Tenant-ID", "1")
 		w := httptest.NewRecorder()
@@ -355,7 +355,7 @@ func TestSortResources(t *testing.T) {
 		var createResp struct {
 			Code int `json:"code"`
 			Data struct {
-				ID int64 `json:"id"`
+				ID int64 `json:"id,string"`
 			} `json:"data"`
 		}
 		json.Unmarshal(w.Body.Bytes(), &createResp)
@@ -371,7 +371,7 @@ func TestSortResources(t *testing.T) {
 		},
 	}
 	jsonBody, _ := json.Marshal(sortBody)
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/resources/sort", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/resources/sort", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -381,7 +381,7 @@ func TestSortResources(t *testing.T) {
 	}
 
 	// 验证排序结果：查询树（通过 header 设置 tenant）
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/resources/tree", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/resources/tree?app_code=default", nil)
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -408,32 +408,32 @@ func TestResourceTenantIsolation(t *testing.T) {
 	body1 := map[string]interface{}{
 		"tenant_id": 1,
 		"type":      "MENU",
-		"name":      "租户1菜单",
-		"app_code":  "default",
+		"name":      "应用1菜单",
+		"app_code":  "app_one",
 	}
 	jsonBody, _ := json.Marshal(body1)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	// 租户 2 创建资源
+	// 应用2 创建资源
 	body2 := map[string]interface{}{
-		"tenant_id": 2,
+		"tenant_id": 1,
 		"type":      "MENU",
-		"name":      "租户2菜单",
-		"app_code":  "default",
+		"name":      "应用2菜单",
+		"app_code":  "app_two",
 	}
 	jsonBody, _ = json.Marshal(body2)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/resources", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/resources", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Test-Tenant-ID", "2")
+	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	// 查询租户 1 的树（通过 header 设置 tenant）
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/resources/tree", nil)
+	// 查询应用1 的树
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/resources/tree?app_code=app_one", nil)
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -444,31 +444,31 @@ func TestResourceTenantIsolation(t *testing.T) {
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if len(resp.Data) != 1 {
-		t.Fatalf("期望租户1只有 1 个资源，实际: %d", len(resp.Data))
+		t.Fatalf("期望应用1只有 1 个资源，实际: %d", len(resp.Data))
 	}
-	if resp.Data[0].Name != "租户1菜单" {
-		t.Fatalf("期望资源名为 '租户1菜单'，实际: %s", resp.Data[0].Name)
+	if resp.Data[0].Name != "应用1菜单" {
+		t.Fatalf("期望资源名为 '应用1菜单'，实际: %s", resp.Data[0].Name)
 	}
 
-	// 查询租户 2 的树
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/resources/tree", nil)
-	req.Header.Set("X-Test-Tenant-ID", "2")
+	// 查询应用2 的树
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/resources/tree?app_code=app_two", nil)
+	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if len(resp.Data) != 1 {
-		t.Fatalf("期望租户2只有 1 个资源，实际: %d", len(resp.Data))
+		t.Fatalf("期望应用2只有 1 个资源，实际: %d", len(resp.Data))
 	}
-	if resp.Data[0].Name != "租户2菜单" {
-		t.Fatalf("期望资源名为 '租户2菜单'，实际: %s", resp.Data[0].Name)
+	if resp.Data[0].Name != "应用2菜单" {
+		t.Fatalf("期望资源名为 '应用2菜单'，实际: %s", resp.Data[0].Name)
 	}
 }
 
 // TestGetUserMenu 测试获取用户菜单树
 func TestGetUserMenu(t *testing.T) {
 	db := setupTestDB(t)
-	err := db.AutoMigrate(&model.Resource{}, &model.RoleResource{})
+	err := db.AutoMigrate(&model.Resource{}, &model.RoleResource{}, &model.RoleApp{}, &model.TenantApp{})
 	if err != nil {
 		t.Fatalf("资源表迁移失败: %v", err)
 	}
@@ -482,8 +482,14 @@ func TestGetUserMenu(t *testing.T) {
 	svc := service.NewResourceService(db, cfg, resourceRepo)
 	h := NewResourceHandler(svc)
 
-	api := r.Group("/api/v1")
+	// admin 组注册 CRUD 路由
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
+
+	// common 组注册 user-menu
+	common := r.Group("/api/v1/common")
+	common.Use(mockAuthMiddleware())
+	common.GET("/user-menu", h.GetUserMenu)
 
 	// 创建资源
 	resource1 := &model.Resource{
@@ -519,8 +525,15 @@ func TestGetUserMenu(t *testing.T) {
 	}
 	db.Create(userRole)
 
+	// 角色绑定应用
+	roleApp := &model.RoleApp{
+		RoleID:  role.ID,
+		AppCode: "default",
+	}
+	db.Create(roleApp)
+
 	// 查询用户菜单（通过 header 设置 tenant 和 user）
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/resources/user-menu", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/common/user-menu", nil)
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	req.Header.Set("X-Test-User-ID", "100")
 	w := httptest.NewRecorder()

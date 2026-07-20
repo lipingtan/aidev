@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 
 export type ModuleStatus = 'SUCCESS' | 'NO_PERMISSION' | 'ERROR' | 'EMPTY'
 export type TimeRange = 'MONTH' | 'QUARTER' | 'YEAR'
@@ -34,14 +34,14 @@ export interface BillingTrendPoint {
 }
 
 export function getDashboardKpi(timeRange: TimeRange) {
-  return request.get('/api/v1/dashboard/kpi', { params: { timeRange } }) as Promise<ModuleResponse<DashboardKpi>>
+  return request.get('/api/v1/admin/dashboard/kpi', { params: { timeRange } }) as Promise<ModuleResponse<DashboardKpi>>
 }
 
 export function getDashboardWorkorderTrend(timeRange: TimeRange) {
-  return request.get('/api/v1/dashboard/trend/workorder', { params: { timeRange } }) as Promise<ModuleResponse<WorkorderTrendPoint[]>>
+  return request.get('/api/v1/admin/dashboard/trend/workorder', { params: { timeRange } }) as Promise<ModuleResponse<WorkorderTrendPoint[]>>
 }
 
 export function getDashboardBillingTrend(timeRange: TimeRange) {
-  return request.get('/api/v1/dashboard/trend/billing', { params: { timeRange } }) as Promise<ModuleResponse<BillingTrendPoint[]>>
+  return request.get('/api/v1/admin/dashboard/trend/billing', { params: { timeRange } }) as Promise<ModuleResponse<BillingTrendPoint[]>>
 }
 

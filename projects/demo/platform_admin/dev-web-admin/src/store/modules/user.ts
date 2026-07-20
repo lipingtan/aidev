@@ -24,7 +24,7 @@ export const useUserStore = defineStore('user', () => {
 
   const token = ref<string>(localStorage.getItem('access_token') || '')
   const refreshTokenVal = ref<string>(localStorage.getItem('refresh_token') || '')
-  const userId = ref<number>(0)
+  const userId = ref<string>('')
   const username = ref<string>('')
   const realName = ref<string>('')
   const avatar = ref<string>('')
@@ -66,7 +66,7 @@ export const useUserStore = defineStore('user', () => {
   function resetState(): void {
     token.value = ''
     refreshTokenVal.value = ''
-    userId.value = 0
+    userId.value = ''
     username.value = ''
     realName.value = ''
     avatar.value = ''

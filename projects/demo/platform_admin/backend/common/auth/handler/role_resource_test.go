@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -17,8 +17,8 @@ import (
 // setupRoleResourceRouter 创建角色资源分配测试路由（额外迁移 Resource 和 RoleResource 表）
 func setupRoleResourceRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	db := setupTestDB(t)
-	// 额外迁移 Resource 和 RoleResource 表
-	err := db.AutoMigrate(&model.Resource{}, &model.RoleResource{})
+	// 额外迁移 Resource、RoleResource、RoleApp 表
+	err := db.AutoMigrate(&model.Resource{}, &model.RoleResource{}, &model.RoleApp{})
 	if err != nil {
 		t.Fatalf("资源表迁移失败: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestAssignResources_Success(t *testing.T) {
 		"resource_ids": []int64{res1.ID, res2.ID},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/roles/%d/resources", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/resources", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -71,37 +71,37 @@ func TestAssignResources_Success(t *testing.T) {
 	}
 }
 
-// TestAssignResources_CrossTenant 测试跨租户 resource_id 返回 400
+// TestAssignResources_CrossTenant 测试分配不同 app_code 的资源→成功（资源是全局的）
 func TestAssignResources_CrossTenant(t *testing.T) {
 	r, db := setupRoleResourceRouter(t)
 
 	tenantA := int64(100)
-	_ = int64(200) // tenantB - 不再使用 TenantID 字段
-	roleID := createRole(t, r, tenantA, "cross_role", "跨租户角色", nil)
+	roleID := createRole(t, r, tenantA, "cross_role", "跨应用角色", nil)
 
-	// 创建租户 B 的资源
-	resCross := &model.Resource{Type: "menu", Name: "其他租户菜单", AppCode: "other_app"}
+	// 创建 other_app 的资源
+	resCross := &model.Resource{Type: "menu", Name: "其他应用菜单", AppCode: "other_app"}
 	db.Create(resCross)
 
-	// 尝试分配跨租户资源
+	// 分配其他应用资源→应成功（自动绑定对应 app）
 	body := map[string]interface{}{
 		"resource_ids": []int64{resCross.ID},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/roles/%d/resources", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/resources", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("期望状态码 400，实际: %d, body: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusOK {
+		t.Fatalf("期望状态码 200，实际: %d, body: %s", w.Code, w.Body.String())
 	}
 
-	var resp Response
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.Code != 40001 {
-		t.Fatalf("期望 code=40001，实际: %d", resp.Code)
+	// 验证角色自动绑定了 other_app
+	var roleApps []model.RoleApp
+	db.Where("role_id = ?", roleID).Find(&roleApps)
+	if len(roleApps) != 1 || roleApps[0].AppCode != "other_app" {
+		t.Fatalf("期望角色自动绑定 other_app，实际: %+v", roleApps)
 	}
 }
 
@@ -125,7 +125,7 @@ func TestAssignResources_FullReplace(t *testing.T) {
 		"resource_ids": []int64{res1.ID, res2.ID},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/roles/%d/resources", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/resources", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

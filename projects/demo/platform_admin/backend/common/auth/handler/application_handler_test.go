@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -46,7 +46,7 @@ func setupAppRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewApplicationService(db, appRepo)
 	h := NewApplicationHandler(svc, roleRepo, db)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -63,7 +63,7 @@ func TestCreateApplication_Success(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/applications", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/applications", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -111,7 +111,7 @@ func TestSetTenantApps_Success(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/tenants/1001/apps", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/tenants/1001/apps", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -157,7 +157,7 @@ func TestUnsubscribeCascadeDeleteRoleApps(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/tenants/2001/apps", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/tenants/2001/apps", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -194,7 +194,7 @@ func TestSetRoleApps_NotSubscribed(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/roles/5001/apps", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/roles/5001/apps", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -219,12 +219,17 @@ func TestListTenantApps_Success(t *testing.T) {
 	tenant := &model.Tenant{ID: 6001, TenantCode: "t6", Name: "租户6", Status: 1, Version: 1}
 	db.Create(tenant)
 
+	// 创建应用
+	db.Create(&model.Application{AppCode: "x1", Name: "应用X1", Status: 1, Version: 1})
+	db.Create(&model.Application{AppCode: "x2", Name: "应用X2", Status: 1, Version: 1})
+	db.Create(&model.Application{AppCode: "x3", Name: "应用X3", Status: 1, Version: 1})
+
 	// 直接插入订阅记录
 	db.Create(&model.TenantApp{TenantID: 6001, AppCode: "x1"})
 	db.Create(&model.TenantApp{TenantID: 6001, AppCode: "x2"})
 	db.Create(&model.TenantApp{TenantID: 6001, AppCode: "x3"})
 
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/tenants/%d/apps", 6001), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/admin/tenants/%d/apps", 6001), nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -233,8 +238,8 @@ func TestListTenantApps_Success(t *testing.T) {
 	}
 
 	var resp struct {
-		Code int              `json:"code"`
-		Data []model.TenantApp `json:"data"`
+		Code int                   `json:"code"`
+		Data []model.Application   `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp.Code != 0 {

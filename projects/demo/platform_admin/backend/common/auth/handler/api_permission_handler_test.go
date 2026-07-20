@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -40,7 +40,7 @@ func setupApiPermRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewApiPermissionService(db, repo)
 	h := NewApiPermissionHandler(svc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -55,10 +55,11 @@ func TestCreateGroup_Success(t *testing.T) {
 		"tenant_id": 1,
 		"type":      "GROUP",
 		"name":      "用户管理",
+		"app_code":  "platform_admin",
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -95,9 +96,10 @@ func TestCreateEndpoint_Success(t *testing.T) {
 		"tenant_id": 1,
 		"type":      "GROUP",
 		"name":      "用户管理",
+		"app_code":  "platform_admin",
 	}
 	jsonBody, _ := json.Marshal(groupBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -116,12 +118,13 @@ func TestCreateEndpoint_Success(t *testing.T) {
 		"type":            "ENDPOINT",
 		"name":            "获取用户列表",
 		"permission_code": "user:list",
-		"url_pattern":     "/api/v1/users",
+		"url_pattern":     "/api/v1/admin/users",
 		"http_method":     "GET",
 		"status":          "ACTIVE",
+		"app_code":        "platform_admin",
 	}
 	jsonBody, _ = json.Marshal(endpointBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
@@ -143,7 +146,7 @@ func TestCreateEndpoint_Success(t *testing.T) {
 	if resp.Data.Type != "ENDPOINT" {
 		t.Fatalf("期望 type=ENDPOINT，实际: %s", resp.Data.Type)
 	}
-	if resp.Data.URLPattern != "/api/v1/users" {
+	if resp.Data.URLPattern != "/api/v1/admin/users" {
 		t.Fatalf("期望 url_pattern=/api/v1/users，实际: %s", resp.Data.URLPattern)
 	}
 }
@@ -158,9 +161,10 @@ func TestGetTree(t *testing.T) {
 		"tenant_id": 1,
 		"type":      "GROUP",
 		"name":      "用户管理",
+		"app_code":  "platform_admin",
 	}
 	jsonBody, _ := json.Marshal(groupBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -179,19 +183,20 @@ func TestGetTree(t *testing.T) {
 		"type":            "ENDPOINT",
 		"name":            "创建用户",
 		"permission_code": "user:create",
-		"url_pattern":     "/api/v1/users",
+		"url_pattern":     "/api/v1/admin/users",
 		"http_method":     "POST",
 		"status":          "ACTIVE",
+		"app_code":        "platform_admin",
 	}
 	jsonBody, _ = json.Marshal(endpointBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	// 获取树（通过 header 设置 tenant）
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/api-permissions/tree", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/api-permissions/tree?app_code=platform_admin", nil)
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -239,9 +244,10 @@ func TestMoveEndpoint(t *testing.T) {
 		"tenant_id": 1,
 		"type":      "GROUP",
 		"name":      "角色管理",
+		"app_code":  "platform_admin",
 	}
 	jsonBody, _ := json.Marshal(groupBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -259,11 +265,12 @@ func TestMoveEndpoint(t *testing.T) {
 		"type":            "ENDPOINT",
 		"name":            "获取角色列表",
 		"permission_code": "role:list",
-		"url_pattern":     "/api/v1/roles",
+		"url_pattern":     "/api/v1/admin/roles",
 		"http_method":     "GET",
+		"app_code":        "platform_admin",
 	}
 	jsonBody, _ = json.Marshal(endpointBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
@@ -285,7 +292,7 @@ func TestMoveEndpoint(t *testing.T) {
 		"parent_id": groupID,
 	}
 	jsonBody, _ = json.Marshal(moveBody)
-	url := fmt.Sprintf("/api/v1/api-permissions/%d/move", epID)
+	url := fmt.Sprintf("/api/v1/admin/api-permissions/%d/move", epID)
 	req = httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
@@ -318,11 +325,12 @@ func TestListUnassigned(t *testing.T) {
 			"type":            "ENDPOINT",
 			"name":            fmt.Sprintf("endpoint_%d", i),
 			"permission_code": fmt.Sprintf("test:ep%d", i),
-			"url_pattern":     fmt.Sprintf("/api/v1/test%d", i),
+			"url_pattern":     fmt.Sprintf("/api/v1/admin/test%d", i),
 			"http_method":     "GET",
+			"app_code":        "platform_admin",
 		}
 		jsonBody, _ := json.Marshal(body)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Test-Tenant-ID", "1")
 		w := httptest.NewRecorder()
@@ -337,9 +345,10 @@ func TestListUnassigned(t *testing.T) {
 		"tenant_id": 1,
 		"type":      "GROUP",
 		"name":      "分组",
+		"app_code":  "platform_admin",
 	}
 	jsonBody, _ := json.Marshal(groupBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -354,19 +363,20 @@ func TestListUnassigned(t *testing.T) {
 		"parent_id":   gResp.Data.ID,
 		"type":        "ENDPOINT",
 		"name":        "已分组接口",
-		"url_pattern": "/api/v1/assigned",
+		"url_pattern": "/api/v1/admin/assigned",
 		"http_method": "POST",
 		"status":      "ACTIVE",
+		"app_code":    "platform_admin",
 	}
 	jsonBody, _ = json.Marshal(assignedBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	// 查询未分组列表（通过 header 设置 tenant）
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/api-permissions/unassigned", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/api-permissions/unassigned?app_code=platform_admin", nil)
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -400,9 +410,10 @@ func TestDeleteGroupWithChildren(t *testing.T) {
 		"tenant_id": 1,
 		"type":      "GROUP",
 		"name":      "不可删分组",
+		"app_code":  "platform_admin",
 	}
 	jsonBody, _ := json.Marshal(groupBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w := httptest.NewRecorder()
@@ -420,19 +431,20 @@ func TestDeleteGroupWithChildren(t *testing.T) {
 		"parent_id":   groupID,
 		"type":        "ENDPOINT",
 		"name":        "子接口",
-		"url_pattern": "/api/v1/child",
+		"url_pattern": "/api/v1/admin/child",
 		"http_method": "GET",
 		"status":      "ACTIVE",
+		"app_code":    "platform_admin",
 	}
 	jsonBody, _ = json.Marshal(childBody)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/api-permissions", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/api-permissions", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", "1")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	// 尝试删除有子节点的 GROUP
-	url := fmt.Sprintf("/api/v1/api-permissions/%d", groupID)
+	url := fmt.Sprintf("/api/v1/admin/api-permissions/%d", groupID)
 	req = httptest.NewRequest(http.MethodDelete, url, nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)

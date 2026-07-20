@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -50,7 +50,7 @@ func setupRoleApiRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewRoleService(db, cfg, roleRepo)
 	h := NewRoleHandler(svc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -104,7 +104,7 @@ func TestAssignApis_BindEndpoint(t *testing.T) {
 		"api_permission_ids": []int64{ep1, ep2},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/roles/%d/apis", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/apis", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -151,7 +151,7 @@ func TestAssignApis_GroupAutoExpand(t *testing.T) {
 		"api_permission_ids": []int64{groupID},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/roles/%d/apis", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/apis", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -199,7 +199,7 @@ func TestAssignApis_EmptyArray(t *testing.T) {
 		"api_permission_ids": []int64{ep1, ep2},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/roles/%d/apis", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/apis", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

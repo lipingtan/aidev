@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page-container">
     <el-card shadow="never" class="search-card">
       <el-form :model="queryParams" inline>
@@ -78,7 +78,7 @@ function methodTagType(method: string) {
 async function fetchData() {
   loading.value = true
   try {
-    const res: any = await request.get('/api/v1/sys-apis', { params: queryParams })
+    const res: any = await request.get('/api/v1/admin/sys-apis', { params: queryParams })
     const list = res?.list || []
     tableData.value = list
     total.value = res?.total || list.length

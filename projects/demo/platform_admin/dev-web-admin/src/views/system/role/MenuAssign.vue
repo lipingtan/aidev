@@ -3,7 +3,7 @@
   保留文件避免其他路由引用报错，实际不再使用。
 -->
 <template>
-  <MenuPermTab v-if="visible" :role-id="roleId" />
+  <MenuPermTab v-if="visible" :role-id="roleId" :app-code="appCode" />
 </template>
 
 <script setup lang="ts">
@@ -12,6 +12,7 @@ import MenuPermTab from './MenuPermTab.vue'
 
 const visible = ref(false)
 const roleId = ref('')
+const appCode = ref('platform_admin')
 
 function open(id: string) {
   roleId.value = id

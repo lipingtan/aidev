@@ -1,7 +1,7 @@
-<!--
+﻿<!--
   侧边菜单栏
   - 默认 220px，折叠后 64px
-  - 优先从 menu store 动态加载菜单树（后端 GET /api/v1/resources/user-menu）
+  - 优先从 menu store 动态加载菜单树（后端 GET /api/v1/common/user-menu?platform=admin）
   - 未加载时 fallback 到静态路由
   - 支持递归子菜单渲染
   - 高亮当前路由对应的菜单项

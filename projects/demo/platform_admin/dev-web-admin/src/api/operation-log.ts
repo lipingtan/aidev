@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 操作日志 API
  * 后端路由：GET /api/v1/operation-logs
  */
@@ -41,5 +41,5 @@ export interface OperationLogPageResult {
 
 /** 获取操作日志列表（分页） */
 export function listOperationLogs(params: OperationLogQuery): Promise<OperationLogPageResult> {
-  return request.get('/api/v1/operation-logs', { params })
+  return request.get('/api/v1/admin/operation-logs', { params })
 }

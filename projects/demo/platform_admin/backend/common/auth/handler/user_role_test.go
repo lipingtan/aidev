@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ func setupUserRoleRouter(db *gorm.DB) *gin.Engine {
 	h := NewUserHandler(userSvc)
 	h.SetRoleService(roleSvc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -59,7 +59,7 @@ func createUserViaRoleAPI(t *testing.T, r *gin.Engine, username, password string
 		"password": password,
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -71,7 +71,7 @@ func createUserViaRoleAPI(t *testing.T, r *gin.Engine, username, password string
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)
@@ -98,7 +98,7 @@ func TestAssignRoles_Success(t *testing.T) {
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/users/%d/roles", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d/roles", userID)
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -133,7 +133,7 @@ func TestAssignRoles_UserNotInTenant(t *testing.T) {
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/users/%d/roles", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d/roles", userID)
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -171,7 +171,7 @@ func TestAssignRoles_RoleNotInTenant(t *testing.T) {
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/users/%d/roles", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d/roles", userID)
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -219,7 +219,7 @@ func TestReplaceRoles_Success(t *testing.T) {
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/users/%d/roles", userID)
+	url := fmt.Sprintf("/api/v1/admin/users/%d/roles", userID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

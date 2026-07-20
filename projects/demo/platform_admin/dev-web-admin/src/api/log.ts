@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 日志 API（对接 auth-rbac）
  * 后端路由：/api/v1/login-logs（登录日志）
  *          /api/v1/operation-logs（操作日志）
@@ -53,15 +53,15 @@ export interface OperationLogItem {
 
 /** 登录日志查询 */
 export function listLoginLogs(params: LoginLogQuery) {
-  return request.get('/api/v1/login-logs', { params })
+  return request.get('/api/v1/admin/login-logs', { params })
 }
 
 /** 删除登录日志 */
 export function deleteLoginLog(id: string): Promise<void> {
-  return request.delete(`/api/v1/login-logs/${id}`)
+  return request.delete(`/api/v1/admin/login-logs/${id}`)
 }
 
 /** 操作日志查询 */
 export function listOperationLogs(params: OperationLogQuery) {
-  return request.get('/api/v1/operation-logs', { params })
+  return request.get('/api/v1/admin/operation-logs', { params })
 }

@@ -19,12 +19,11 @@ func NewResourceHandler(svc *service.ResourceService) *ResourceHandler {
 	return &ResourceHandler{svc: svc}
 }
 
-// RegisterRoutes 注册资源管理路由
+// RegisterRoutes 注册资源管理路由（admin 组下的 CRUD 接口）
 func (h *ResourceHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	resources := rg.Group("/resources")
 	{
 		resources.GET("/tree", h.GetTree)
-		resources.GET("/user-menu", h.GetUserMenu)
 		resources.POST("", h.Create)
 		resources.PUT("/sort", h.Sort)
 		resources.PUT("/:id", h.Update)
@@ -50,7 +49,7 @@ func (h *ResourceHandler) GetTree(c *gin.Context) {
 }
 
 // GetUserMenu 获取用户有权限的菜单树
-// GET /api/v1/resources/user-menu
+// GET /api/v1/common/user-menu
 func (h *ResourceHandler) GetUserMenu(c *gin.Context) {
 	authCtx, err := MustGetAuthContext(c)
 	if err != nil {

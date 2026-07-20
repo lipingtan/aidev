@@ -17,6 +17,7 @@ type ApiPermission struct {
 	URLPattern     string     `gorm:"type:varchar(256)" json:"url_pattern"`                  // URL 匹配模式
 	HTTPMethod     string     `gorm:"type:varchar(16)" json:"http_method"`                   // HTTP 方法：GET/POST/PUT/DELETE
 	AppCode        string     `gorm:"type:varchar(64);not null;index" json:"app_code"`       // 所属应用编码
+	ModuleCode     string     `gorm:"type:varchar(64)" json:"module_code"`                   // 所属功能模块
 	Status         string     `gorm:"type:varchar(16);default:'ACTIVE'" json:"status"`       // 状态：UNASSIGNED/ACTIVE/DEPRECATED
 	Visible        *int       `gorm:"default:1" json:"visible"`                              // 1=显示 0=隐藏（界面配置可见性）
 	AuthRequired   *int       `gorm:"default:1" json:"auth_required"`                        // 1=需要权限校验 0=免检（所有登录用户可调）

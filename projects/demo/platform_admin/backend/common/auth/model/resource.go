@@ -16,7 +16,9 @@ type Resource struct {
 	Path           string         `gorm:"type:varchar(256)" json:"path"`                             // 路由路径
 	Component      string         `gorm:"type:varchar(256)" json:"component"`                        // 前端组件路径
 	Icon           string         `gorm:"type:varchar(128)" json:"icon"`                             // 图标
-	AppCode        string         `gorm:"type:varchar(64);not null;index" json:"app_code"`           // 所属应用编码
+	AppCode        string         `gorm:"type:varchar(64);not null;index:idx_app_platform" json:"app_code"` // 所属应用编码
+	Platform       string         `gorm:"type:varchar(16);not null;default:admin;index:idx_app_platform" json:"platform"` // 归属前端平台：admin/user
+	ModuleCode     string         `gorm:"type:varchar(64)" json:"module_code"`                       // 所属功能模块
 	SortOrder      int            `gorm:"default:0" json:"sort_order"`                               // 排序号
 	Status         int            `gorm:"default:1" json:"status"`                                   // 状态：1-启用 0-禁用
 	Version        int            `gorm:"default:1" json:"version"`                                  // 乐观锁版本号

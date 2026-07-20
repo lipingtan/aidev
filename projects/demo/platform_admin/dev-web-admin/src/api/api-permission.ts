@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 接口权限管理 API
  * 对接后端 /api/v1/api-permissions 系列接口
  */
@@ -45,35 +45,35 @@ export interface MovePayload {
 
 /** 获取接口权限树 */
 export function getApiPermissionTree(appCode: string): Promise<ApiPermissionNode[]> {
-  return request.get('/api/v1/api-permissions/tree', { params: { app_code: appCode } })
+  return request.get('/api/v1/admin/api-permissions/tree', { params: { app_code: appCode } })
 }
 
 /** 获取未分配 endpoint 列表 */
 export function getUnassignedEndpoints(appCode: string): Promise<ApiPermissionNode[]> {
-  return request.get('/api/v1/api-permissions/unassigned', { params: { app_code: appCode } })
+  return request.get('/api/v1/admin/api-permissions/unassigned', { params: { app_code: appCode } })
 }
 
 /** 新增接口权限节点 */
 export function createApiPermission(data: ApiPermissionForm): Promise<ApiPermissionNode> {
-  return request.post('/api/v1/api-permissions', data)
+  return request.post('/api/v1/admin/api-permissions', data)
 }
 
 /** 编辑接口权限节点 */
 export function updateApiPermission(id: string, data: Partial<ApiPermissionForm>): Promise<ApiPermissionNode> {
-  return request.put(`/api/v1/api-permissions/${id}`, data)
+  return request.put(`/api/v1/admin/api-permissions/${id}`, data)
 }
 
 /** 删除接口权限节点 */
 export function deleteApiPermission(id: string): Promise<void> {
-  return request.delete(`/api/v1/api-permissions/${id}`)
+  return request.delete(`/api/v1/admin/api-permissions/${id}`)
 }
 
 /** 移动节点到目标 GROUP */
 export function moveApiPermission(id: string, data: MovePayload): Promise<void> {
-  return request.put(`/api/v1/api-permissions/${id}/move`, data)
+  return request.put(`/api/v1/admin/api-permissions/${id}/move`, data)
 }
 
 /** 切换接口权限节点显示/隐藏 */
 export function toggleApiPermissionVisible(id: string, visible: number): Promise<void> {
-  return request.put(`/api/v1/api-permissions/${id}/visible`, { visible })
+  return request.put(`/api/v1/admin/api-permissions/${id}/visible`, { visible })
 }

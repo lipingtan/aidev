@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// SeedInitialData 创建初始数据：超级管理员 + 默认租户 + SUPER_ADMIN 角色 + 关联
+// SeedInitialData 创建初始数据：超级管理员 + 默认租户 + SUPER_ADMIN 角色 + 应用 + 菜单
 // 仅在 admin_user 表无记录时执行（幂等）
 func SeedInitialData(db *gorm.DB) error {
 	// 幂等检查
@@ -16,7 +16,7 @@ func SeedInitialData(db *gorm.DB) error {
 		return err
 	}
 	if count > 0 {
-		return nil // 已有数据，跳过
+		return nil
 	}
 
 	// 1. 创建超级管理员
@@ -35,11 +35,14 @@ func SeedInitialData(db *gorm.DB) error {
 		return err
 	}
 
-	// 2. 创建默认租户
+	// 2. 创建默认租户（含 timezone/locale/currency）
 	tenant := &model.Tenant{
 		TenantCode: "default",
 		Name:       "默认租户",
 		Status:     1,
+		Timezone:   "Asia/Shanghai",
+		Locale:     "zh-CN",
+		Currency:   "CNY",
 		Version:    1,
 	}
 	if err := db.Create(tenant).Error; err != nil {
@@ -47,11 +50,7 @@ func SeedInitialData(db *gorm.DB) error {
 	}
 
 	// 3. 关联 admin → default 租户
-	ut := &model.UserTenant{
-		UserID:   admin.ID,
-		TenantID: tenant.ID,
-	}
-	if err := db.Create(ut).Error; err != nil {
+	if err := db.Create(&model.UserTenant{UserID: admin.ID, TenantID: tenant.ID}).Error; err != nil {
 		return err
 	}
 
@@ -69,20 +68,18 @@ func SeedInitialData(db *gorm.DB) error {
 	}
 
 	// 5. 分配角色
-	userRole := &model.UserRole{
-		UserID:   admin.ID,
-		RoleID:   role.ID,
-		TenantID: tenant.ID,
-	}
-	if err := db.Create(userRole).Error; err != nil {
+	if err := db.Create(&model.UserRole{UserID: admin.ID, RoleID: role.ID, TenantID: tenant.ID}).Error; err != nil {
 		return err
 	}
 
-	// 6. 创建默认应用 admin
+	// 6. 创建内置应用 platform_admin（含 app_type/route_prefix/platforms）
 	app := &model.Application{
-		AppCode:     "admin",
+		AppCode:     "platform_admin",
 		Name:        "平台管理",
-		Description: "平台管理应用",
+		Description: "平台管理后台应用",
+		AppType:     "BUILTIN",
+		RoutePrefix: "/api/v1/admin",
+		Platforms:   []byte(`["admin:pc","admin:h5"]`),
 		Status:      1,
 		Version:     1,
 	}
@@ -91,23 +88,31 @@ func SeedInitialData(db *gorm.DB) error {
 	}
 
 	// 7. 角色绑定应用
-	roleApp := &model.RoleApp{RoleID: role.ID, AppCode: "admin"}
-	if err := db.Create(roleApp).Error; err != nil {
+	if err := db.Create(&model.RoleApp{RoleID: role.ID, AppCode: "platform_admin"}).Error; err != nil {
 		return err
 	}
 
 	// 8. 租户订阅应用
-	tenantApp := &model.TenantApp{TenantID: tenant.ID, AppCode: "admin"}
-	if err := db.Create(tenantApp).Error; err != nil {
+	if err := db.Create(&model.TenantApp{TenantID: tenant.ID, AppCode: "platform_admin"}).Error; err != nil {
 		return err
 	}
 
-	// 9. 创建菜单资源（对齐前端 static-routes.ts）
+	// 9. 创建管理端菜单（全部 platform=admin, app_code=platform_admin）
+	if err := seedMenus(db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// seedMenus 创建管理端菜单资源
+func seedMenus(db *gorm.DB) error {
+	// 一级菜单
 	resources := []*model.Resource{
-		{Type: "MENU", Name: "首页", Path: "/home", Icon: "HomeFilled", AppCode: "admin", SortOrder: 0, Status: 1, Version: 1},
-		{Type: "MENU", Name: "系统管理", Path: "/system", Icon: "Setting", AppCode: "admin", SortOrder: 10, Status: 1, Version: 1},
-		{Type: "MENU", Name: "日志管理", Path: "/log", Icon: "Document", AppCode: "admin", SortOrder: 20, Status: 1, Version: 1},
-		{Type: "MENU", Name: "监控", Path: "/monitor", Icon: "Monitor", AppCode: "admin", SortOrder: 30, Status: 1, Version: 1},
+		{Type: "MENU", Name: "首页", Path: "/home", Icon: "HomeFilled", AppCode: "platform_admin", Platform: "admin", SortOrder: 0, Status: 1, Version: 1},
+		{Type: "MENU", Name: "系统管理", Path: "/system", Icon: "Setting", AppCode: "platform_admin", Platform: "admin", ModuleCode: "system", SortOrder: 10, Status: 1, Version: 1},
+		{Type: "MENU", Name: "日志管理", Path: "/log", Icon: "Document", AppCode: "platform_admin", Platform: "admin", ModuleCode: "log-mgmt", SortOrder: 20, Status: 1, Version: 1},
+		{Type: "MENU", Name: "监控", Path: "/monitor", Icon: "Monitor", AppCode: "platform_admin", Platform: "admin", ModuleCode: "monitor", SortOrder: 30, Status: 1, Version: 1},
 	}
 	if err := db.Create(&resources).Error; err != nil {
 		return err
@@ -116,14 +121,14 @@ func SeedInitialData(db *gorm.DB) error {
 	// 系统管理子菜单
 	sysParentID := resources[1].ID
 	sysChildren := []*model.Resource{
-		{ParentID: &sysParentID, Type: "MENU", Name: "用户管理", Path: "/system/users", Icon: "User", PermissionCode: "user:user:list", AppCode: "admin", SortOrder: 0, Status: 1, Version: 1},
-		{ParentID: &sysParentID, Type: "MENU", Name: "角色管理", Path: "/system/roles", Icon: "UserFilled", PermissionCode: "user:role:list", AppCode: "admin", SortOrder: 1, Status: 1, Version: 1},
-		{ParentID: &sysParentID, Type: "MENU", Name: "租户管理", Path: "/system/tenants", Icon: "Tickets", PermissionCode: "system:tenant:list", AppCode: "admin", SortOrder: 3, Status: 1, Version: 1},
-		{ParentID: &sysParentID, Type: "MENU", Name: "应用管理", Path: "/system/applications", Icon: "Box", PermissionCode: "system:app:list", AppCode: "admin", SortOrder: 4, Status: 1, Version: 1},
-		{ParentID: &sysParentID, Type: "MENU", Name: "数据权限配置", Path: "/system/data-scope", Icon: "Key", PermissionCode: "system:data-scope:list", AppCode: "admin", SortOrder: 5, Status: 1, Version: 1},
-		{ParentID: &sysParentID, Type: "MENU", Name: "系统配置", Path: "/system/config", Icon: "Setting", PermissionCode: "system:config:list", AppCode: "admin", SortOrder: 6, Status: 1, Version: 1},
-		{ParentID: &sysParentID, Type: "MENU", Name: "接口管理", Path: "/system/api", Icon: "Connection", PermissionCode: "system:api:list", AppCode: "admin", SortOrder: 7, Status: 1, Version: 1},
-		{ParentID: &sysParentID, Type: "MENU", Name: "插件管理", Path: "/system/plugins", Icon: "Box", PermissionCode: "system:plugin:list", AppCode: "admin", SortOrder: 8, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "用户管理", Path: "/system/users", Icon: "User", PermissionCode: "user:user:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "user-mgmt", SortOrder: 0, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "角色管理", Path: "/system/roles", Icon: "UserFilled", PermissionCode: "user:role:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "role-mgmt", SortOrder: 1, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "租户管理", Path: "/system/tenants", Icon: "Tickets", PermissionCode: "system:tenant:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "tenant-mgmt", SortOrder: 3, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "应用管理", Path: "/system/applications", Icon: "Box", PermissionCode: "system:app:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "app-mgmt", SortOrder: 4, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "数据权限配置", Path: "/system/data-scope", Icon: "Key", PermissionCode: "system:data-scope:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "data-scope-mgmt", SortOrder: 5, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "系统配置", Path: "/system/config", Icon: "Setting", PermissionCode: "system:config:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "config-mgmt", SortOrder: 6, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "接口管理", Path: "/system/api", Icon: "Connection", PermissionCode: "system:api:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "api-perm-mgmt", SortOrder: 7, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "插件管理", Path: "/system/plugins", Icon: "Box", PermissionCode: "system:plugin:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "plugin-mgmt", SortOrder: 8, Status: 1, Version: 1},
 	}
 	if err := db.Create(&sysChildren).Error; err != nil {
 		return err
@@ -132,8 +137,8 @@ func SeedInitialData(db *gorm.DB) error {
 	// 日志管理子菜单
 	logParentID := resources[2].ID
 	logChildren := []*model.Resource{
-		{ParentID: &logParentID, Type: "MENU", Name: "登录日志", Path: "/log/login-logs", Icon: "Document", PermissionCode: "user:log:list", AppCode: "admin", SortOrder: 0, Status: 1, Version: 1},
-		{ParentID: &logParentID, Type: "MENU", Name: "操作日志", Path: "/log/operation-logs", Icon: "Notebook", PermissionCode: "user:log:list", AppCode: "admin", SortOrder: 1, Status: 1, Version: 1},
+		{ParentID: &logParentID, Type: "MENU", Name: "登录日志", Path: "/log/login-logs", Icon: "Document", PermissionCode: "user:log:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "log-mgmt", SortOrder: 0, Status: 1, Version: 1},
+		{ParentID: &logParentID, Type: "MENU", Name: "操作日志", Path: "/log/operation-logs", Icon: "Notebook", PermissionCode: "user:log:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "log-mgmt", SortOrder: 1, Status: 1, Version: 1},
 	}
 	if err := db.Create(&logChildren).Error; err != nil {
 		return err
@@ -142,7 +147,7 @@ func SeedInitialData(db *gorm.DB) error {
 	// 监控子菜单
 	monParentID := resources[3].ID
 	monChildren := []*model.Resource{
-		{ParentID: &monParentID, Type: "MENU", Name: "服务监控", Path: "/monitor/server", Icon: "Monitor", PermissionCode: "monitor:server", AppCode: "admin", SortOrder: 0, Status: 1, Version: 1},
+		{ParentID: &monParentID, Type: "MENU", Name: "服务监控", Path: "/monitor/server", Icon: "Monitor", PermissionCode: "monitor:server", AppCode: "platform_admin", Platform: "admin", ModuleCode: "monitor", SortOrder: 0, Status: 1, Version: 1},
 	}
 	if err := db.Create(&monChildren).Error; err != nil {
 		return err

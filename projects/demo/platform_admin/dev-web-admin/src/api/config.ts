@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 系统配置 API（对接 auth-rbac）
  * 后端路由：/api/v1/configs
  */
@@ -37,7 +37,7 @@ export interface ConfigPageResult {
 
 /** 获取配置分页列表 */
 export async function listConfigs(params: ConfigQuery): Promise<ConfigPageResult> {
-  const res: any = await request.get('/api/v1/configs', { params })
+  const res: any = await request.get('/api/v1/admin/configs', { params })
   if (res && Array.isArray(res.list)) {
     return { list: res.list, total: res.count || res.total || res.list.length }
   }
@@ -49,25 +49,25 @@ export async function listConfigs(params: ConfigQuery): Promise<ConfigPageResult
 
 /** 获取配置详情 */
 export function getConfig(id: string) {
-  return request.get(`/api/v1/configs/${id}`)
+  return request.get(`/api/v1/admin/configs/${id}`)
 }
 
 /** 按 configKey 查询配置值 */
 export function getConfigByKey(configKey: string) {
-  return request.get(`/api/v1/configs/key/${configKey}`)
+  return request.get(`/api/v1/admin/configs/key/${configKey}`)
 }
 
 /** 创建配置 */
 export function createConfig(data: ConfigCreateParams) {
-  return request.post('/api/v1/configs', data)
+  return request.post('/api/v1/admin/configs', data)
 }
 
 /** 更新配置 */
 export function updateConfig(id: string, data: Partial<ConfigCreateParams>) {
-  return request.put(`/api/v1/configs/${id}`, data)
+  return request.put(`/api/v1/admin/configs/${id}`, data)
 }
 
 /** 删除配置 */
 export function deleteConfig(id: string) {
-  return request.delete(`/api/v1/configs/${id}`)
+  return request.delete(`/api/v1/admin/configs/${id}`)
 }

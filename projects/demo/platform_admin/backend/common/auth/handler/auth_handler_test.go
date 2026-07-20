@@ -1,7 +1,8 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
+"fmt"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +36,7 @@ func setupAuthRouter(db *gorm.DB) (*gin.Engine, *service.AuthService) {
 	h.RegisterRoutes(r.Group(""))
 
 	// 注册一个受保护的测试端点
-	protected := r.Group("/api/v1")
+	protected := r.Group("/api/v1/admin")
 	protected.Use(middleware.AuthMiddleware(authSvc))
 	protected.GET("/me", func(c *gin.Context) {
 		authCtx := middleware.GetAuthContext(c)
@@ -201,7 +202,7 @@ func TestSelectTenant_Success(t *testing.T) {
 
 	// 选择租户
 	selectBody := map[string]interface{}{
-		"tenant_id": tenant1.ID,
+		"tenant_id": fmt.Sprintf("%d", tenant1.ID),
 	}
 	jsonBody, _ = json.Marshal(selectBody)
 	req = httptest.NewRequest(http.MethodPost, "/auth/tenant/select", bytes.NewBuffer(jsonBody))
@@ -272,7 +273,7 @@ func TestSelectTenant_NotAssociated(t *testing.T) {
 
 	// 尝试选择未关联的租户
 	selectBody := map[string]interface{}{
-		"tenant_id": tenant2.ID,
+		"tenant_id": fmt.Sprintf("%d", tenant2.ID),
 	}
 	jsonBody, _ = json.Marshal(selectBody)
 	req = httptest.NewRequest(http.MethodPost, "/auth/tenant/select", bytes.NewBuffer(jsonBody))
@@ -364,7 +365,7 @@ func TestLogout_BlacklistToken(t *testing.T) {
 	}
 
 	// 先验证 access_token 有效
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/me", nil)
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -382,7 +383,7 @@ func TestLogout_BlacklistToken(t *testing.T) {
 	}
 
 	// 再次使用已注销的 token 访问受保护端点
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/me", nil)
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -423,7 +424,7 @@ func TestRefreshToken(t *testing.T) {
 
 	// 刷新获取新的 access_token
 	refreshBody := map[string]interface{}{
-		"tenant_id": tenant1.ID,
+		"tenant_id": fmt.Sprintf("%d", tenant1.ID),
 	}
 	jsonBody, _ = json.Marshal(refreshBody)
 	req = httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(jsonBody))
@@ -459,7 +460,7 @@ func TestMiddleware_Unauthorized(t *testing.T) {
 	r, _ := setupAuthRouter(db)
 
 	// 不带 token 访问受保护端点
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/me", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -473,7 +474,7 @@ func TestMiddleware_InvalidToken(t *testing.T) {
 	db := setupAuthTestDB(t)
 	r, _ := setupAuthRouter(db)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/me", nil)
 	req.Header.Set("Authorization", "Bearer invalid.token.here")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

@@ -158,7 +158,7 @@ async function fetchTree() {
 }
 
 // ===== 拖拽排序 =====
-function allowDrop(draggingNode: Node, dropNode: Node, type: string): boolean {
+function allowDrop(draggingNode: any, dropNode: any, type: string): boolean {
   // 按钮不能作为父节点
   if (type === 'inner' && dropNode.data.type === 'BUTTON') return false
   return true

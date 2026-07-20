@@ -14,21 +14,20 @@ import (
 
 // skipPaths 免检白名单（FullPath 匹配）
 var skipPaths = map[string]bool{
-	"/auth/login":                        true,
-	"/auth/tenant/select":                true,
-	"/auth/refresh":                      true,
-	"/auth/logout":                       true,
-	"/setup":                             true,
-	"/setup/":                            true,
-	"/setup/status":                      true,
-	"/setup/init":                        true,
-	"/setup/test-db":                     true,
-	"/api/v1/resources/user-menu":        true,
-	"/api/v1/dashboard/kpi":              true,
-	"/api/v1/dashboard/trend/workorder":  true,
-	"/api/v1/dashboard/trend/billing":    true,
-	"/api/v1/monitor/server":             true,
-	"/api/v1/sys-apis":                   true,
+	"/auth/login":                              true,
+	"/auth/tenant/select":                      true,
+	"/auth/refresh":                            true,
+	"/auth/logout":                             true,
+	"/setup":                                   true,
+	"/setup/":                                  true,
+	"/setup/status":                            true,
+	"/setup/init":                              true,
+	"/setup/test-db":                           true,
+	"/api/v1/admin/dashboard/kpi":              true,
+	"/api/v1/admin/dashboard/trend/workorder":  true,
+	"/api/v1/admin/dashboard/trend/billing":    true,
+	"/api/v1/admin/monitor/server":             true,
+	"/api/v1/admin/sys-apis":                   true,
 }
 
 // DynamicPermissionMiddleware 动态权限检查中间件

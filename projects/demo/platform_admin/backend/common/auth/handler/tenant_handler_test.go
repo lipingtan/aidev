@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -50,7 +50,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewTenantService(db, cfg, tenantRepo)
 	h := NewTenantHandler(svc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -67,7 +67,7 @@ func TestCreateTenant_Success(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/tenants", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -97,7 +97,7 @@ func TestCreateTenant_DuplicateCode(t *testing.T) {
 	jsonBody, _ := json.Marshal(body)
 
 	// 第一次创建
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/tenants", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -108,7 +108,7 @@ func TestCreateTenant_DuplicateCode(t *testing.T) {
 
 	// 第二次创建（重复）
 	jsonBody, _ = json.Marshal(body)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/tenants", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -137,7 +137,7 @@ func TestUpdateStatus(t *testing.T) {
 		"name":        "状态测试公司",
 	}
 	jsonBody, _ := json.Marshal(createBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/tenants", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -150,7 +150,7 @@ func TestUpdateStatus(t *testing.T) {
 	var createResp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &createResp)
@@ -161,7 +161,7 @@ func TestUpdateStatus(t *testing.T) {
 		"status": 0,
 	}
 	jsonBody, _ = json.Marshal(statusBody)
-	url := fmt.Sprintf("/api/v1/tenants/%d/status", tenantID)
+	url := fmt.Sprintf("/api/v1/admin/tenants/%d/status", tenantID)
 	req = httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
@@ -191,7 +191,7 @@ func TestListTenants_Pagination(t *testing.T) {
 			"name":        fmt.Sprintf("分页测试公司%d", i),
 		}
 		jsonBody, _ := json.Marshal(body)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/tenants", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
@@ -201,7 +201,7 @@ func TestListTenants_Pagination(t *testing.T) {
 	}
 
 	// 查询第一页，page_size=2
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tenants?page=1&page_size=2", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/tenants?page=1&page_size=2", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 

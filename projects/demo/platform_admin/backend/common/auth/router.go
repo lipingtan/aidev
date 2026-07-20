@@ -49,49 +49,54 @@ type Dependencies struct {
 }
 
 // RegisterRoutes 注册 auth 模块所有路由到指定路由组
-// 可独立挂载到任意 gin.Engine
+// 路由组结构: /auth（公开）+ /api/v1/common（仅认证）+ /api/v1/admin（完整中间件链）
 func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
-	// 认证路由（无需认证中间件）
+	// 认证路由（公开，不走任何中间件）
 	deps.AuthHandler.RegisterRoutes(rg)
 
-	// 需要认证的 API 路由
-	api := rg.Group("/api/v1")
-	api.Use(middleware.AuthMiddleware(deps.AuthService))
-
-	// 动态权限检查（SUPER_ADMIN 放行 + 白名单放行 + permission_code 匹配）
-	api.Use(middleware.DynamicPermissionMiddleware(deps.DB, deps.Cfg))
-
-	// 注册各业务 handler 路由
-	deps.TenantHandler.RegisterRoutes(api)
-	deps.UserHandler.RegisterRoutes(api)
-	deps.RoleHandler.RegisterRoutes(api)
-
-	if deps.ApiPermissionHandler != nil {
-		deps.ApiPermissionHandler.RegisterRoutes(api)
-	}
-	if deps.ResourceHandler != nil {
-		deps.ResourceHandler.RegisterRoutes(api)
-	}
-	if deps.ApplicationHandler != nil {
-		deps.ApplicationHandler.RegisterRoutes(api)
-	}
-	if deps.DataScopeHandler != nil {
-		deps.DataScopeHandler.RegisterRoutes(api)
-	}
-	if deps.OperationLogHandler != nil {
-		deps.OperationLogHandler.RegisterRoutes(api)
-	}
-	if deps.ConfigHandler != nil {
-		deps.ConfigHandler.RegisterRoutes(api)
-	}
-	if deps.LoginLogHandler != nil {
-		deps.LoginLogHandler.RegisterRoutes(api)
+	// 公共路由（仅需认证，不走权限中间件）
+	common := rg.Group("/api/v1/common")
+	common.Use(middleware.AuthMiddleware(deps.AuthService))
+	{
+		common.GET("/user-menu", deps.ResourceHandler.GetUserMenu)
 	}
 
-	// Stub 路由
-	registerDashboardStub(api)
-	registerSysApiStub(api)
-	registerMonitorStub(api)
+	// 管理端业务路由（认证 + 动态权限检查）
+	admin := rg.Group("/api/v1/admin")
+	admin.Use(middleware.AuthMiddleware(deps.AuthService))
+	admin.Use(middleware.DynamicPermissionMiddleware(deps.DB, deps.Cfg))
+	{
+		deps.TenantHandler.RegisterRoutes(admin)
+		deps.UserHandler.RegisterRoutes(admin)
+		deps.RoleHandler.RegisterRoutes(admin)
+
+		if deps.ApiPermissionHandler != nil {
+			deps.ApiPermissionHandler.RegisterRoutes(admin)
+		}
+		if deps.ResourceHandler != nil {
+			deps.ResourceHandler.RegisterRoutes(admin)
+		}
+		if deps.ApplicationHandler != nil {
+			deps.ApplicationHandler.RegisterRoutes(admin)
+		}
+		if deps.DataScopeHandler != nil {
+			deps.DataScopeHandler.RegisterRoutes(admin)
+		}
+		if deps.OperationLogHandler != nil {
+			deps.OperationLogHandler.RegisterRoutes(admin)
+		}
+		if deps.ConfigHandler != nil {
+			deps.ConfigHandler.RegisterRoutes(admin)
+		}
+		if deps.LoginLogHandler != nil {
+			deps.LoginLogHandler.RegisterRoutes(admin)
+		}
+
+		// Stub 路由
+		registerDashboardStub(admin)
+		registerSysApiStub(admin)
+		registerMonitorStub(admin)
+	}
 }
 
 // registerDashboardStub 注册 dashboard 占位路由，避免前端 404

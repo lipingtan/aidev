@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 用户管理 API
  * 后端路由前缀：/api/v1/users
  */
@@ -74,45 +74,45 @@ export interface UserPageResult {
 
 /** 用户分页查询 */
 export function listUsers(params: UserQuery) {
-  return request.get<any, UserPageResult>('/api/v1/users', { params })
+  return request.get<any, UserPageResult>('/api/v1/admin/users', { params })
 }
 
 /** 新增用户 */
 export function createUser(data: UserCreateParams): Promise<void> {
-  return request.post('/api/v1/users', data)
+  return request.post('/api/v1/admin/users', data)
 }
 
 /** 编辑用户 */
 export function updateUser(id: string, data: UserUpdateParams): Promise<void> {
-  return request.put(`/api/v1/users/${id}`, data)
+  return request.put(`/api/v1/admin/users/${id}`, data)
 }
 
 /** 删除用户 */
 export function deleteUser(id: string): Promise<void> {
-  return request.delete(`/api/v1/users/${id}`)
+  return request.delete(`/api/v1/admin/users/${id}`)
 }
 
 /** 获取用户关联的租户列表 */
 export function getUserTenants(userId: string): Promise<UserTenant[]> {
-  return request.get(`/api/v1/users/${userId}/tenants`)
+  return request.get(`/api/v1/admin/users/${userId}/tenants`)
 }
 
 /** 关联用户到租户 */
 export function addUserTenants(userId: string, data: UserTenantParams): Promise<void> {
-  return request.post(`/api/v1/users/${userId}/tenants`, data)
+  return request.post(`/api/v1/admin/users/${userId}/tenants`, data)
 }
 
 /** 移除用户与租户的关联 */
 export function removeUserTenant(userId: string, tenantId: string): Promise<void> {
-  return request.delete(`/api/v1/users/${userId}/tenants/${tenantId}`)
+  return request.delete(`/api/v1/admin/users/${userId}/tenants/${tenantId}`)
 }
 
 /** 分配用户角色（当前租户下） */
 export function assignUserRoles(userId: string, data: UserRoleParams): Promise<void> {
-  return request.post(`/api/v1/users/${userId}/roles`, data)
+  return request.post(`/api/v1/admin/users/${userId}/roles`, data)
 }
 
 /** 强制下线 */
 export function forceOfflineUser(userId: string): Promise<void> {
-  return request.post(`/api/v1/users/${userId}/force-offline`)
+  return request.post(`/api/v1/admin/users/${userId}/force-offline`)
 }

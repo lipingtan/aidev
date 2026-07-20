@@ -24,14 +24,14 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// setupTestEngine 创建测试用 gin.Engine 并注册路由
+// setupTestEngine 创建测试用 gin.Engine 并注册路由（新前缀）
 func setupTestEngine() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
-	engine.GET("/api/v1/users", func(c *gin.Context) { c.Status(http.StatusOK) })
-	engine.POST("/api/v1/users", func(c *gin.Context) { c.Status(http.StatusOK) })
-	engine.PUT("/api/v1/users/:id", func(c *gin.Context) { c.Status(http.StatusOK) })
-	engine.DELETE("/api/v1/users/:id", func(c *gin.Context) { c.Status(http.StatusOK) })
+	engine.GET("/api/v1/admin/users", func(c *gin.Context) { c.Status(http.StatusOK) })
+	engine.POST("/api/v1/admin/users", func(c *gin.Context) { c.Status(http.StatusOK) })
+	engine.PUT("/api/v1/admin/users/:id", func(c *gin.Context) { c.Status(http.StatusOK) })
+	engine.DELETE("/api/v1/admin/users/:id", func(c *gin.Context) { c.Status(http.StatusOK) })
 	return engine
 }
 
@@ -43,7 +43,7 @@ func TestAutoDiscover_FirstScan(t *testing.T) {
 	AutoDiscover(engine, db, 500)
 
 	var perms []model.ApiPermission
-	db.Where("app_code = ?", "admin").Find(&perms)
+	db.Where("app_code = ?", "platform_admin").Find(&perms)
 
 	// 期望 1 GROUP (users) + 4 ENDPOINT = 5
 	if len(perms) != 5 {
@@ -64,6 +64,12 @@ func TestAutoDiscover_FirstScan(t *testing.T) {
 		if ep.Status != "ACTIVE" {
 			t.Errorf("期望 status=ACTIVE，实际 %s", ep.Status)
 		}
+		if ep.AppCode != "platform_admin" {
+			t.Errorf("期望 app_code=platform_admin，实际 %s", ep.AppCode)
+		}
+		if ep.ModuleCode != "user-mgmt" {
+			t.Errorf("期望 module_code=user-mgmt，实际 %s", ep.ModuleCode)
+		}
 	}
 }
 
@@ -78,7 +84,7 @@ func TestAutoDiscover_Idempotent(t *testing.T) {
 	AutoDiscover(engine, db, 500)
 
 	var count int64
-	db.Model(&model.ApiPermission{}).Where("app_code = ?", "admin").Count(&count)
+	db.Model(&model.ApiPermission{}).Where("app_code = ?", "platform_admin").Count(&count)
 
 	// 期望 1 GROUP + 4 ENDPOINT = 5，重复扫描不增加
 	if count != 5 {
@@ -96,7 +102,7 @@ func TestAutoDiscover_AsyncThreshold(t *testing.T) {
 
 	// 立即查询应该没有记录（异步尚未执行）
 	var count int64
-	db.Model(&model.ApiPermission{}).Where("app_code = ?", "admin").Count(&count)
+	db.Model(&model.ApiPermission{}).Where("app_code = ?", "platform_admin").Count(&count)
 
 	if count != 0 {
 		t.Logf("异步模式：立即查询到 %d 条记录（可能执行很快），跳过严格断言", count)
@@ -111,26 +117,26 @@ func TestRegisterAPIs_Active(t *testing.T) {
 		{
 			Name:           "获取用户列表",
 			PermissionCode: "user:list",
-			URLPattern:     "/api/v1/users",
+			URLPattern:     "/api/v1/admin/users",
 			HTTPMethod:     "GET",
-			AppCode:        "admin",
+			AppCode:        "platform_admin",
 			GroupName:      "用户管理",
 		},
 		{
 			Name:           "创建用户",
 			PermissionCode: "user:create",
-			URLPattern:     "/api/v1/users",
+			URLPattern:     "/api/v1/admin/users",
 			HTTPMethod:     "POST",
-			AppCode:        "admin",
+			AppCode:        "platform_admin",
 			GroupName:      "用户管理",
 		},
 	}
 
-	RegisterAPIs(db, "admin", apis)
+	RegisterAPIs(db, "platform_admin", apis)
 
 	// 验证 ENDPOINT
 	var endpoints []model.ApiPermission
-	db.Where("app_code = ? AND type = ?", "admin", "ENDPOINT").Find(&endpoints)
+	db.Where("app_code = ? AND type = ?", "platform_admin", "ENDPOINT").Find(&endpoints)
 	if len(endpoints) != 2 {
 		t.Fatalf("期望 2 条 ENDPOINT，实际 %d 条", len(endpoints))
 	}
@@ -139,8 +145,8 @@ func TestRegisterAPIs_Active(t *testing.T) {
 		if ep.Status != "ACTIVE" {
 			t.Errorf("期望 status=ACTIVE，实际 %s", ep.Status)
 		}
-		if ep.AppCode != "admin" {
-			t.Errorf("期望 app_code=admin，实际 %s", ep.AppCode)
+		if ep.AppCode != "platform_admin" {
+			t.Errorf("期望 app_code=platform_admin，实际 %s", ep.AppCode)
 		}
 		if ep.ParentID == nil {
 			t.Error("期望有 parent_id（分组），实际为 nil")
@@ -149,7 +155,7 @@ func TestRegisterAPIs_Active(t *testing.T) {
 
 	// 验证 GROUP 只创建了一个
 	var groups []model.ApiPermission
-	db.Where("app_code = ? AND type = ?", "admin", "GROUP").Find(&groups)
+	db.Where("app_code = ? AND type = ?", "platform_admin", "GROUP").Find(&groups)
 	if len(groups) != 1 {
 		t.Fatalf("期望 1 个 GROUP，实际 %d 个", len(groups))
 	}
@@ -166,17 +172,17 @@ func TestRegisterAPIs_Idempotent(t *testing.T) {
 		{
 			Name:           "获取用户列表",
 			PermissionCode: "user:list",
-			URLPattern:     "/api/v1/users",
+			URLPattern:     "/api/v1/admin/users",
 			HTTPMethod:     "GET",
-			AppCode:        "admin",
+			AppCode:        "platform_admin",
 		},
 	}
 
-	RegisterAPIs(db, "admin", apis)
-	RegisterAPIs(db, "admin", apis)
+	RegisterAPIs(db, "platform_admin", apis)
+	RegisterAPIs(db, "platform_admin", apis)
 
 	var count int64
-	db.Model(&model.ApiPermission{}).Where("app_code = ? AND type = ?", "admin", "ENDPOINT").Count(&count)
+	db.Model(&model.ApiPermission{}).Where("app_code = ? AND type = ?", "platform_admin", "ENDPOINT").Count(&count)
 	if count != 1 {
 		t.Fatalf("RegisterAPIs 幂等失败：期望 1 条，实际 %d 条", count)
 	}

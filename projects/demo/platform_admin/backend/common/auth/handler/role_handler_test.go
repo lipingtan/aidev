@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ func setupRoleRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewRoleService(db, cfg, roleRepo)
 	h := NewRoleHandler(svc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -43,11 +43,11 @@ func createRole(t *testing.T, r *gin.Engine, tenantID int64, roleCode, roleName 
 		"role_name": roleName,
 	}
 	if parentID != nil {
-		body["parent_id"] = *parentID
+		body["parent_id"] = fmt.Sprintf("%d", *parentID)
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/roles", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", strconv.FormatInt(tenantID, 10))
 	w := httptest.NewRecorder()
@@ -60,7 +60,7 @@ func createRole(t *testing.T, r *gin.Engine, tenantID int64, roleCode, roleName 
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)
@@ -80,7 +80,7 @@ func TestCreateRole_Success(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/roles", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", strconv.FormatInt(tenantID, 10))
 	w := httptest.NewRecorder()
@@ -122,7 +122,7 @@ func TestCreateRole_DuplicateCode(t *testing.T) {
 		"role_name": "重复角色2",
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/roles", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", strconv.FormatInt(tenantID, 10))
 	w := httptest.NewRecorder()
@@ -153,11 +153,11 @@ func TestCyclicHierarchy(t *testing.T) {
 
 	// 尝试更新角色 A 的 parent 为 B（形成循环）
 	updateBody := map[string]interface{}{
-		"parent_id": roleB,
+		"parent_id": fmt.Sprintf("%d", roleB),
 		"version":   1,
 	}
 	jsonBody, _ := json.Marshal(updateBody)
-	url := fmt.Sprintf("/api/v1/roles/%d", roleA)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d", roleA)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -187,7 +187,7 @@ func TestMaxHierarchyDepth(t *testing.T) {
 	roleRepo := repository.NewRoleRepository()
 	svc := service.NewRoleService(db, cfg, roleRepo)
 	h := NewRoleHandler(svc)
-	api := router.Group("/api/v1")
+	api := router.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	tenantID := int64(100)
@@ -202,10 +202,10 @@ func TestMaxHierarchyDepth(t *testing.T) {
 		"tenant_id": tenantID,
 		"role_code": "child3",
 		"role_name": "子角色3",
-		"parent_id": child2ID,
+		"parent_id": fmt.Sprintf("%d", child2ID),
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/roles", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", strconv.FormatInt(tenantID, 10))
 	w := httptest.NewRecorder()
@@ -230,11 +230,11 @@ func createRoleWith(t *testing.T, router *gin.Engine, tenantID int64, roleCode, 
 		"role_name": roleName,
 	}
 	if parentID != nil {
-		body["parent_id"] = *parentID
+		body["parent_id"] = fmt.Sprintf("%d", *parentID)
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/roles", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Tenant-ID", strconv.FormatInt(tenantID, 10))
 	w := httptest.NewRecorder()
@@ -247,7 +247,7 @@ func createRoleWith(t *testing.T, router *gin.Engine, tenantID int64, roleCode, 
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			ID int64 `json:"id"`
+			ID int64 `json:"id,string"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)
@@ -273,7 +273,7 @@ func TestDeleteRole_HasUsers(t *testing.T) {
 	}
 
 	// 尝试删除角色
-	url := fmt.Sprintf("/api/v1/roles/%d", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d", roleID)
 	req := httptest.NewRequest(http.MethodDelete, url, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -298,7 +298,7 @@ func TestDeleteRole_Success(t *testing.T) {
 	roleID := createRole(t, r, tenantID, "free_role", "无绑定角色", nil)
 
 	// 直接删除角色
-	url := fmt.Sprintf("/api/v1/roles/%d", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d", roleID)
 	req := httptest.NewRequest(http.MethodDelete, url, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -328,7 +328,7 @@ func TestTenantIsolation(t *testing.T) {
 	createRole(t, r, tenantB, "role_in_b", "租户B角色", nil)
 
 	// 查询租户 A 的角色列表（通过 header 设置 tenant）
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/roles", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/roles", nil)
 	req.Header.Set("X-Test-Tenant-ID", strconv.FormatInt(tenantA, 10))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -354,7 +354,7 @@ func TestTenantIsolation(t *testing.T) {
 	}
 
 	// 查询租户 B 的角色列表
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/roles", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/roles", nil)
 	req.Header.Set("X-Test-Tenant-ID", strconv.FormatInt(tenantB, 10))
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -382,7 +382,7 @@ func TestUpdateRole_OptimisticLock(t *testing.T) {
 		"version":   1,
 	}
 	jsonBody, _ := json.Marshal(updateBody)
-	url := fmt.Sprintf("/api/v1/roles/%d", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

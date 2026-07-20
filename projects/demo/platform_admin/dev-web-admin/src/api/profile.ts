@@ -5,13 +5,14 @@
 import request from '@/utils/request'
 
 export interface ProfileInfo {
-  userId: number
+  userId: string
   username: string
   realName: string
-  phone: string
+  phone?: string
   avatar: string
   roles: string[]
   permissions: string[]
+  tenantId?: string
 }
 
 /** 获取个人信息 */

@@ -1,4 +1,4 @@
-package handler
+﻿package handler
 
 import (
 	"bytes"
@@ -43,7 +43,7 @@ func setupDataScopeRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewDataScopeService(db, configRepo, scopeRepo)
 	h := NewDataScopeHandler(svc)
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1/admin")
 	h.RegisterRoutes(api)
 
 	return r
@@ -63,7 +63,7 @@ func TestCreateDataScopeConfig_Success(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/data-scope-configs", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/data-scope-configs", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -106,7 +106,7 @@ func TestCreateDataScopeConfig_DuplicateName(t *testing.T) {
 	jsonBody, _ := json.Marshal(body)
 
 	// 第一次创建
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/data-scope-configs", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/data-scope-configs", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -116,7 +116,7 @@ func TestCreateDataScopeConfig_DuplicateName(t *testing.T) {
 
 	// 第二次创建（重复）
 	jsonBody, _ = json.Marshal(body)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/data-scope-configs", bytes.NewBuffer(jsonBody))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/data-scope-configs", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -137,7 +137,7 @@ func TestUpdateDataScopeConfig_Success(t *testing.T) {
 		"display_name":   "组织",
 	}
 	jsonBody, _ := json.Marshal(createBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/data-scope-configs", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/data-scope-configs", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -157,7 +157,7 @@ func TestUpdateDataScopeConfig_Success(t *testing.T) {
 		"table_column": "org_id",
 	}
 	jsonBody, _ = json.Marshal(updateBody)
-	url := fmt.Sprintf("/api/v1/data-scope-configs/%d", id)
+	url := fmt.Sprintf("/api/v1/admin/data-scope-configs/%d", id)
 	req = httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
@@ -189,7 +189,7 @@ func TestDeleteDataScopeConfig_Success(t *testing.T) {
 		"display_name":   "待删除",
 	}
 	jsonBody, _ := json.Marshal(createBody)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/data-scope-configs", bytes.NewBuffer(jsonBody))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/data-scope-configs", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -204,7 +204,7 @@ func TestDeleteDataScopeConfig_Success(t *testing.T) {
 	id := createResp.Data.ID
 
 	// 删除
-	url := fmt.Sprintf("/api/v1/data-scope-configs/%d", id)
+	url := fmt.Sprintf("/api/v1/admin/data-scope-configs/%d", id)
 	req = httptest.NewRequest(http.MethodDelete, url, nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -233,7 +233,7 @@ func TestListDataScopeConfigs(t *testing.T) {
 			"display_name":   name + "_display",
 		}
 		jsonBody, _ := json.Marshal(body)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/data-scope-configs", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/data-scope-configs", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
@@ -243,7 +243,7 @@ func TestListDataScopeConfigs(t *testing.T) {
 	}
 
 	// 查询列表
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/data-scope-configs", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/data-scope-configs", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -285,7 +285,7 @@ func TestSetRoleDataScopes_Success(t *testing.T) {
 	}
 	jsonBody, _ := json.Marshal(body)
 
-	url := fmt.Sprintf("/api/v1/roles/%d/data-scopes", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/data-scopes", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -333,7 +333,7 @@ func TestSetRoleDataScopes_ReplaceExisting(t *testing.T) {
 		},
 	}
 	jsonBody, _ := json.Marshal(body1)
-	url := fmt.Sprintf("/api/v1/roles/%d/data-scopes", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/data-scopes", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -390,7 +390,7 @@ func TestGetRoleDataScopes(t *testing.T) {
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
-	url := fmt.Sprintf("/api/v1/roles/%d/data-scopes", roleID)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/data-scopes", roleID)
 	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

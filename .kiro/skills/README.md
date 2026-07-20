@@ -14,6 +14,8 @@
 | tech-graph | 技术架构图生成（SVG+PNG） |
 | pptx | PPT 幻灯片创建/编辑/分析（PptxGenJS 模板 + XML 编辑工作流） |
 | ui-ux-design | UI/UX 设计辅助 |
+| multi-role-review | 多角色设计 Review（业务专家→产品经理→架构师三轮审查） |
+| test-case-gen | 测试用例生成（触发词："测试一下"，基于需求/设计/任务生成结构化测试用例） |
 
 ## 技能使用方式
 

@@ -759,6 +759,105 @@ admin_application
 | crm | PLUGIN | /api/v1/crm | ["admin:pc","admin:h5"] |
 | wechat_work | EXTERNAL | — | ["admin:pc"] |
 
+### 6.2.1 核心概念关系说明（app_code / platform / module_code / 租户）
+
+**各字段职责**：
+
+| 字段 | 所在表 | 回答的问题 | 定义者 |
+|------|--------|-----------|--------|
+| app_code | admin_resource / admin_api_permission | 这个菜单/接口属于**哪个应用**？ | 应用开发者注册 |
+| platform | admin_resource | 这个菜单在**哪个前端**展示？(admin/user) | 应用开发者注册 |
+| module_code | admin_resource / admin_api_permission | 属于应用的**哪个功能模块**？ | 应用开发者注册 |
+| enabled_modules | admin_tenant_app | 租户开通了应用的**哪些模块**？ | SUPER_ADMIN 配置 |
+
+**各层级的控制者与影响范围**：
+
+| 层级 | 控制者 | 影响范围 | 类比 |
+|------|--------|---------|------|
+| 应用上架 | SUPER_ADMIN | 整个应用全部功能可用/不可用 | 商品 |
+| 租户订阅 | SUPER_ADMIN | 租户能否使用这个应用 | 购买 |
+| 模块启用 | SUPER_ADMIN | 租户能用应用的哪些子功能 | 套餐 |
+| 平台归属 | 自动（前端加载时按 platform 过滤） | 菜单出现在管理端还是用户端 | 展台 |
+| 功能权限 | TENANT_ADMIN（给角色分配） | 租户内具体哪个人能操作什么 | 工牌 |
+
+**请求访问控制的 4 道关**：
+
+```
+请求进入 → 1.认证 → 2.应用订阅 → 3.模块启用 → 4.功能权限 → Handler
+
+1. 认证：Token 有效？租户状态正常？（AuthMiddleware）
+2. 应用订阅：API 属于哪个 app_code？租户订阅了吗？（AppResolveMiddleware）
+3. 模块启用：API 的 module_code 在租户的 enabled_modules 中？（AppResolveMiddleware）
+4. 功能权限：用户角色有这个 API 的 permission_code？（PermissionMiddleware）
+```
+
+**完整场景示例**：
+
+```
+全局定义：
+  应用 billing (app_code="billing")
+  ├── modules: [invoice, payment, refund]
+  ├── 菜单: 发票管理 (platform=admin, module_code=invoice)
+  ├── 菜单: 我的账单 (platform=user, module_code=invoice)
+  └── API: GET /api/v1/billing/invoices (module_code=invoice)
+
+租户 A 订阅：
+  admin_tenant_app: {app_code=billing, enabled_modules=["invoice","payment"]}
+
+结果：
+  ├── 租户 A 管理端用户(dev-web-admin) → 看到: 发票管理菜单 ✅ / 退款菜单 ❌
+  ├── 租户 A C端用户(dev-web-user) → 看到: 我的账单菜单 ✅
+  ├── GET /api/v1/billing/invoices → ✅ (invoice 模块已启用)
+  └── GET /api/v1/billing/refunds → ❌ 403 (refund 模块未启用)
+
+租户 B 订阅：
+  admin_tenant_app: {app_code=billing, enabled_modules=NULL}  ← 全部启用
+
+结果：billing 全部菜单和 API 都可用（含退款）
+```
+
+**`/api/v1/common/` 公共接口组**：
+
+用于管理端和用户端都需要调用的平台基础设施接口：
+- `/api/v1/common/user-menu` — 两端都要加载菜单（传不同 platform 参数）
+- `/api/v1/common/user-info` — 两端都要获取当前用户信息
+
+这些接口不绑定任何 app_code，不走 AppResolveMiddleware 的应用订阅校验，仅需 access_token 认证。原因：C 端用户不订阅 platform_admin 应用，如果 user-menu 放在 `/api/v1/admin/` 下会被 AppResolveMiddleware 拦截。
+
+### 6.2.2 platform 扩展性设计
+
+`admin_resource.platform` 为**开放字符串**（VARCHAR(16)），不是硬编码枚举。当前使用两个值，未来扩展 APP 时只需增加值，不改表结构、不改中间件、不改查询逻辑。
+
+**当前定义**：
+
+| platform 值 | 对应前端 | 说明 |
+|---|---|---|
+| `admin` | dev-web-admin (PC+H5) | 管理端菜单 |
+| `user` | dev-web-user (PC+H5) | 用户端/C端菜单 |
+
+**未来扩展（增加原生 APP 时）**：
+
+| platform 值 | 对应前端 | 说明 |
+|---|---|---|
+| `admin` | dev-web-admin | Web 管理端 |
+| `user` | dev-web-user | Web 用户端 |
+| `admin_app` | 管理端原生 APP (iOS/Android) | APP 管理端（菜单结构可能与 Web 不同） |
+| `user_app` | 用户端原生 APP (iOS/Android) | APP 用户端 |
+
+**扩展规则**：
+- 如果 APP 和 H5 的菜单结构完全相同 → APP 端直接使用 `platform=user` 获取菜单，不需要新增 platform 值
+- 如果 APP 有独立的菜单结构（如底部 Tab 导航 vs Web 侧边栏）→ 使用独立 platform 值（如 `user_app`）
+- 后端只是字符串过滤，零改动：`GET /api/v1/common/user-menu?platform=user_app`
+
+**`admin_application.platforms` 与 `admin_resource.platform` 的关系**：
+
+| 字段 | 层级 | 用途 |
+|------|------|------|
+| `admin_application.platforms` | 应用级声明（JSON 数组） | 告知系统"这个应用支持哪些端+设备"，用于插件安装时决定部署哪些前端 bundle |
+| `admin_resource.platform` | 菜单级实例（字符串） | 运行时过滤条件，GetUserMenu 按此字段过滤返回对应端的菜单 |
+
+`admin_application.platforms` 格式为 `{platform}:{device}`（如 `"admin:pc"`, `"user:h5"`, `"user_app:ios"`），其中 `{platform}` 部分与 `admin_resource.platform` 对应。两者是声明与实例的关系——应用声明支持哪些端，菜单实例标记属于哪个端。
+
 ### 6.3 插件生命周期与应用的关系
 
 ```
