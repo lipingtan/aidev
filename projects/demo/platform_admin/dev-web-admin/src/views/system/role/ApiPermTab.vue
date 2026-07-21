@@ -8,7 +8,7 @@
       show-checkbox
       node-key="id"
       :default-checked-keys="checkedKeys"
-      :props="{ label: 'name', children: 'children' }"
+      :props="{ label: 'name', children: 'children', disabled: disabledFn }"
       default-expand-all
       @check="handleCheck"
     >
@@ -44,10 +44,10 @@
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { ElTree } from 'element-plus'
-import { getApiPermTree, getRoleApis, assignRoleApis } from '@/api/role'
-import type { ApiPermTreeNode } from '@/api/role'
+import { getApiPermTree, getRoleApis, assignRoleApis, getAssignableApis } from '@/api/role'
+import type { ApiPermTreeNode, AssignResult } from '@/api/role'
 
-const props = defineProps<{ roleId: string; appCode: string }>()
+const props = defineProps<{ roleId: string; appCode: string; parentId?: string | null }>()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -55,8 +55,15 @@ const apiTree = ref<ApiPermTreeNode[]>([])
 const checkedKeys = ref<string[]>([])
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const isDirty = ref(false)
+const assignableIds = ref<string[] | null>(null)
 
 defineExpose({ isDirty })
+
+/** 判断节点是否不可选（不在父角色可分配范围内） */
+function disabledFn(data: ApiPermTreeNode): boolean {
+  if (!assignableIds.value) return false
+  return !assignableIds.value.includes(data.id)
+}
 
 function getMethodTagType(method?: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' {
   switch (method) {
@@ -72,10 +79,19 @@ async function loadData() {
   if (!props.appCode) return
   loading.value = true
   try {
-    const [tree, ids] = await Promise.all([
+    const requests: Promise<any>[] = [
       getApiPermTree(props.appCode),
       getRoleApis(props.roleId)
-    ])
+    ]
+    // 如果有 parentId，获取可分配范围
+    if (props.parentId) {
+      requests.push(getAssignableApis(props.parentId))
+    }
+    const results = await Promise.all(requests)
+    const tree: ApiPermTreeNode[] = results[0]
+    const ids: string[] = results[1]
+    assignableIds.value = results[2] || null
+
     // 过滤：显示 visible=1 的节点 + 已绑定(在 ids 中)的 visible=0 节点
     apiTree.value = filterVisibleTree(tree, ids)
     // 勾选叶子节点
@@ -126,9 +142,15 @@ async function handleSave() {
   try {
     const checked = treeRef.value?.getCheckedKeys(false) as string[]
     const half = treeRef.value?.getHalfCheckedKeys() as string[]
-    await assignRoleApis(props.roleId, [...checked, ...half])
+    const result: AssignResult = await assignRoleApis(props.roleId, [...checked, ...half])
     isDirty.value = false
-    ElMessage.success('接口权限保存成功')
+    // 显示级联裁剪影响
+    if (result?.affected_children?.length) {
+      const totalRemoved = result.affected_children.reduce((sum, c) => sum + c.removed_count, 0)
+      ElMessage.warning(`已影响 ${result.affected_children.length} 个子角色，共移除 ${totalRemoved} 项权限`)
+    } else {
+      ElMessage.success('接口权限保存成功')
+    }
   } finally {
     submitting.value = false
   }

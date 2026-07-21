@@ -22,14 +22,16 @@ const (
 
 // 业务逻辑错误码 (400xx)
 const (
-	ErrDuplicateEntity        = 40001
-	ErrEntityNotFound         = 40002
-	ErrCyclicHierarchy        = 40003
-	ErrProtectedEntity        = 40004
-	ErrTenantAppNotSubscribed = 40005
-	ErrRoleHasUsers           = 40006
-	ErrMaxHierarchyDepth      = 40007
-	ErrUserNotInTenant        = 40008
+	ErrDuplicateEntity          = 40001
+	ErrEntityNotFound           = 40002
+	ErrCyclicHierarchy          = 40003
+	ErrProtectedEntity          = 40004
+	ErrTenantAppNotSubscribed   = 40005
+	ErrRoleHasUsers             = 40006
+	ErrMaxHierarchyDepth        = 40007
+	ErrUserNotInTenant          = 40008
+	ErrExceedsParentPermission  = 40009
+	ErrInvalidParam             = 40010
 )
 
 // AuthError 统一权限错误类型

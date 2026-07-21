@@ -4,6 +4,7 @@ import (
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/handler"
 	"go-admin/common/auth/middleware"
+	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
 
 	"github.com/gin-gonic/gin"
@@ -15,11 +16,12 @@ type Dependencies struct {
 	DB  *gorm.DB
 	Cfg *config.Config
 
-	AuthService    *service.AuthService
-	TenantService  *service.TenantService
-	UserService    *service.UserService
-	RoleService    *service.RoleService
+	AuthService     *service.AuthService
+	TenantService   *service.TenantService
+	UserService     *service.UserService
+	RoleService     *service.RoleService
 	UserRoleService *service.UserRoleService
+	FieldRegistry   *service.FieldRegistry
 
 	AuthHandler   *handler.AuthHandler
 	TenantHandler *handler.TenantHandler
@@ -47,9 +49,17 @@ type Dependencies struct {
 	LoginLogService *service.LoginLogService
 	LoginLogHandler *handler.LoginLogHandler
 
+	FieldPermissionService *service.FieldPermissionService
+	FieldPermissionHandler *handler.FieldPermissionHandler
+
+	RecordShareService *service.RecordShareService
+	RecordShareHandler *handler.RecordShareHandler
+
 	// 中间件缓存
-	AppPrefixMap    *middleware.AppPrefixMap
-	ModuleCodeCache *middleware.ModuleCodeCache
+	AppPrefixMap         *middleware.AppPrefixMap
+	ModuleCodeCache      *middleware.ModuleCodeCache
+	FieldObjectRegistry  *middleware.FieldObjectRegistry
+	FieldPermissionRepo  repository.FieldPermissionRepository
 }
 
 // RegisterRoutes 注册 auth 模块所有路由到指定路由组
@@ -72,6 +82,9 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		admin.Use(middleware.AppResolveMiddleware(deps.AppPrefixMap, deps.ModuleCodeCache, deps.DB))
 	}
 	admin.Use(middleware.DynamicPermissionMiddleware(deps.DB, deps.Cfg))
+	if deps.FieldObjectRegistry != nil && deps.FieldPermissionRepo != nil {
+		admin.Use(middleware.FieldFilterMiddleware(deps.FieldObjectRegistry, deps.FieldPermissionRepo, deps.DB))
+	}
 	{
 		deps.TenantHandler.RegisterRoutes(admin)
 		deps.UserHandler.RegisterRoutes(admin)
@@ -97,6 +110,12 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		}
 		if deps.LoginLogHandler != nil {
 			deps.LoginLogHandler.RegisterRoutes(admin)
+		}
+		if deps.FieldPermissionHandler != nil {
+			deps.FieldPermissionHandler.RegisterRoutes(admin)
+		}
+		if deps.RecordShareHandler != nil {
+			deps.RecordShareHandler.RegisterRoutes(admin)
 		}
 
 		// Stub 路由

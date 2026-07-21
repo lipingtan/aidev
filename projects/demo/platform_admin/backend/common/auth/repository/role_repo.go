@@ -14,6 +14,7 @@ type RoleRepository interface {
 	FindByID(db *gorm.DB, id int64) (*model.Role, error)
 	FindByCode(db *gorm.DB, tenantID int64, code string) (*model.Role, error)
 	ListByTenantID(db *gorm.DB, tenantID int64) ([]model.Role, error)
+	ListByTenantIDAndType(db *gorm.DB, tenantID int64, roleType string) ([]model.Role, error)
 	SoftDelete(db *gorm.DB, id int64) error
 	HasUserBinding(db *gorm.DB, roleID int64) (bool, error)
 }
@@ -84,6 +85,13 @@ func (r *roleRepo) FindByCode(db *gorm.DB, tenantID int64, code string) (*model.
 func (r *roleRepo) ListByTenantID(db *gorm.DB, tenantID int64) ([]model.Role, error) {
 	var roles []model.Role
 	err := db.Where("tenant_id = ?", tenantID).Order("sort_order ASC, created_at ASC").Find(&roles).Error
+	return roles, err
+}
+
+// ListByTenantIDAndType 按 tenant_id + role_type 查询角色列表
+func (r *roleRepo) ListByTenantIDAndType(db *gorm.DB, tenantID int64, roleType string) ([]model.Role, error) {
+	var roles []model.Role
+	err := db.Where("tenant_id = ? AND role_type = ?", tenantID, roleType).Order("sort_order ASC, created_at ASC").Find(&roles).Error
 	return roles, err
 }
 

@@ -167,3 +167,86 @@ func TestAssignResources_FullReplace(t *testing.T) {
 		t.Fatalf("新记录不正确，期望 res2=%d 和 res3=%d", res2.ID, res3.ID)
 	}
 }
+
+// TestAssignResources_EmptyArray 测试传入空数组清空权限
+func TestAssignResources_EmptyArray(t *testing.T) {
+	r, db := setupRoleResourceRouter(t)
+
+	tenantID := int64(100)
+	roleID := createRole(t, r, tenantID, "empty_role", "空数组角色", nil)
+
+	// 先分配一个资源
+	res1 := &model.Resource{Type: "menu", Name: "菜单X", AppCode: "default"}
+	db.Create(res1)
+	body := map[string]interface{}{
+		"resource_ids": []int64{res1.ID},
+	}
+	jsonBody, _ := json.Marshal(body)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/resources", roleID)
+	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("分配资源失败: %d, body: %s", w.Code, w.Body.String())
+	}
+
+	// 传入空数组清空权限
+	body = map[string]interface{}{
+		"resource_ids": []int64{},
+	}
+	jsonBody, _ = json.Marshal(body)
+	req = httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("空数组清空权限失败: 期望 200，实际 %d, body: %s", w.Code, w.Body.String())
+	}
+
+	// 验证：无记录
+	var count int64
+	db.Model(&model.RoleResource{}).Where("role_id = ?", roleID).Count(&count)
+	if count != 0 {
+		t.Fatalf("期望 0 条记录，实际: %d", count)
+	}
+}
+
+// TestAssignResources_EmptyStringArray 测试传入空字符串数组清空权限
+func TestAssignResources_EmptyStringArray(t *testing.T) {
+	r, db := setupRoleResourceRouter(t)
+
+	tenantID := int64(100)
+	roleID := createRole(t, r, tenantID, "empty_str_role", "空字符串数组角色", nil)
+
+	// 先分配一个资源
+	res1 := &model.Resource{Type: "menu", Name: "菜单Y", AppCode: "default"}
+	db.Create(res1)
+	body := map[string]interface{}{
+		"resource_ids": []string{fmt.Sprintf("%d", res1.ID)},
+	}
+	jsonBody, _ := json.Marshal(body)
+	url := fmt.Sprintf("/api/v1/admin/roles/%d/resources", roleID)
+	req := httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("分配资源失败: %d, body: %s", w.Code, w.Body.String())
+	}
+
+	// 传入空字符串数组清空权限
+	body = map[string]interface{}{
+		"resource_ids": []string{},
+	}
+	jsonBody, _ = json.Marshal(body)
+	req = httptest.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("空字符串数组清空权限失败: 期望 200，实际 %d, body: %s", w.Code, w.Body.String())
+	}
+}

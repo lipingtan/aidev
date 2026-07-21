@@ -146,6 +146,12 @@ export const asyncRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/permission/page/PagePermission.vue'),
         meta: { title: '页面权限', icon: 'Key', permission: 'permission:page' }
       },
+      {
+        path: 'permission/field',
+        name: 'permission-field',
+        component: () => import('@/views/permission/field-permission/index.vue'),
+        meta: { title: '字段权限', icon: 'Grid', permission: 'permission:field:list' }
+      },
       // 插件容器
       {
         path: 'plugin/:pluginName/:pathMatch(.*)*',

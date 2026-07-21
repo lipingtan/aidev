@@ -89,9 +89,9 @@ export interface AppItem {
 
 // ==================== 角色 CRUD ====================
 
-/** 获取角色列表（树形） */
-export function getRoleList(): Promise<RoleItem[]> {
-  return request.get('/api/v1/admin/roles')
+/** 获取角色列表（树形），可按 role_type 过滤 */
+export function getRoleList(roleType?: string): Promise<RoleItem[]> {
+  return request.get('/api/v1/admin/roles', { params: roleType ? { role_type: roleType } : {} })
 }
 
 /** 创建角色 */
@@ -121,8 +121,13 @@ export function getRoleResources(roleId: string): Promise<string[]> {
   return request.get(`/api/v1/admin/roles/${roleId}/resources`)
 }
 
+/** 分配结果（含级联裁剪信息） */
+export interface AssignResult {
+  affected_children: { role_id: string; role_name: string; removed_count: number }[]
+}
+
 /** 分配资源（菜单）权限 */
-export function assignRoleResources(roleId: string, resourceIds: string[]): Promise<void> {
+export function assignRoleResources(roleId: string, resourceIds: string[]): Promise<AssignResult> {
   return request.put(`/api/v1/admin/roles/${roleId}/resources`, { resource_ids: resourceIds })
 }
 
@@ -137,13 +142,23 @@ export function getRoleApis(roleId: string): Promise<string[]> {
 }
 
 /** 分配接口权限 */
-export function assignRoleApis(roleId: string, apiIds: string[]): Promise<void> {
+export function assignRoleApis(roleId: string, apiIds: string[]): Promise<AssignResult> {
   return request.put(`/api/v1/admin/roles/${roleId}/apis`, { api_permission_ids: apiIds })
 }
 
 /** 获取数据权限维度配置选项 */
 export function getDataScopeConfigs(): Promise<DataScopeDimension[]> {
   return request.get('/api/v1/admin/data-scope-configs')
+}
+
+/** 获取角色可分配给子角色的资源范围 */
+export function getAssignableResources(roleId: string): Promise<string[]> {
+  return request.get(`/api/v1/admin/roles/${roleId}/assignable-resources`)
+}
+
+/** 获取角色可分配给子角色的 API 权限范围 */
+export function getAssignableApis(roleId: string): Promise<string[]> {
+  return request.get(`/api/v1/admin/roles/${roleId}/assignable-apis`)
 }
 
 /** 获取角色已配置的数据权限 */
@@ -191,12 +206,12 @@ export function getRolePermissionSummary(roleId: string): Promise<AppPermissionS
 // ==================== 兼容旧引用 ====================
 
 /** 角色全量列表（兼容 UserForm 等组件引用） */
-export async function listAllRoles(): Promise<{ id: string; roleName: string; roleKey: string }[]> {
-  const list = await getRoleList()
-  const result: { id: string; roleName: string; roleKey: string }[] = []
+export async function listAllRoles(roleType?: string): Promise<{ id: string; roleName: string; roleKey: string; roleType: string }[]> {
+  const list = await getRoleList(roleType)
+  const result: { id: string; roleName: string; roleKey: string; roleType: string }[] = []
   function flatten(nodes: RoleItem[]) {
     for (const n of nodes) {
-      result.push({ id: n.id, roleName: n.role_name, roleKey: n.role_code })
+      result.push({ id: n.id, roleName: n.role_name, roleKey: n.role_code, roleType: n.role_type })
       if (n.children) flatten(n.children)
     }
   }

@@ -48,6 +48,9 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 		log.Printf("[auth-rbac] Seed 失败: %v", err)
 	}
 
+	// 字段权限自动注册
+	registerFieldPermModels(deps.FieldRegistry)
+
 	// 启动 API 自动发现
 	if cfg.APIDiscovery.Enabled {
 		discovery.AutoDiscover(engine, db, cfg.APIDiscovery.AsyncThreshold)
@@ -56,6 +59,14 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	// 加载中间件缓存（AutoDiscover 写入 module_code 后再加载）
 	deps.ModuleCodeCache.Load(db)
 	deps.AppPrefixMap.Load(db)
+
+	// 加载字段权限路由映射
+	deps.FieldObjectRegistry.LoadRoutes(db)
+	// 硬编码已知路由
+	deps.FieldObjectRegistry.RegisterRoute("GET", "/api/v1/admin/users", "user")
+	deps.FieldObjectRegistry.RegisterRoute("GET", "/api/v1/admin/users/:id", "user")
+	deps.FieldObjectRegistry.RegisterRoute("GET", "/api/v1/admin/tenants", "tenant")
+	deps.FieldObjectRegistry.RegisterRoute("GET", "/api/v1/admin/tenants/:id", "tenant")
 
 	log.Printf("[auth-rbac] 模块初始化完成 auth-type=%s cache-type=%s", cfg.AuthType, cfg.CacheType)
 	return nil
@@ -86,6 +97,10 @@ func autoMigrate(db *gorm.DB) error {
 		&model.DataScopeConfig{},
 		&model.SysConfig{},
 		&model.LoginLog{},
+		&model.FieldObject{},
+		&model.FieldDefinition{},
+		&model.FieldPermission{},
+		&model.RecordShare{},
 	)
 }
 
@@ -101,6 +116,9 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	dataScopeConfigRepo := repository.NewDataScopeConfigRepository()
 	dataScopeRepo := repository.NewDataScopeRepository()
 	operationLogRepo := repository.NewOperationLogRepository()
+	fieldObjectRepo := repository.NewFieldObjectRepository()
+	fieldPermRepo := repository.NewFieldPermissionRepository()
+	recordShareRepo := repository.NewRecordShareRepository()
 
 	// Services
 	authSvc := service.NewAuthService(db, cfg)
@@ -115,6 +133,9 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	opLogQuerySvc := service.NewOperationLogQueryService(db, operationLogRepo)
 	configSvc := service.NewConfigService(db)
 	loginLogSvc := service.NewLoginLogService(db)
+	fieldRegistrySvc := service.NewFieldRegistry(db, fieldObjectRepo)
+	fieldPermSvc := service.NewFieldPermissionService(db, fieldObjectRepo, fieldPermRepo)
+	recordShareSvc := service.NewRecordShareService(db, recordShareRepo)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
@@ -129,16 +150,19 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	opLogHandler := handler.NewOperationLogHandler(opLogQuerySvc)
 	configHandler := handler.NewConfigHandler(configSvc)
 	loginLogHandler := handler.NewLoginLogHandler(loginLogSvc)
+	fieldPermHandler := handler.NewFieldPermissionHandler(fieldPermSvc)
+	recordShareHandler := handler.NewRecordShareHandler(recordShareSvc)
 
 	return &Dependencies{
 		DB:  db,
 		Cfg: cfg,
 
-		AuthService:    authSvc,
-		TenantService:  tenantSvc,
-		UserService:    userSvc,
-		RoleService:    roleSvc,
+		AuthService:     authSvc,
+		TenantService:   tenantSvc,
+		UserService:     userSvc,
+		RoleService:     roleSvc,
 		UserRoleService: userRoleSvc,
+		FieldRegistry:   fieldRegistrySvc,
 
 		AuthHandler:   authHandler,
 		TenantHandler: tenantHandler,
@@ -166,7 +190,21 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 		LoginLogService: loginLogSvc,
 		LoginLogHandler: loginLogHandler,
 
-		AppPrefixMap:    middleware.NewAppPrefixMap(),
-		ModuleCodeCache: middleware.NewModuleCodeCache(),
+		FieldPermissionService: fieldPermSvc,
+		FieldPermissionHandler: fieldPermHandler,
+
+		RecordShareService: recordShareSvc,
+		RecordShareHandler: recordShareHandler,
+
+		AppPrefixMap:         middleware.NewAppPrefixMap(),
+		ModuleCodeCache:      middleware.NewModuleCodeCache(),
+		FieldObjectRegistry:  middleware.NewFieldObjectRegistry(),
+		FieldPermissionRepo:  fieldPermRepo,
 	}
+}
+
+// registerFieldPermModels 注册所有需要字段权限管控的 model
+func registerFieldPermModels(registry *service.FieldRegistry) {
+	registry.AutoRegister("user", "用户", model.User{})
+	registry.AutoRegister("tenant", "租户", model.Tenant{})
 }

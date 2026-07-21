@@ -35,6 +35,8 @@ func (h *RoleHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		roles.PUT("/:id/apis", h.AssignApis)
 		roles.GET("/:id/apps", h.GetApps)
 		roles.GET("/:id/permission-summary", h.GetPermissionSummary)
+		roles.GET("/:id/assignable-resources", h.AssignableResources)
+		roles.GET("/:id/assignable-apis", h.AssignableApis)
 	}
 }
 
@@ -54,7 +56,7 @@ type RoleTreeNode struct {
 }
 
 // List 查询当前租户角色列表（树形结构）
-// GET /api/v1/roles
+// GET /api/v1/roles?role_type=PERMISSION_SET
 func (h *RoleHandler) List(c *gin.Context) {
 	authCtx, err := MustGetAuthContext(c)
 	if err != nil {
@@ -62,7 +64,10 @@ func (h *RoleHandler) List(c *gin.Context) {
 		return
 	}
 
-	roles, err := h.svc.ListRoles(authCtx.TenantID)
+	// 从 query param 读取 role_type 过滤条件
+	roleType := c.Query("role_type")
+
+	roles, err := h.svc.ListRoles(authCtx.TenantID, roleType)
 	if err != nil {
 		Error(c, err)
 		return
@@ -190,14 +195,15 @@ func (h *RoleHandler) AssignResources(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.AssignResources(id, &req); err != nil {
+	result, err := h.svc.AssignResources(id, &req)
+	if err != nil {
 		Error(c, err)
 		return
 	}
-	Success(c, nil)
+	Success(c, result)
 }
 
-// AssignApis 分配角色接口权限（全量替换）
+// AssignApis 分配角色接口权限（全量替换，含父角色子集校验 + 级联裁剪）
 // PUT /api/v1/roles/:id/apis
 func (h *RoleHandler) AssignApis(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -212,11 +218,12 @@ func (h *RoleHandler) AssignApis(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.AssignApis(id, &req); err != nil {
+	result, err := h.svc.AssignApis(id, &req)
+	if err != nil {
 		Error(c, err)
 		return
 	}
-	Success(c, nil)
+	Success(c, result)
 }
 
 // GetResources 查询角色已分配的资源 ID 列表
@@ -265,6 +272,48 @@ func (h *RoleHandler) GetApps(c *gin.Context) {
 		return
 	}
 	Success(c, codes)
+}
+
+// AssignableResources 查询角色可分配给子角色的资源 ID 范围
+// GET /api/v1/roles/:id/assignable-resources
+func (h *RoleHandler) AssignableResources(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		Error(c, errors.NewAuthError(errors.ErrEntityNotFound, "无效的角色 ID"))
+		return
+	}
+	authCtx, err := MustGetAuthContext(c)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+	ids, err := h.svc.GetAssignableResources(id, authCtx.TenantID)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+	Success(c, ids)
+}
+
+// AssignableApis 查询角色可分配给子角色的 API 权限 ID 范围
+// GET /api/v1/roles/:id/assignable-apis
+func (h *RoleHandler) AssignableApis(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		Error(c, errors.NewAuthError(errors.ErrEntityNotFound, "无效的角色 ID"))
+		return
+	}
+	authCtx, err := MustGetAuthContext(c)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+	ids, err := h.svc.GetAssignableApis(id, authCtx.TenantID)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+	Success(c, ids)
 }
 
 // GetPermissionSummary 查询角色在每个应用下的权限统计摘要

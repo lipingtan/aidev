@@ -4,10 +4,17 @@
     <el-card shadow="never" class="role-tree-card">
       <template #header>
         <div class="card-header">
-          <span>角色列表</span>
+          <span>角色管理</span>
           <el-button type="primary" size="small" @click="handleAdd">新增</el-button>
         </div>
       </template>
+
+      <!-- Tab 切换：角色 / 权限集 -->
+      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+        <el-tab-pane label="角色" name="role" />
+        <el-tab-pane label="权限集" name="permission_set" />
+      </el-tabs>
+
       <el-input v-model="filterText" placeholder="搜索角色" clearable style="margin-bottom: 12px" />
       <el-tree
         ref="roleTreeRef"
@@ -43,6 +50,7 @@
           <el-tag size="small" :type="currentRole.status === 1 ? 'success' : 'danger'">
             {{ currentRole.status === 1 ? '启用' : '禁用' }}
           </el-tag>
+          <el-tag v-if="currentRole.role_type === 'PERMISSION_SET'" size="small" type="warning">权限集</el-tag>
           <span class="role-code">{{ currentRole.role_code }}</span>
         </div>
 
@@ -85,10 +93,10 @@
     <el-drawer v-model="drawerVisible" :title="drawerTitle" size="60%" destroy-on-close>
       <el-tabs v-model="drawerTab">
         <el-tab-pane label="菜单权限" name="menu">
-          <MenuPermTab :role-id="currentRole!.id" :app-code="drawerAppCode" />
+          <MenuPermTab :role-id="currentRole!.id" :app-code="drawerAppCode" :parent-id="currentRole!.parent_id" />
         </el-tab-pane>
         <el-tab-pane label="接口权限" name="api">
-          <ApiPermTab :role-id="currentRole!.id" :app-code="drawerAppCode" />
+          <ApiPermTab :role-id="currentRole!.id" :app-code="drawerAppCode" :parent-id="currentRole!.parent_id" />
         </el-tab-pane>
         <el-tab-pane label="数据权限" name="data">
           <DataScopeTab :role-id="currentRole!.id" />
@@ -97,12 +105,12 @@
     </el-drawer>
 
     <!-- 角色新增/编辑弹窗 -->
-    <RoleForm ref="formRef" :role-tree="roleTree" @success="loadRoleTree" />
+    <RoleForm ref="formRef" :role-tree="roleTree" :is-permission-set="isPermissionSetTab" @success="loadRoleTree" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ElTree } from 'element-plus'
 import { getRoleList, deleteRole, getRolePermissionSummary } from '@/api/role'
@@ -119,6 +127,10 @@ const filterText = ref('')
 const roleTreeRef = ref<InstanceType<typeof ElTree>>()
 const formRef = ref()
 
+// Tab 切换
+const activeTab = ref<'role' | 'permission_set'>('role')
+const isPermissionSetTab = computed(() => activeTab.value === 'permission_set')
+
 // 权限汇总
 const permissionSummary = ref<AppPermissionSummary[]>([])
 const summaryLoading = ref(false)
@@ -133,10 +145,18 @@ const drawerTab = ref('menu')
 async function loadRoleTree() {
   treeLoading.value = true
   try {
-    roleTree.value = await getRoleList()
+    const roleType = activeTab.value === 'permission_set' ? 'PERMISSION_SET' : undefined
+    roleTree.value = await getRoleList(roleType)
   } finally {
     treeLoading.value = false
   }
+}
+
+/** Tab 切换处理 */
+function handleTabChange() {
+  currentRole.value = null
+  permissionSummary.value = []
+  loadRoleTree()
 }
 
 /** 加载权限汇总 */

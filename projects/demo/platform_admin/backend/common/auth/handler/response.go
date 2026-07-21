@@ -6,6 +6,7 @@ import (
 	"go-admin/common/auth/errors"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // Response 统一响应结构体
@@ -32,6 +33,15 @@ func Error(c *gin.Context, err error) {
 			Code:    authErr.Code,
 			Data:    nil,
 			Message: authErr.Message,
+		})
+		return
+	}
+	// 处理 gorm.ErrRecordNotFound
+	if err == gorm.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, Response{
+			Code:    40002,
+			Data:    nil,
+			Message: "记录不存在",
 		})
 		return
 	}

@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" :title="isEdit ? '编辑角色' : '新增角色'" width="520px" destroy-on-close>
+  <el-dialog v-model="visible" :title="dialogTitle" width="520px" destroy-on-close>
     <el-form ref="formElRef" :model="form" :rules="rules" label-width="100px">
       <el-form-item label="角色名称" prop="role_name">
         <el-input v-model="form.role_name" placeholder="请输入角色名称" />
@@ -7,7 +7,7 @@
       <el-form-item label="角色编码" prop="role_code">
         <el-input v-model="form.role_code" :disabled="isEdit" placeholder="请输入角色编码" />
       </el-form-item>
-      <el-form-item label="上级角色" prop="parent_id">
+      <el-form-item v-if="!props.isPermissionSet" label="上级角色" prop="parent_id">
         <el-tree-select
           v-model="form.parent_id"
           :data="parentTreeData"
@@ -45,6 +45,7 @@ import type { RoleItem } from '@/api/role'
 
 const props = defineProps<{
   roleTree: RoleItem[]
+  isPermissionSet?: boolean
 }>()
 
 const emit = defineEmits<{ success: [] }>()
@@ -68,6 +69,13 @@ const rules: FormRules = {
   role_name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
   role_code: [{ required: true, message: '请输入角色编码', trigger: 'blur' }]
 }
+
+const dialogTitle = computed(() => {
+  if (props.isPermissionSet) {
+    return isEdit.value ? '编辑权限集' : '新增权限集'
+  }
+  return isEdit.value ? '编辑角色' : '新增角色'
+})
 
 /** 构建父角色下拉树数据，编辑时排除自身及子节点 */
 const parentTreeData = computed(() => {
@@ -115,7 +123,8 @@ async function handleSubmit() {
     if (isEdit.value) {
       await updateRole(editId.value, {
         role_name: form.role_name,
-        parent_id: form.parent_id || undefined,
+        role_type: props.isPermissionSet ? 'PERMISSION_SET' : undefined,
+        parent_id: props.isPermissionSet ? undefined : (form.parent_id || undefined),
         sort_order: form.sort_order,
         status: form.status,
         version: editVersion.value
@@ -124,7 +133,8 @@ async function handleSubmit() {
       await createRole({
         role_name: form.role_name,
         role_code: form.role_code,
-        parent_id: form.parent_id || undefined,
+        role_type: props.isPermissionSet ? 'PERMISSION_SET' : undefined,
+        parent_id: props.isPermissionSet ? undefined : (form.parent_id || undefined),
         sort_order: form.sort_order,
         status: form.status
       })

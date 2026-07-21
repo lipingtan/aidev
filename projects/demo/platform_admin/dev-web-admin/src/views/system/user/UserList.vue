@@ -100,8 +100,15 @@
           :key="role.id"
           :label="role.id"
           :value="role.id"
+          style="display: flex; align-items: center; margin-bottom: 4px;"
         >
           {{ role.name }}（{{ role.code }}）
+          <el-tag
+            v-if="role.roleType === 'PERMISSION_SET'"
+            size="small"
+            type="warning"
+            style="margin-left: 6px"
+          >权限集</el-tag>
         </el-checkbox>
       </el-checkbox-group>
       <template #footer>
@@ -241,19 +248,19 @@ const roleDialogVisible = ref(false)
 const roleSaving = ref(false)
 const roleUserId = ref('')
 const selectedRoleIds = ref<string[]>([])
-const currentTenantRoles = ref<{ id: string; name: string; code: string }[]>([])
+const currentTenantRoles = ref<{ id: string; name: string; code: string; roleType: string }[]>([])
 
 async function handleRoleAssign(row: UserPageItem) {
   roleUserId.value = row.id
   roleDialogVisible.value = true
   selectedRoleIds.value = []
-  // 加载当前租户下角色列表
+  // 加载当前租户下所有角色（含权限集）
   const roles: RoleItem[] = await getRoleList()
   // 展平树形为平铺列表
-  const flat: { id: string; name: string; code: string }[] = []
+  const flat: { id: string; name: string; code: string; roleType: string }[] = []
   function flatten(nodes: RoleItem[]) {
     for (const n of nodes) {
-      flat.push({ id: n.id, name: n.role_name, code: n.role_code })
+      flat.push({ id: n.id, name: n.role_name, code: n.role_code, roleType: n.role_type })
       if (n.children) flatten(n.children)
     }
   }
