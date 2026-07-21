@@ -11,6 +11,7 @@ import (
 	"go-admin/common/auth/model"
 	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
+	"go-admin/common/auth/spi"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -47,6 +48,10 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	if err := SeedInitialData(db); err != nil {
 		log.Printf("[auth-rbac] Seed 失败: %v", err)
 	}
+	// Seed 配额默认值
+	if err := SeedConfigDefaults(db); err != nil {
+		log.Printf("[auth-rbac] Seed 配置默认值失败: %v", err)
+	}
 
 	// 字段权限自动注册
 	registerFieldPermModels(deps.FieldRegistry)
@@ -59,6 +64,15 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	// 加载中间件缓存（AutoDiscover 写入 module_code 后再加载）
 	deps.ModuleCodeCache.Load(db)
 	deps.AppPrefixMap.Load(db)
+
+	// sys_config → admin_config 数据迁移（幂等）
+	if err := deps.AdminConfigService.MigrateFromSysConfig(); err != nil {
+		log.Printf("[auth-rbac] sys_config 迁移失败: %v", err)
+	}
+
+	// 注册数据权限 GORM Callback（含 OrganizationProvider）
+	orgProvider := &spi.DefaultOrganizationProvider{DB: db}
+	middleware.RegisterDataScopeCallback(db, cfg.DataScope.Enabled, orgProvider)
 
 	// 加载字段权限路由映射
 	deps.FieldObjectRegistry.LoadRoutes(db)
@@ -101,6 +115,9 @@ func autoMigrate(db *gorm.DB) error {
 		&model.FieldDefinition{},
 		&model.FieldPermission{},
 		&model.RecordShare{},
+		&model.OrgUnit{},
+		&model.UserOrg{},
+		&model.AdminConfig{},
 	)
 }
 
@@ -136,6 +153,9 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	fieldRegistrySvc := service.NewFieldRegistry(db, fieldObjectRepo)
 	fieldPermSvc := service.NewFieldPermissionService(db, fieldObjectRepo, fieldPermRepo)
 	recordShareSvc := service.NewRecordShareService(db, recordShareRepo)
+	orgUnitRepo := repository.NewOrgUnitRepository()
+	orgUnitSvc := service.NewOrgUnitService(db, orgUnitRepo)
+	adminConfigSvc := service.NewAdminConfigService(db)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
@@ -152,6 +172,8 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	loginLogHandler := handler.NewLoginLogHandler(loginLogSvc)
 	fieldPermHandler := handler.NewFieldPermissionHandler(fieldPermSvc)
 	recordShareHandler := handler.NewRecordShareHandler(recordShareSvc)
+	orgUnitHandler := handler.NewOrgUnitHandler(orgUnitSvc)
+	adminConfigHandler := handler.NewAdminConfigHandler(adminConfigSvc)
 
 	return &Dependencies{
 		DB:  db,
@@ -195,6 +217,12 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 
 		RecordShareService: recordShareSvc,
 		RecordShareHandler: recordShareHandler,
+
+		OrgUnitService:      orgUnitSvc,
+		OrgUnitHandler:      orgUnitHandler,
+
+		AdminConfigService: adminConfigSvc,
+		AdminConfigHandler: adminConfigHandler,
 
 		AppPrefixMap:         middleware.NewAppPrefixMap(),
 		ModuleCodeCache:      middleware.NewModuleCodeCache(),

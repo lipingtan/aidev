@@ -155,3 +155,24 @@ func seedMenus(db *gorm.DB) error {
 
 	return nil
 }
+
+// SeedConfigDefaults 创建默认配额和功能开关种子数据（幂等）
+func SeedConfigDefaults(db *gorm.DB) error {
+	defaults := []model.AdminConfig{
+		{ConfigKey: "quota.max_admin_users", ConfigValue: "999999", ConfigType: "number", Scope: "SYSTEM", ScopeID: 0, TenantID: 0, DisplayName: "最大管理端用户数", Description: "租户最大管理端用户数配额，999999=不限制", Status: 1},
+		{ConfigKey: "quota.max_roles", ConfigValue: "999999", ConfigType: "number", Scope: "SYSTEM", ScopeID: 0, TenantID: 0, DisplayName: "最大角色数", Description: "租户最大角色数配额，999999=不限制", Status: 1},
+		{ConfigKey: "quota.max_apps", ConfigValue: "999999", ConfigType: "number", Scope: "SYSTEM", ScopeID: 0, TenantID: 0, DisplayName: "最大可订阅应用数", Description: "租户最大可订阅应用数配额，999999=不限制", Status: 1},
+	}
+
+	for _, cfg := range defaults {
+		var count int64
+		db.Model(&model.AdminConfig{}).
+			Where("config_key = ? AND scope = 'SYSTEM' AND scope_id = 0 AND tenant_id = 0", cfg.ConfigKey).
+			Count(&count)
+		if count > 0 {
+			continue
+		}
+		db.Create(&cfg)
+	}
+	return nil
+}

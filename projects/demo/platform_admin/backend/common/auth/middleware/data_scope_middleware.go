@@ -11,9 +11,12 @@ type systemOpContextKey struct{}
 // DataScopeDimension 单个维度的数据权限配置
 type DataScopeDimension struct {
 	DimensionName string   // 维度标识
+	ScopeType     string   // ALL/SELF/DEPT/DEPT_TREE/CUSTOM
 	TargetEntity  string   // 目标实体（表名）
 	ColumnName    string   // 过滤字段名
-	Values        []string // 允许的值列表
+	Values        []string // 允许的值列表（scope_type=CUSTOM 时使用）
+	UserID        int64    // 当前用户 ID（供 SELF 使用）
+	TenantID      int64    // 当前租户 ID（供 DEPT/DEPT_TREE 使用）
 }
 
 // DataScopeContext 数据权限上下文，包含当前用户所有维度配置

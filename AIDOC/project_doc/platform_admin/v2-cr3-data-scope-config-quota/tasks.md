@@ -5,17 +5,17 @@
 | 指标 | 值 |
 |------|-----|
 | 总任务数 | 18 |
-| 已完成 | 0 |
+| 已完成 | 18 |
 | 进行中 | 0 |
-| 未开始 | 18 |
-| 完成率 | 0/18 (0%) |
-| 当前阶段 | Phase 1: DDL + 模型层 |
+| 未开始 | 0 |
+| 完成率 | 18/18 (100%) |
+| 当前阶段 | 全部完成 |
 
 ---
 
 ## Phase 1: DDL + 模型层
 
-### Task 1: admin_org_unit 表 + OrgUnit Model ⬜
+### Task 1: admin_org_unit 表 + OrgUnit Model ✅
 
 **复杂度**: 中
 
@@ -34,7 +34,7 @@
 - AC: TableName() 返回 "admin_org_unit"
 - AC: go build ./... 零错误
 
-### Task 2: admin_user_org 表 + UserOrg Model ⬜
+### Task 2: admin_user_org 表 + UserOrg Model ✅
 
 **复杂度**: 低
 
@@ -46,7 +46,7 @@
 - AC: TableName() 返回 "admin_user_org"
 - AC: go build ./... 零错误
 
-### Task 3: admin_data_scope 增加 scope_type + admin_data_scope_config 增加 supported_scope_types ⬜
+### Task 3: admin_data_scope 增加 scope_type + admin_data_scope_config 增加 supported_scope_types ✅
 
 **复杂度**: 中
 
@@ -63,7 +63,7 @@
 - AC: 旧数据兼容（default 'CUSTOM'）
 - AC: go build ./... 零错误
 
-### Task 4: admin_config 表 + AdminConfig Model ⬜
+### Task 4: admin_config 表 + AdminConfig Model ✅
 
 **复杂度**: 中
 
@@ -84,7 +84,7 @@
 
 ## Phase 2: 组织架构后端（Repository + Service + Handler）
 
-### Task 5: OrgUnit Repository ⬜
+### Task 5: OrgUnit Repository ✅
 
 **复杂度**: 中
 
@@ -98,7 +98,7 @@
 - AC: 接口含 Create/Update/Delete/FindByID/ListByTenant/HasChildren/FindByTenantAndCode
 - AC: go build ./... 零错误
 
-### Task 6: OrgUnit Service + UserOrg Service ⬜
+### Task 6: OrgUnit Service + UserOrg Service ✅
 
 **复杂度**: 高
 
@@ -120,7 +120,7 @@
 - AC: 删除有子节点的组织报错
 - AC: go build ./... 零错误
 
-### Task 7: OrgUnit Handler + 路由注册 ⬜
+### Task 7: OrgUnit Handler + 路由注册 ✅
 
 **复杂度**: 高
 
@@ -144,7 +144,7 @@
 
 ## Phase 3: DefaultOrganizationProvider
 
-### Task 8: DefaultOrganizationProvider 实现 ⬜
+### Task 8: DefaultOrganizationProvider 实现 ✅
 
 **复杂度**: 高
 
@@ -169,7 +169,7 @@
 
 ## Phase 4: DataScopeCallback 增强
 
-### Task 9: DataScopeDimension 扩展 + DataScopeCallback scope_type 分支 ⬜
+### Task 9: DataScopeDimension 扩展 + DataScopeCallback scope_type 分支 ✅
 
 **复杂度**: 高
 
@@ -195,7 +195,7 @@
 - AC:【回归】记录共享逻辑不变（RG-2）
 - AC: go build ./... 零错误
 
-### Task 10: DataScopeMiddleware 加载 scope_type 到 context ⬜
+### Task 10: DataScopeMiddleware 加载 scope_type 到 context ✅
 
 **复杂度**: 中
 
@@ -217,7 +217,7 @@
 
 ## Phase 5: 三级配置后端
 
-### Task 11: AdminConfigService 实现（三级合并 + 缓存） ⬜
+### Task 11: AdminConfigService 实现（三级合并 + 缓存） ✅
 
 **复杂度**: 高
 
@@ -240,7 +240,7 @@
 - AC: InvalidateCache 后下次查询走库
 - AC: go build ./... 零错误
 
-### Task 12: AdminConfig Handler + 路由注册 ⬜
+### Task 12: AdminConfig Handler + 路由注册 ✅
 
 **复杂度**: 高
 
@@ -262,7 +262,7 @@
 - AC:【回归】现有 /api/v1/admin/configs 接口保持可用（RG-3）
 - AC: go build ./... 零错误
 
-### Task 13: sys_config 数据迁移 ⬜
+### Task 13: sys_config 数据迁移 ✅
 
 **复杂度**: 中
 
@@ -286,7 +286,7 @@
 
 ## Phase 6: 功能开关 + 配额
 
-### Task 14: DynamicPermissionMiddleware 集成功能开关 ⬜
+### Task 14: DynamicPermissionMiddleware 集成功能开关 ✅
 
 **复杂度**: 中
 
@@ -311,7 +311,7 @@
 - AC: router.go 调用方签名同步更新
 - AC: go build ./... 零错误
 
-### Task 15: 配额校验植入 Service 层 ⬜
+### Task 15: 配额校验植入 Service 层 ✅
 
 **复杂度**: 中
 
@@ -335,7 +335,7 @@
 - AC: 未配置配额 → 默认 999999 不限制
 - AC: go build ./... 零错误
 
-### Task 16: Seed 数据（默认配额 + 功能开关示例） ⬜
+### Task 16: Seed 数据（默认配额 + 功能开关示例） ✅
 
 **复杂度**: 低
 
@@ -353,7 +353,7 @@
 
 ## Phase 7: 前端
 
-### Task 17: 前端 — 组织架构管理页 ⬜
+### Task 17: 前端 — 组织架构管理页 ✅
 
 **复杂度**: 高
 
@@ -370,7 +370,7 @@
 - AC: API 路径带 /api/v1/admin/ 前缀
 - AC: 配额超限操作时弹窗提示含"请联系管理员升配"引导
 
-### Task 18: 前端 — 三级配置管理页 + 数据权限 scope_type 选择 ⬜
+### Task 18: 前端 — 三级配置管理页 + 数据权限 scope_type 选择 ✅
 
 **复杂度**: 高
 

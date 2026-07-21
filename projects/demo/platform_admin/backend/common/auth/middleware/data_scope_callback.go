@@ -2,16 +2,21 @@ package middleware
 
 import (
 	"go-admin/common/auth/model"
+	"go-admin/common/auth/spi"
 
 	"gorm.io/gorm"
 )
 
+// orgProvider 组织架构提供者（通过 RegisterDataScopeCallback 注入）
+var dataScopeOrgProvider spi.OrganizationProvider
+
 // RegisterDataScopeCallback 注册数据权限 GORM Callback
 // enabled=false 时不注册，直接返回
-func RegisterDataScopeCallback(db *gorm.DB, enabled bool) {
+func RegisterDataScopeCallback(db *gorm.DB, enabled bool, orgProvider spi.OrganizationProvider) {
 	if !enabled {
 		return
 	}
+	dataScopeOrgProvider = orgProvider
 	_ = db.Callback().Query().Before("gorm:query").Register("auth:data_scope", dataScopeQueryCallback)
 }
 
@@ -34,82 +39,100 @@ func dataScopeQueryCallback(db *gorm.DB) {
 	// 获取当前查询的目标表名
 	targetTable := resolveTableName(db)
 
-	// 维度数据权限注入
+	// scope_type 分支注入
 	hasDimensionScope := false
 	if dsc != nil && len(dsc.Dimensions) > 0 && targetTable != "" {
-		hasDimensionScope = injectDimensionScope(db, dsc, targetTable)
+		hasDimensionScope = injectScopeTypeWhere(db, dsc, targetTable)
 	}
 
 	// 记录共享规则扩展：追加 OR id IN (共享命中的 record_id)
-	// 无 objectCode 时不注入（RG-4：行为与 CR-1 一致）
 	injectRecordShareScope(db, hasDimensionScope)
 }
 
-// injectDimensionScope 注入维度数据权限 WHERE 条件，返回是否注入了条件
-func injectDimensionScope(db *gorm.DB, dsc *DataScopeContext, targetTable string) bool {
-	// 按维度分组合并值（多角色同维度取并集）
-	type dimKey struct {
-		DimensionName string
-		ColumnName    string
-	}
-	merged := make(map[dimKey]map[string]struct{})
-
+// injectScopeTypeWhere 根据 scope_type 注入 WHERE 条件
+func injectScopeTypeWhere(db *gorm.DB, dsc *DataScopeContext, targetTable string) bool {
+	// 先检查是否有 ALL 短路（任一角色对该实体配置 ALL → 不注入任何条件）
 	for _, dim := range dsc.Dimensions {
-		// target_entity 不匹配时跳过
-		if dim.TargetEntity != targetTable {
-			continue
-		}
-		key := dimKey{DimensionName: dim.DimensionName, ColumnName: dim.ColumnName}
-		if merged[key] == nil {
-			merged[key] = make(map[string]struct{})
-		}
-		for _, v := range dim.Values {
-			merged[key][v] = struct{}{}
+		if dim.TargetEntity == targetTable && dim.ScopeType == "ALL" {
+			return false
 		}
 	}
 
 	injected := false
-	// 拼接 WHERE 条件
-	for key, valSet := range merged {
-		if len(valSet) == 0 {
+	for _, dim := range dsc.Dimensions {
+		if dim.TargetEntity != targetTable {
 			continue
 		}
-		values := make([]string, 0, len(valSet))
-		for v := range valSet {
-			values = append(values, v)
+		switch dim.ScopeType {
+		case "ALL":
+			continue // 不注入（已在短路中处理，此处防御性保留）
+		case "SELF":
+			db.Where("create_by = ?", dim.UserID)
+			injected = true
+		case "DEPT":
+			if dataScopeOrgProvider != nil {
+				orgIDs, _ := dataScopeOrgProvider.GetOrgIds(dim.UserID, dim.TenantID)
+				if len(orgIDs) > 0 {
+					db.Where(dim.ColumnName+" IN ?", orgIDs)
+				} else {
+					db.Where("1 = 0")
+				}
+				injected = true
+			}
+		case "DEPT_TREE":
+			if dataScopeOrgProvider != nil {
+				orgIDs, _ := dataScopeOrgProvider.GetOrgIds(dim.UserID, dim.TenantID)
+				allIDs := make([]int64, 0)
+				for _, oid := range orgIDs {
+					subIDs, _ := dataScopeOrgProvider.GetSubOrgIds(oid, dim.TenantID)
+					allIDs = append(allIDs, subIDs...)
+				}
+				// 去重
+				allIDs = uniqueInt64(allIDs)
+				if len(allIDs) > 0 {
+					db.Where(dim.ColumnName+" IN ?", allIDs)
+				} else {
+					db.Where("1 = 0")
+				}
+				injected = true
+			}
+		case "CUSTOM":
+			// 保持现有 CUSTOM 逻辑
+			if len(dim.Values) > 0 {
+				db.Where(dim.ColumnName+" IN ?", dim.Values)
+				injected = true
+			}
+		default:
+			// 未知 scope_type 按 CUSTOM 处理
+			if len(dim.Values) > 0 {
+				db.Where(dim.ColumnName+" IN ?", dim.Values)
+				injected = true
+			}
 		}
-		db.Where(key.ColumnName+" IN (?)", values)
-		injected = true
 	}
 	return injected
 }
 
 // injectRecordShareScope 注入记录共享 OR 子查询
-// 当 context 中存在 objectCode 和 AuthInfo 时，追加 OR id IN (共享命中) 条件
-// hasDimensionScope 表示是否已有维度权限条件（用于决定是否需要用 OR 包裹）
 func injectRecordShareScope(db *gorm.DB, _ bool) {
 	ctx := db.Statement.Context
 
-	// 获取 objectCode，无则不注入（RG-4）
 	objectCode := GetObjectCode(ctx)
 	if objectCode == "" {
 		return
 	}
 
-	// 获取用户身份信息
 	authInfo := GetAuthInfo(ctx)
 	if authInfo == nil {
 		return
 	}
 
-	// 构建共享规则子查询：查询 admin_record_share 表中命中的 record_id
 	shareSubQuery := db.Session(&gorm.Session{NewDB: true}).
 		Model(&model.RecordShare{}).
 		Select("record_id").
 		Where("tenant_id = ? AND object_code = ?", authInfo.TenantID, objectCode).
 		Where("expire_at IS NULL OR expire_at > NOW()")
 
-	// 构建共享目标匹配条件（USER/ROLE/DEPT 任一命中即可）
 	targetCond := db.Session(&gorm.Session{NewDB: true}).
 		Where("share_to_type = 'USER' AND share_to_id = ?", authInfo.UserID)
 	if len(authInfo.RoleIDs) > 0 {
@@ -120,7 +143,6 @@ func injectRecordShareScope(db *gorm.DB, _ bool) {
 	}
 	shareSubQuery = shareSubQuery.Where(targetCond)
 
-	// 追加 OR id IN (共享命中)：不缩小原有数据权限范围
 	db.Or("id IN (?)", shareSubQuery)
 }
 
@@ -133,4 +155,17 @@ func resolveTableName(db *gorm.DB) string {
 		return db.Statement.Schema.Table
 	}
 	return ""
+}
+
+// uniqueInt64 去重 int64 切片
+func uniqueInt64(input []int64) []int64 {
+	seen := make(map[int64]struct{})
+	result := make([]int64, 0, len(input))
+	for _, v := range input {
+		if _, ok := seen[v]; !ok {
+			seen[v] = struct{}{}
+			result = append(result, v)
+		}
+	}
+	return result
 }

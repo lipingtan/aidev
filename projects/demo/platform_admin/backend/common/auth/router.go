@@ -55,6 +55,12 @@ type Dependencies struct {
 	RecordShareService *service.RecordShareService
 	RecordShareHandler *handler.RecordShareHandler
 
+	OrgUnitService      *service.OrgUnitService
+	OrgUnitHandler      *handler.OrgUnitHandler
+
+	AdminConfigService *service.AdminConfigService
+	AdminConfigHandler *handler.AdminConfigHandler
+
 	// 中间件缓存
 	AppPrefixMap         *middleware.AppPrefixMap
 	ModuleCodeCache      *middleware.ModuleCodeCache
@@ -81,7 +87,7 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 	if deps.AppPrefixMap != nil && deps.ModuleCodeCache != nil {
 		admin.Use(middleware.AppResolveMiddleware(deps.AppPrefixMap, deps.ModuleCodeCache, deps.DB))
 	}
-	admin.Use(middleware.DynamicPermissionMiddleware(deps.DB, deps.Cfg))
+	admin.Use(middleware.DynamicPermissionMiddleware(deps.DB, deps.Cfg, deps.AdminConfigService))
 	if deps.FieldObjectRegistry != nil && deps.FieldPermissionRepo != nil {
 		admin.Use(middleware.FieldFilterMiddleware(deps.FieldObjectRegistry, deps.FieldPermissionRepo, deps.DB))
 	}
@@ -105,9 +111,6 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		if deps.OperationLogHandler != nil {
 			deps.OperationLogHandler.RegisterRoutes(admin)
 		}
-		if deps.ConfigHandler != nil {
-			deps.ConfigHandler.RegisterRoutes(admin)
-		}
 		if deps.LoginLogHandler != nil {
 			deps.LoginLogHandler.RegisterRoutes(admin)
 		}
@@ -116,6 +119,28 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		}
 		if deps.RecordShareHandler != nil {
 			deps.RecordShareHandler.RegisterRoutes(admin)
+		}
+		if deps.OrgUnitHandler != nil {
+			orgUnits := admin.Group("/org-units")
+			{
+				orgUnits.GET("/tree", deps.OrgUnitHandler.GetTree)
+				orgUnits.POST("", deps.OrgUnitHandler.Create)
+				orgUnits.PUT("/:id", deps.OrgUnitHandler.Update)
+				orgUnits.DELETE("/:id", deps.OrgUnitHandler.Delete)
+				orgUnits.GET("/:id/users", deps.OrgUnitHandler.GetNodeUsers)
+				orgUnits.PUT("/:id/users", deps.OrgUnitHandler.SetNodeUsers)
+			}
+		}
+		if deps.AdminConfigHandler != nil {
+			cfgs := admin.Group("/configs")
+			{
+				cfgs.GET("", deps.AdminConfigHandler.List)
+				cfgs.POST("", deps.AdminConfigHandler.Create)
+				cfgs.PUT("/:id", deps.AdminConfigHandler.Update)
+				cfgs.DELETE("/:id", deps.AdminConfigHandler.Delete)
+				cfgs.GET("/resolve/:key", deps.AdminConfigHandler.Resolve)
+				cfgs.GET("/feature-flags", deps.AdminConfigHandler.GetFeatureFlags)
+			}
 		}
 
 		// Stub 路由

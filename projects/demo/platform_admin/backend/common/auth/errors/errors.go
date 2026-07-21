@@ -32,6 +32,7 @@ const (
 	ErrUserNotInTenant          = 40008
 	ErrExceedsParentPermission  = 40009
 	ErrInvalidParam             = 40010
+	ErrQuotaExceeded            = 40011
 )
 
 // AuthError 统一权限错误类型

@@ -7,6 +7,7 @@ import (
 
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/engine"
+	"go-admin/common/auth/service"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -33,10 +34,16 @@ var skipPaths = map[string]bool{
 // DynamicPermissionMiddleware 动态权限检查中间件
 // 按 FullPath + Method 从数据库查 permission_code，再校验用户是否拥有该权限
 // 无 permission_code 的接口默认拒绝（除非在白名单中）
-func DynamicPermissionMiddleware(db *gorm.DB, cfg *config.Config) gin.HandlerFunc {
+func DynamicPermissionMiddleware(db *gorm.DB, cfg *config.Config, configSvc ...*service.AdminConfigService) gin.HandlerFunc {
 	// 启动时预加载 permission_code 映射（method:path → code）
 	codeMap := loadPermissionCodeMap(db)
 	var mu sync.RWMutex
+
+	// 可选注入 AdminConfigService（功能开关用）
+	var adminConfigSvc *service.AdminConfigService
+	if len(configSvc) > 0 && configSvc[0] != nil {
+		adminConfigSvc = configSvc[0]
+	}
 
 	return func(c *gin.Context) {
 		fullPath := c.FullPath()
@@ -72,6 +79,20 @@ func DynamicPermissionMiddleware(db *gorm.DB, cfg *config.Config) gin.HandlerFun
 		if isSuperAdminByDB(db, cfg, authCtx.Roles) {
 			c.Next()
 			return
+		}
+
+		// 功能开关检查：按 module_code 查 feature.{module_code}.enabled
+		if adminConfigSvc != nil {
+			moduleCode := getModuleCodeFromContext(c)
+			if moduleCode != "" {
+				featureKey := "feature." + moduleCode + ".enabled"
+				if !adminConfigSvc.IsFeatureEnabled(authCtx.TenantID, featureKey) {
+					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+						"code": 40302, "data": nil, "message": "该功能未开启",
+					})
+					return
+				}
+			}
 		}
 
 		// 查找 permission_code
@@ -177,4 +198,14 @@ func isSuperAdminByDB(db *gorm.DB, cfg *config.Config, roleIDs []int64) bool {
 		Where("id IN ? AND role_code = ?", roleIDs, superAdminCode).
 		Count(&count)
 	return count > 0
+}
+
+// getModuleCodeFromContext 从 gin.Context 获取当前请求的 module_code
+func getModuleCodeFromContext(c *gin.Context) string {
+	if mc, exists := c.Get("module_code"); exists {
+		if s, ok := mc.(string); ok {
+			return s
+		}
+	}
+	return ""
 }

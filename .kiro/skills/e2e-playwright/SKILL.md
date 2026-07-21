@@ -16,10 +16,14 @@
 ## 核心规则（强制）
 
 1. **E2E 工程唯一性**：每个软件项目只创建一个 e2e 工程，路径为 `projects/{解决方案名}/{项目名}/e2e-tests/`。多个 CR 的测试脚本在同一工程中累积，不重复建工程。
-2. **脚本命名规则**：每个 CR 对应一个脚本文件，命名为 `{cr-name}.spec.ts`（全小写 kebab-case），放在 `e2e-tests/tests/` 目录下。同一 CR 后续补充测试时，修改同一 spec 文件，不新建。
-3. **报告位置**：每个 CR 的测试报告写入 `AIDOC/project_doc/{项目名}/{cr目录}/e2e_test_report.md`；项目级汇总报告写入 `AIDOC/project_doc/{项目名}/domain_shared/e2e_test_report.md`。
-4. **回归模式**：回归时不重新生成 test_cases.md，不重写 spec 文件（除非修复 Bug 标注）。在 `e2e_test_report.md` 末尾追加新轮次记录，同步更新"历史执行汇总"表。
-5. **后端端口**：执行前先读 `config/settings.yml` 确认后端实际监听端口，不硬编码 8080。
+2. **双脚本产出（强制）**：每个 CR 生成两份 spec 文件：
+   - `{cr-name}.api.spec.ts` — **接口测试脚本**：使用 Playwright `request` API 直接发 HTTP 请求，验证状态码/响应体/错误码。覆盖 test_cases.md 中的"接口测试"和"正向/反向/边界"中可通过 API 验证的用例。
+   - `{cr-name}.ui.spec.ts` — **端面测试脚本**：使用 Playwright `page` 操作浏览器，模拟真实用户操作流程（导航/点击/填写/断言页面元素）。覆盖 test_cases.md 中的"前端功能验证"和可通过 UI 操作验证的正向/反向场景。
+3. **脚本命名规则**：放在 `e2e-tests/tests/` 目录下。同一 CR 后续补充测试时，修改对应 spec 文件，不新建。
+4. **报告位置**：每个 CR 的测试报告写入 `AIDOC/project_doc/{项目名}/{cr目录}/e2e_test_report.md`；项目级汇总报告写入 `AIDOC/project_doc/{项目名}/domain_shared/e2e_test_report.md`。
+5. **回归模式**：回归时不重新生成 test_cases.md，不重写 spec 文件（除非修复 Bug 标注）。在 `e2e_test_report.md` 末尾追加新轮次记录，同步更新"历史执行汇总"表。
+6. **后端端口**：执行前先读 `config/settings.yml` 确认后端实际监听端口，不硬编码 8080。
+7. **前端地址**：UI 测试需确认前端 dev server 地址（默认 `http://localhost:5173`），从 `vite.config.ts` 或用户确认获取。
 
 ---
 
@@ -79,9 +83,25 @@ e2e-tests/
 ```
 
 `playwright.config.ts` 关键配置：
-- `workers: 1`（避免并发写数据库冲突）
 - `timeout: 60000`
 - `reporter: [['html', { open: 'never' }], ['list']]`
+- 使用 `projects` 区分 API 和 UI 测试：
+  ```typescript
+  projects: [
+    {
+      name: 'api',
+      testMatch: '**/*.api.spec.ts',
+      use: { /* 无浏览器，仅 request */ },
+      fullyParallel: true,  // API 测试可并行
+    },
+    {
+      name: 'ui',
+      testMatch: '**/*.ui.spec.ts',
+      use: { browserName: 'chromium', headless: true },
+      workers: 1,  // UI 测试串行（避免浏览器状态冲突）
+    },
+  ]
+  ```
 - 后端 `API_BASE` 在各 spec 文件中单独定义，不在 config 中统一
 
 #### 2.3 定位测试用例文档（必须完成，不可跳过）
@@ -107,14 +127,169 @@ e2e-tests/
 
 #### 2.4 创建 / 修改 spec 文件
 
-**如何将 test_cases.md 转为 spec 代码：**
+**双脚本生成规则：**
 
-1. 读取 test_cases.md，识别所有章节（正向/反向/边界/回归/接口/数据验证）
-2. 按章节创建 `test.describe` 分组，describe 名称与章节名称对应
-3. 每条用例 → 一个 `test(...)` 函数，用例编号和名称作为 test 名称
-4. 前置条件中的"创建数据"逻辑放入 `test.beforeAll`
-5. 无法自动执行的数据验证用例（需要直连 DB）→ 用 `test.skip()` 并注释原因
-6. 已知后端缺陷（接口行为与预期不符）→ 用 `test.fail()` 并在名称中标注 `[BUG: 简短说明]`
+从 test_cases.md 中的用例按以下规则分配到两份 spec：
+
+| 用例类型 | 归属脚本 | 验证方式 |
+|---------|---------|---------|
+| 接口测试（TC-A*） | `{cr}.api.spec.ts` | HTTP request → 断言状态码/body |
+| 正向/反向/边界中「可通过 API 触发且断言 HTTP 响应」的 | `{cr}.api.spec.ts` | HTTP request |
+| 回归测试（TC-R*） | `{cr}.api.spec.ts` | HTTP request 验证行为不变 |
+| 前端功能（TC-F*） | `{cr}.ui.spec.ts` | page 操作 + 元素断言 |
+| 正向/反向中「需通过页面操作才能完成」的 | `{cr}.ui.spec.ts` | page 操作 |
+| 单元测试级（需 Mock） | 标注 `test.skip('单元测试级别')` 在 api spec 中 |
+| 数据验证（需直连 DB） | 标注 `test.skip('需数据库直连验证')` 在 api spec 中 |
+
+---
+
+**API spec 文件结构（`{cr-name}.api.spec.ts`）：**
+
+```typescript
+/**
+ * {CR名称} — 接口测试
+ * 关联用例: AIDOC/project_doc/{项目名}/{cr目录}/test_cases.md
+ */
+import { test, expect, APIRequestContext, request } from '@playwright/test';
+
+const API_BASE = 'http://localhost:{后端端口}';
+// ... loginAdmin / auth / extractID 公共函数 ...
+
+test.describe('接口测试 — {模块名}', () => {
+  // TC-A01, TC-A02 ...
+});
+
+test.describe('正向测试 — API 验证', () => {
+  // TC-001（通过 API 调用验证）...
+});
+
+test.describe('反向测试 — API 验证', () => {
+  // TC-N01 ...
+});
+
+test.describe('回归测试', () => {
+  // TC-R01 ...
+});
+```
+
+---
+
+**UI spec 文件结构（`{cr-name}.ui.spec.ts`）：**
+
+```typescript
+/**
+ * {CR名称} — 端面测试（用户操作流程）
+ * 关联用例: AIDOC/project_doc/{项目名}/{cr目录}/test_cases.md
+ */
+import { test, expect, Page } from '@playwright/test';
+
+const APP_URL = 'http://localhost:5173';  // 前端 dev server
+const API_BASE = 'http://localhost:{后端端口}';
+
+/** 浏览器内登录（操作登录页面） */
+async function uiLogin(page: Page, username = 'admin', password = 'admin123') {
+  await page.goto(`${APP_URL}/login`);
+  await page.getByPlaceholder('请输入用户名').fill(username);
+  await page.getByPlaceholder('请输入密码').fill(password);
+  await page.getByRole('button', { name: '登录' }).click();
+  // 处理租户选择（如有）
+  const tenantSelect = page.locator('[data-testid="tenant-select"]');
+  if (await tenantSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await tenantSelect.locator('[data-testid="tenant-item"]').first().click();
+  }
+  await page.waitForURL('**/home**', { timeout: 10000 });
+}
+
+/** 导航到指定菜单 */
+async function navigateTo(page: Page, path: string) {
+  await page.goto(`${APP_URL}${path}`);
+  await page.waitForLoadState('networkidle');
+}
+
+test.describe('端面测试 — {功能模块}', () => {
+  test.beforeEach(async ({ page }) => {
+    await uiLogin(page);
+  });
+
+  test('TC-F01: {场景名} — 用户操作流', async ({ page }) => {
+    await navigateTo(page, '/system/org');
+    // 断言页面元素（使用显式等待，禁止 waitForTimeout）
+    await expect(page.locator('[data-testid="org-tree"], .el-tree')).toBeVisible();
+    // 执行操作
+    await page.getByRole('button', { name: '新增顶级节点' }).click();
+    // 断言弹窗出现
+    await expect(page.locator('.el-dialog')).toBeVisible();
+    // ...
+  });
+});
+```
+
+---
+
+**UI spec 端面操作断言规范：**
+
+| 断言对象 | 写法 |
+|---------|------|
+| 元素可见 | `await expect(locator).toBeVisible()` |
+| 文本内容 | `await expect(locator).toContainText('xxx')` |
+| 表格行数 | `await expect(page.locator('tr')).toHaveCount(N)` |
+| Toast 成功提示 | `await expect(page.locator('.el-message--success')).toBeVisible()` |
+| Toast 错误提示 | `await expect(page.locator('.el-message--error')).toContainText('xxx')` |
+| 对话框消失 | `await expect(page.locator('.el-dialog')).not.toBeVisible()` |
+| 下拉选项存在 | `await expect(page.locator('.el-select-dropdown__item:has-text("xxx")')).toBeVisible()` |
+
+---
+
+**选择器策略（优先级从高到低）：**
+
+| 优先级 | 策略 | 示例 | 适用场景 |
+|--------|------|------|---------|
+| 1 | `data-testid` | `page.locator('[data-testid="org-tree"]')` | 前端已添加测试标记 |
+| 2 | 语义化选择器 | `page.getByRole('button', { name: '新增' })` | 按钮/链接等有明确角色 |
+| 3 | placeholder/label | `page.getByPlaceholder('请输入用户名')` | 表单输入框 |
+| 4 | CSS class + text | `page.locator('.el-menu-item:has-text("系统管理")')` | 最后备选 |
+
+**规则**：优先使用 `data-testid`（要求前端在关键交互元素上添加）。不可用时依次退回语义化选择器→placeholder→CSS+text。禁止使用 XPath 或层级过深的 CSS 选择器。
+
+---
+
+**导航策略：**
+
+UI 测试导航到目标页面推荐使用**直接路由导航**，避免菜单折叠/动画等不确定性：
+
+```typescript
+/** 导航到指定页面（推荐：直接 URL 导航） */
+async function navigateTo(page: Page, path: string) {
+  await page.goto(`${APP_URL}${path}`);
+  await page.waitForLoadState('networkidle');
+}
+
+// 用法
+await navigateTo(page, '/system/org');  // 替代点击菜单层级
+```
+
+仅在测试「菜单可见性/菜单权限」时才使用点击菜单方式导航。
+
+---
+
+**测试数据隔离规范：**
+
+| 策略 | 做法 |
+|------|------|
+| 唯一标识命名 | 创建的测试数据名称含时间戳或随机后缀：`test_org_${Date.now()}` |
+| beforeAll 清理 | UI spec 的 `test.beforeAll` 通过 API 删除上次残留的测试数据 |
+| afterAll 清理 | 测试完成后删除本轮创建的数据（可选，CI 环境建议保留便于排查） |
+
+```typescript
+test.beforeAll(async ({ request }) => {
+  const api = await request.newContext();
+  const token = await loginAdmin(api);
+  // 清理可能残留的测试组织节点
+  const tree = await api.get(`${API_BASE}/api/v1/admin/org-units/tree`, auth(token));
+  const nodes = await tree.json();
+  // 删除名称含 'test_' 前缀的节点...
+});
+```
 
 **spec 文件必须包含的元素：**
 
@@ -187,14 +362,20 @@ netstat -ano | findstr ":{端口}"
 #### 3.2 执行测试命令
 
 ```powershell
-# 执行单个 CR 的测试
-npx playwright test tests/{cr-name}.spec.ts --reporter=list
+# 执行单个 CR 的接口测试
+npx playwright test tests/{cr-name}.api.spec.ts --reporter=list
+
+# 执行单个 CR 的端面测试
+npx playwright test tests/{cr-name}.ui.spec.ts --reporter=list
+
+# 执行单个 CR 的全部测试（接口 + 端面）
+npx playwright test tests/{cr-name}.*.spec.ts --reporter=list
 
 # 执行全部测试（全量回归）
 npx playwright test --reporter=list
 
 # 同时生成 HTML 报告
-npx playwright test tests/{cr-name}.spec.ts --reporter=html
+npx playwright test tests/{cr-name}.*.spec.ts --reporter=html
 ```
 
 #### 3.3 解析执行结果
@@ -257,14 +438,11 @@ npx playwright test tests/{cr-name}.spec.ts --reporter=html
 
 ### 执行统计
 
-| 状态 | 数量 |
-|------|------|
-| ✅ 通过 | N |
-| ❌ 失败（未预期） | N |
-| 🐛 已知 Bug（test.fail 符合预期） | N |
-| ⚠️ Bug 已修复（test.fail 但实际通过） | N |
-| ⏭️ 跳过 | N |
-| **总计** | **N** |
+| 脚本类型 | ✅ 通过 | ❌ 失败 | 🐛 已知Bug | ⚠️ Bug已修复 | ⏭️ 跳过 | 小计 |
+|---------|--------|--------|-----------|------------|--------|------|
+| API spec | N | N | N | N | N | N |
+| UI spec | N | N | N | N | N | N |
+| **总计** | **N** | **N** | **N** | **N** | **N** | **N** |
 
 **测试结论**: ✅ 通过 / ❌ 不通过 / ⚠️ 有风险
 
@@ -333,8 +511,10 @@ test('TC-XXX {用例名称} [BUG: {简短说明}]', async () => {
 projects/{解决方案}/{项目}/
 └── e2e-tests/                          ← E2E 工程（每个项目唯一）
     ├── tests/
-    │   ├── {cr1-name}.spec.ts          ← CR1 测试脚本
-    │   ├── {cr2-name}.spec.ts          ← CR2 测试脚本（追加）
+    │   ├── {cr1-name}.api.spec.ts      ← CR1 接口测试脚本
+    │   ├── {cr1-name}.ui.spec.ts       ← CR1 端面测试脚本
+    │   ├── {cr2-name}.api.spec.ts      ← CR2 接口测试脚本
+    │   ├── {cr2-name}.ui.spec.ts       ← CR2 端面测试脚本
     │   └── ...
     ├── playwright.config.ts
     ├── package.json
