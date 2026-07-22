@@ -1,5 +1,41 @@
 {
   "name": "{{.Name}}",
   "version": "0.1.0",
-  "description": "{{.Name}} 插件"
+  "displayName": "{{.DisplayName}}",
+  "description": "{{.Description}}",
+  "routePrefix": "/api/v1/{{.Name}}",
+  "platforms": ["admin:pc"],
+  "modules": [
+    {"code": "default", "name": "默认模块"}
+  ],
+  "frontends": {
+    "admin": {"pc": "dist/admin-pc/"}
+  },
+  "menus": [
+    {
+      "type": "menu",
+      "name": "{{.DisplayName}}",
+      "permissionCode": "{{.Name}}:menu",
+      "path": "/plugin/{{.Name}}",
+      "icon": "ep:box",
+      "platform": "admin",
+      "moduleCode": "default",
+      "sort": 1,
+      "component": "plugin/container",
+      "children": []
+    }
+  ],
+  "apiPermissions": [
+    {
+      "type": "GROUP",
+      "name": "{{.DisplayName}}",
+      "moduleCode": "default",
+      "children": []
+    }
+  ],
+  "exposedActions": [],
+  "subscribedEvents": [],
+  "breakingUpgrade": false,
+  "minUpgradeFrom": "",
+  "migrationNotes": ""
 }

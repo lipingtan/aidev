@@ -90,6 +90,12 @@ export const asyncRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/system/data-scope/DataScopeConfigList.vue'),
         meta: { title: '数据权限配置', icon: 'Key', permission: 'system:data-scope:list' }
       },
+      {
+        path: 'system/org',
+        name: 'system-org',
+        component: () => import('@/views/system/org/index.vue'),
+        meta: { title: '组织架构', icon: 'OfficeBuilding', permission: 'org:tree' }
+      },
       // 日志管理
       {
         path: 'log/login-logs',
@@ -160,12 +166,27 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '插件页面', icon: 'Box', hidden: true }
       },
 
-      // 插件管理
+      // 应用目录
+      {
+        path: 'system/app-catalog',
+        name: 'AppCatalog',
+        component: () => import('@/views/app-catalog/AppCatalog.vue'),
+        meta: { title: '应用目录', icon: 'Grid', permission: 'system:app-catalog:list' }
+      },
+
+      // 插件管理（新版）
+      {
+        path: 'system/plugin',
+        name: 'PluginManage',
+        component: () => import('@/views/plugin/PluginManage.vue'),
+        meta: { title: '插件管理', icon: 'Box', permission: 'system:plugin:list' }
+      },
+      // 插件管理（旧版，保留兼容）
       {
         path: 'system/plugins',
         name: 'system-plugins',
         component: () => import('@/views/system/plugin/PluginList.vue'),
-        meta: { title: '插件管理', icon: 'Box', permission: 'system:plugin:list' }
+        meta: { title: '插件管理(旧)', icon: 'Box', permission: 'system:plugin:list', hidden: true }
       },
       {
         path: 'system/tenant-plugins',

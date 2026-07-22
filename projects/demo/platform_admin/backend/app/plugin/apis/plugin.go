@@ -103,15 +103,6 @@ func (p Plugin) Start(c *gin.Context) {
 		return
 	}
 
-	// 注册插件菜单到 sys_menu 表
-	if inst, ok := service.Manager.GetPlugin(name); ok && inst.Info != nil && len(inst.Info.Menus) > 0 {
-		if err := service.Installer.RegisterMenus(name, inst.Info.Menus); err != nil {
-			// 菜单注册失败不阻断启动，但记录错误
-			c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "插件启动成功，但菜单注册失败: " + err.Error(), "data": gin.H{"name": name}})
-			return
-		}
-	}
-
 	// 更新数据库状态为运行中
 	if err := service.Installer.UpdateStatus(name, models.PluginStatusRunning); err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "更新插件状态失败: " + err.Error()})
@@ -134,9 +125,6 @@ func (p Plugin) Stop(c *gin.Context) {
 	if inst, exists := service.Manager.GetPlugin(name); exists && inst.Status == 1 {
 		_ = service.Manager.Stop(name)
 	}
-
-	// 注销插件菜单
-	_ = service.Installer.UnregisterMenus(name)
 
 	// 更新数据库状态为已停止
 	if err := service.Installer.UpdateStatus(name, models.PluginStatusStopped); err != nil {
@@ -161,9 +149,6 @@ func (p Plugin) Uninstall(c *gin.Context) {
 	if inst, exists := service.Manager.GetPlugin(name); exists && inst.Status == 1 {
 		_ = service.Manager.Stop(name)
 	}
-
-	// 注销插件菜单
-	_ = service.Installer.UnregisterMenus(name)
 
 	// 先更新数据库状态，再尝试删除文件
 	_ = service.Installer.UpdateStatus(name, models.PluginStatusStopped)

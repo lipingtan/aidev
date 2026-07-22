@@ -61,6 +61,12 @@ type Dependencies struct {
 	AdminConfigService *service.AdminConfigService
 	AdminConfigHandler *handler.AdminConfigHandler
 
+	// 应用目录与订阅管理
+	AppCatalogHandler *handler.AppCatalogHandler
+
+	// 插件管理（可选，Task 11 负责注入）
+	PluginHandler *handler.PluginHandler
+
 	// 中间件缓存
 	AppPrefixMap         *middleware.AppPrefixMap
 	ModuleCodeCache      *middleware.ModuleCodeCache
@@ -141,6 +147,16 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 				cfgs.GET("/resolve/:key", deps.AdminConfigHandler.Resolve)
 				cfgs.GET("/feature-flags", deps.AdminConfigHandler.GetFeatureFlags)
 			}
+		}
+
+		// 插件管理路由（可选，依赖 Task 11 注入 PluginHandler）
+		if deps.PluginHandler != nil {
+			deps.PluginHandler.RegisterRoutes(admin)
+		}
+
+		// 应用目录与订阅管理路由
+		if deps.AppCatalogHandler != nil {
+			deps.AppCatalogHandler.RegisterRoutes(admin)
 		}
 
 		// Stub 路由

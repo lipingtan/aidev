@@ -12,6 +12,7 @@ import (
 	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
 	"go-admin/common/auth/spi"
+	"go-admin/common/plugin"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -52,6 +53,9 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	if err := SeedConfigDefaults(db); err != nil {
 		log.Printf("[auth-rbac] Seed 配置默认值失败: %v", err)
 	}
+
+	// 清理 sys_menu 中遗留的插件菜单（一次性迁移）
+	cleanLegacyPluginMenus(db)
 
 	// 字段权限自动注册
 	registerFieldPermModels(deps.FieldRegistry)
@@ -175,6 +179,22 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	orgUnitHandler := handler.NewOrgUnitHandler(orgUnitSvc)
 	adminConfigHandler := handler.NewAdminConfigHandler(adminConfigSvc)
 
+	// 插件系统依赖
+	pluginsDir := "./plugins"
+	staticDir := "./static/plugins"
+	pluginSyncer := plugin.NewPluginResourceSyncer(db)
+	pluginMgr := plugin.NewPluginManager(db, pluginsDir)
+	pluginInstaller := plugin.NewInstaller(pluginsDir, staticDir, db, pluginSyncer)
+
+	// 清理残留的升级目录
+	if err := pluginInstaller.RecoverStaleUpgrade(); err != nil {
+		log.Printf("[auth-rbac] 插件升级残留清理失败: %v", err)
+	}
+
+	// 插件管理 Handler
+	pluginHandler := handler.NewPluginHandler(pluginMgr, pluginInstaller)
+	appCatalogHandler := handler.NewAppCatalogHandler(db, pluginMgr)
+
 	return &Dependencies{
 		DB:  db,
 		Cfg: cfg,
@@ -224,6 +244,9 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 		AdminConfigService: adminConfigSvc,
 		AdminConfigHandler: adminConfigHandler,
 
+		AppCatalogHandler: appCatalogHandler,
+		PluginHandler:     pluginHandler,
+
 		AppPrefixMap:         middleware.NewAppPrefixMap(),
 		ModuleCodeCache:      middleware.NewModuleCodeCache(),
 		FieldObjectRegistry:  middleware.NewFieldObjectRegistry(),
@@ -235,4 +258,18 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 func registerFieldPermModels(registry *service.FieldRegistry) {
 	registry.AutoRegister("user", "用户", model.User{})
 	registry.AutoRegister("tenant", "租户", model.Tenant{})
+}
+
+// cleanLegacyPluginMenus 清理 sys_menu 中遗留的插件菜单
+// 将 menu_name 以 plugin_ 开头的记录执行软删除（设置 deleted_at）
+// 幂等：已软删除的记录不会再次处理
+func cleanLegacyPluginMenus(db *gorm.DB) {
+	result := db.Exec("UPDATE sys_menu SET deleted_at = NOW() WHERE menu_name LIKE 'plugin_%' AND deleted_at IS NULL")
+	if result.Error != nil {
+		log.Printf("[auth-rbac] 清理遗留插件菜单失败: %v", result.Error)
+		return
+	}
+	if result.RowsAffected > 0 {
+		log.Printf("[auth-rbac] 清理了 %d 条遗留插件菜单", result.RowsAffected)
+	}
 }

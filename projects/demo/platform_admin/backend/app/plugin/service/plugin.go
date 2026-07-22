@@ -15,6 +15,8 @@ var (
 
 // Init 初始化插件服务（在路由注册时调用）
 func Init(db *gorm.DB) {
-	Manager = plugin.NewPluginManager()
-	Installer = plugin.NewInstaller("./plugins", "./static/plugins", db)
+	pluginsDir := "./plugins"
+	Manager = plugin.NewPluginManager(db, pluginsDir)
+	syncer := plugin.NewPluginResourceSyncer(db)
+	Installer = plugin.NewInstaller(pluginsDir, "./static/plugins", db, syncer)
 }

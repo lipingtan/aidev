@@ -92,7 +92,7 @@ func (p *mockPlugin) getEvents() []proto.Event {
 
 // TestPluginLifecycle 测试插件完整生命周期：注册 → 启动 → 健康检查 → 停止
 func TestPluginLifecycle(t *testing.T) {
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	mock := newMockPlugin("game", "1.0.0", "game")
 
 	// 注册
@@ -163,7 +163,7 @@ func TestPluginLifecycle(t *testing.T) {
 
 // TestRegistry 测试路由/菜单/权限注册和注销
 func TestRegistry(t *testing.T) {
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	mock := newMockPlugin("shop", "1.0.0", "shop")
 
 	_ = mgr.Register("shop", mock)
@@ -202,7 +202,7 @@ func TestRegistry(t *testing.T) {
 
 // TestEventBus 测试事件广播和插件间调用
 func TestEventBus(t *testing.T) {
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	pluginA := newMockPlugin("pluginA", "1.0.0", "a")
 	pluginB := newMockPlugin("pluginB", "1.0.0", "b")
 
@@ -285,7 +285,7 @@ func TestEventBus(t *testing.T) {
 
 // TestHostService 测试 HostService 接口
 func TestHostService(t *testing.T) {
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	mock := newMockPlugin("svc", "1.0.0", "svc")
 	_ = mgr.Register("svc", mock)
 	_ = mgr.Start("svc")
@@ -323,7 +323,7 @@ func TestHostService(t *testing.T) {
 func TestPluginProxy(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	mock := newMockPlugin("demo", "1.0.0", "demo")
 	_ = mgr.Register("demo", mock)
 	_ = mgr.Start("demo")
@@ -411,7 +411,7 @@ func TestPluginProxy(t *testing.T) {
 
 // TestStopAll 测试批量停止
 func TestStopAll(t *testing.T) {
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	_ = mgr.Register("p1", newMockPlugin("p1", "1.0.0", "p1"))
 	_ = mgr.Register("p2", newMockPlugin("p2", "1.0.0", "p2"))
 	_ = mgr.Start("p1")
@@ -435,7 +435,7 @@ func TestStopAll(t *testing.T) {
 
 // TestListPlugins 测试列出所有插件
 func TestListPlugins(t *testing.T) {
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	_ = mgr.Register("a", newMockPlugin("a", "1.0.0", "a"))
 	_ = mgr.Register("b", newMockPlugin("b", "2.0.0", "b"))
 
@@ -447,7 +447,7 @@ func TestListPlugins(t *testing.T) {
 
 // TestEventBusUnsubscribeOnStop 测试停止插件后事件不再广播到该插件
 func TestEventBusUnsubscribeOnStop(t *testing.T) {
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 	mock := newMockPlugin("sub", "1.0.0", "sub")
 	_ = mgr.Register("sub", mock)
 	_ = mgr.Start("sub")
@@ -464,3 +464,4 @@ func TestEventBusUnsubscribeOnStop(t *testing.T) {
 		t.Fatalf("停止后不应收到事件，实际收到: %d", len(events))
 	}
 }
+

@@ -59,6 +59,7 @@
           <el-table-column prop="app_name" label="应用" min-width="120">
             <template #default="{ row }">
               <span>{{ row.app_name }}</span>
+              <span v-if="isPluginStopped(row.app_code)" class="plugin-stopped-hint">(插件已停止)</span>
               <el-tag v-if="row.bound" type="success" size="small" style="margin-left: 8px">已绑定</el-tag>
             </template>
           </el-table-column>
@@ -115,6 +116,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ElTree } from 'element-plus'
 import { getRoleList, deleteRole, getRolePermissionSummary } from '@/api/role'
 import type { RoleItem, AppPermissionSummary } from '@/api/role'
+import { getPluginList } from '@/api/plugin'
+import type { PluginItem } from '@/api/plugin'
 import RoleForm from './RoleForm.vue'
 import MenuPermTab from './MenuPermTab.vue'
 import ApiPermTab from './ApiPermTab.vue'
@@ -140,6 +143,31 @@ const drawerVisible = ref(false)
 const drawerAppCode = ref('')
 const drawerTitle = ref('')
 const drawerTab = ref('menu')
+
+// 插件状态 map：name → runStatus
+const pluginStatusMap = ref<Record<string, string>>({})
+
+/** 加载插件状态列表，构建 name → runStatus 的映射 */
+async function loadPluginStatus() {
+  try {
+    const res: any = await getPluginList()
+    const data = res?.data || res
+    const list: PluginItem[] = data?.list || []
+    const map: Record<string, string> = {}
+    list.forEach((p) => {
+      map[p.name] = p.runStatus
+    })
+    pluginStatusMap.value = map
+  } catch {
+    pluginStatusMap.value = {}
+  }
+}
+
+/** 判断某 app_code 对应的插件是否已停止 */
+function isPluginStopped(appCode: string): boolean {
+  const status = pluginStatusMap.value[appCode]
+  return !!status && status !== 'running'
+}
 
 /** 加载角色树 */
 async function loadRoleTree() {
@@ -224,6 +252,7 @@ async function handleDelete(data: RoleItem) {
 
 onMounted(() => {
   loadRoleTree()
+  loadPluginStatus()
 })
 </script>
 
@@ -287,5 +316,10 @@ onMounted(() => {
 }
 .count-zero {
   color: var(--el-text-color-secondary);
+}
+.plugin-stopped-hint {
+  color: #f56c6c;
+  font-size: 12px;
+  margin-left: 4px;
 }
 </style>

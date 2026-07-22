@@ -6,7 +6,6 @@ import (
 	"github.com/go-admin-team/go-admin-core/sdk"
 	"github.com/go-admin-team/go-admin-core/sdk/config"
 
-	"go-admin/app/plugin/apis"
 	pluginModels "go-admin/app/plugin/models"
 	"go-admin/app/plugin/service"
 	authMiddleware "go-admin/common/auth/middleware"
@@ -46,22 +45,9 @@ func InitPluginRouter() {
 		log.Warn("[plugin-router] auth service 不可用，插件路由未注册认证中间件")
 	}
 
-	api := apis.Plugin{}
-
-	// 插件管理 API（使用新 auth-rbac 认证中间件）
-	v1 := r.Group("/api/v1/admin")
-	pluginGroup := v1.Group("/plugins")
-	if authSvc != nil {
-		pluginGroup.Use(authMiddleware.AuthMiddleware(authSvc))
-	}
-	{
-		pluginGroup.GET("", api.List)
-		pluginGroup.POST("/install", api.Install)
-		pluginGroup.POST("/:name/start", api.Start)
-		pluginGroup.POST("/:name/stop", api.Stop)
-		pluginGroup.DELETE("/:name", api.Uninstall)
-		pluginGroup.GET("/:name/health", api.Health)
-	}
+	// 插件管理 API 已迁移至 common/auth/handler/PluginHandler（CR4）
+	// 此处不再注册 /api/v1/admin/plugins 路由组，避免重复注册 panic
+	// 仅保留插件代理路由
 
 	// 插件代理路由（需要认证 + 租户中间件）
 	dbDsn := ""
@@ -69,7 +55,7 @@ func InitPluginRouter() {
 		dbDsn = config.DatabaseConfig.Source
 	}
 	proxy := pluginPkg.NewPluginProxy(service.Manager, dbDsn)
-	proxyGroup := v1.Group("")
+	proxyGroup := r.Group("/api/v1/admin")
 	if authSvc != nil {
 		proxyGroup.Use(authMiddleware.AuthMiddleware(authSvc))
 	}

@@ -49,6 +49,7 @@ message CallPluginRequest {
   string target_plugin = 1;
   string method = 2;
   bytes payload = 3;
+  string action_version = 4;
 }
 
 message CallPluginResponse {

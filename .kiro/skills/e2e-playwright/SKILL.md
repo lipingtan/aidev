@@ -61,6 +61,51 @@ Test-Path "node_modules"
 | 执行已有 CR 测试 | 有对应 spec 文件，无"补充"意图 | → Step 3（执行） |
 | 跨 CR 全量回归 | 用户说"全量回归"/"全部跑一遍" | → Step 3（执行全部） |
 
+#### 测试模式选择（API vs UI）
+
+**每个用例都必须判断采用哪种模式，不能全部默认 API：**
+
+| 场景特征 | 适用模式 | 原因 |
+|---------|---------|------|
+| 验证 HTTP 状态码/响应体字段/错误码 | API 模式 | 快，直接 |
+| 验证 CRUD 接口基本功能 | API 模式 | 不依赖前端 |
+| 验证用户登录后看到什么菜单/页面 | **UI 模式** | 需要完整浏览器会话 |
+| 验证字段在页面上是否显示/隐藏 | **UI 模式** | 需要 DOM 断言 |
+| 验证多步骤业务流（创建→分配→切换用户→验证效果） | **UI 模式** | API 模式需手动模拟 token 注入，脆弱 |
+| 验证前端组件交互（弹窗/Tab切换/Tree 选择） | **UI 模式** | 只有 UI 能验证 |
+| 验证认证守卫（无 token 请求被拒绝） | API 模式 | 不需要页面 |
+
+**核心原则**：如果测试需要"以某个用户的视角看到什么"，用 UI 模式；如果只验证"接口返回什么"，用 API 模式。
+
+#### UI 模式实现模式
+
+```typescript
+// 通过 API 准备数据 + 注入 localStorage token + page 操作验证
+// 避免在 UI 上做复杂数据准备（慢且脆弱）
+
+// 1. API 准备：创建用户/角色/配置权限
+const adminToken = await apiLogin(api, 'admin', 'admin123');
+await api.post('/users', { data: {...} });
+await api.post('/users/:id/roles', { data: {...} });
+
+// 2. 获取目标用户 token
+const userAuth = await apiLogin(api, username, password);
+
+// 3. 注入浏览器 localStorage
+await page.goto(WEB_BASE);
+await page.evaluate((data) => {
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('platform_token', data.platform_token);
+  localStorage.setItem('current_tenant_id', data.current_tenant_id);
+  localStorage.setItem('tenant_list', JSON.stringify(data.tenants));
+}, userAuth);
+await page.goto(`${WEB_BASE}/#/home`);
+
+// 4. 页面断言
+await page.waitForSelector('.el-menu');
+expect(await page.locator('.el-menu-item').count()).toBeGreaterThan(0);
+```
+
 ---
 
 ### Step 2: 初始化（首次或补充）

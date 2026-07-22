@@ -21,7 +21,7 @@ func TestStartProcessIntegration(t *testing.T) {
 		t.Skipf("DLC 插件二进制不存在，跳过集成测试: %s", pluginBinary)
 	}
 
-	mgr := NewPluginManager()
+	mgr := NewPluginManager(nil, "")
 
 	// 启动插件子进程
 	err := mgr.StartProcess("dlc", pluginBinary)
@@ -87,3 +87,4 @@ func TestStartProcessIntegration(t *testing.T) {
 		t.Fatal("停止后路由应被注销")
 	}
 }
+

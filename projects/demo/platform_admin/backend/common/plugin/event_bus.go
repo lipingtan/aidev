@@ -9,6 +9,14 @@ import (
 	"platform-admin/plugin-sdk/proto"
 )
 
+// 错误变量
+var (
+	ErrPluginNotFound            = fmt.Errorf("目标插件不存在")
+	ErrPluginNotRunning          = fmt.Errorf("目标插件未运行")
+	ErrActionNotFound            = fmt.Errorf("目标 Action 不存在")
+	ErrActionVersionIncompatible = fmt.Errorf("Action 版本不兼容")
+)
+
 // EventBus 插件间异步事件总线
 type EventBus struct {
 	mu          sync.RWMutex
@@ -84,15 +92,29 @@ func (b *EventBus) PublishEvent(ctx context.Context, event *proto.Event) error {
 	return nil
 }
 
-// CallPlugin 同步调用目标插件
+// CallPlugin 同步调用目标插件（含 Action 版本校验）
 func (b *EventBus) CallPlugin(ctx context.Context, req *proto.CallPluginRequest) (*proto.CallPluginResponse, error) {
+	// 1. 检查插件是否存在
 	inst, ok := b.mgr.GetPlugin(req.TargetPlugin)
 	if !ok {
-		return nil, fmt.Errorf("目标插件 %s 不存在", req.TargetPlugin)
+		return nil, ErrPluginNotFound
 	}
+	// 2. 检查插件是否运行
 	if inst.Status != StatusRunning {
-		return nil, fmt.Errorf("目标插件 %s 未运行", req.TargetPlugin)
+		return nil, ErrPluginNotRunning
 	}
+	// 3. Action 版本校验（如果请求带了 ActionVersion）
+	if req.ActionVersion != "" {
+		ar := b.mgr.ActionRegistry()
+		_, found := ar.FindAction(req.TargetPlugin, req.Method)
+		if !found {
+			return nil, ErrActionNotFound
+		}
+		if !ar.IsCompatible(req.TargetPlugin, req.Method, req.ActionVersion) {
+			return nil, ErrActionVersionIncompatible
+		}
+	}
+	// 4. 转发调用
 	return inst.Service.CallPlugin(ctx, req)
 }
 

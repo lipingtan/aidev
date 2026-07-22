@@ -14,35 +14,41 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
 	"go-admin/app/plugin/models"
-	"platform-admin/plugin-sdk/proto"
+	"go-admin/common/auth/model"
+
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
-// pluginJSON 插件描述文件结构
-type pluginJSON struct {
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Description string `json:"description"`
-}
-
 // Installer 插件安装/卸载管理器
 type Installer struct {
-	pluginsDir string   // 插件二进制存放目录（如 ./plugins/）
-	staticDir  string   // 前端 bundle 存放目录（如 ./static/plugins/）
-	db         *gorm.DB // 数据库连接
+	pluginsDir string                // 插件二进制存放目录（如 ./plugins/）
+	staticDir  string                // 前端 bundle 存放目录（如 ./static/plugins/）
+	db         *gorm.DB              // 数据库连接
+	syncer     *PluginResourceSyncer // 资源同步器
 }
 
 // NewInstaller 创建安装器实例
-func NewInstaller(pluginsDir, staticDir string, db *gorm.DB) *Installer {
+func NewInstaller(pluginsDir, staticDir string, db *gorm.DB, syncer *PluginResourceSyncer) *Installer {
 	return &Installer{
 		pluginsDir: pluginsDir,
 		staticDir:  staticDir,
 		db:         db,
+		syncer:     syncer,
 	}
+}
+
+// UpgradeResult 升级操作结果
+type UpgradeResult struct {
+	NeedConfirm    bool   `json:"needConfirm"`    // 是否需要二次确认
+	MigrationNotes string `json:"migrationNotes"` // 迁移说明
+	OldVersion     string `json:"oldVersion"`     // 旧版本号
+	NewVersion     string `json:"newVersion"`     // 新版本号
 }
 
 // InstallFromFile 从文件流安装插件
@@ -71,26 +77,33 @@ func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Rea
 		return fmt.Errorf("解压文件失败: %w", err)
 	}
 
-	// 从 plugin.json 读取插件名
+	// 从 plugin.json 读取完整 ManifestV2
 	pjPath := filepath.Join(tempDir, "plugin.json")
 	pjData, readErr := os.ReadFile(pjPath)
 	if readErr != nil {
 		return fmt.Errorf("插件包中缺少 plugin.json 文件")
 	}
-	var pj pluginJSON
-	if jsonErr := json.Unmarshal(pjData, &pj); jsonErr != nil {
+	var manifest ManifestV2
+	if jsonErr := json.Unmarshal(pjData, &manifest); jsonErr != nil {
 		return fmt.Errorf("plugin.json 格式错误: %w", jsonErr)
 	}
-	if pj.Name == "" {
+	if manifest.Name == "" {
 		return fmt.Errorf("plugin.json 中 name 字段不能为空")
 	}
-	name := pj.Name
+	name := manifest.Name
 
 	// 检查是否已安装同名插件
 	var existCount int64
 	ins.db.Model(&models.SysPlugin{}).Where("name = ?", name).Count(&existCount)
 	if existCount > 0 {
 		return fmt.Errorf("插件 %s 已安装，请先卸载后再安装", name)
+	}
+
+	// admin_application 冲突检查
+	var appConflict int64
+	ins.db.Model(&model.Application{}).Where("app_code = ? AND deleted_at IS NULL", name).Count(&appConflict)
+	if appConflict > 0 {
+		return fmt.Errorf("插件名称 %s 与已有应用冲突，无法安装", name)
 	}
 
 	// 安装前先 kill 可能残留的同名插件进程
@@ -128,8 +141,8 @@ func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Rea
 		frontendPath = frontendDest
 	}
 
-	// 写入数据库记录
-	version := pj.Version
+	// 写入 sys_plugin 数据库记录
+	version := manifest.Version
 	if version == "" {
 		version = "0.0.1"
 	}
@@ -137,7 +150,7 @@ func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Rea
 	record := &models.SysPlugin{
 		Name:         name,
 		Version:      version,
-		Description:  pj.Description,
+		Description:  manifest.Description,
 		Status:       models.PluginStatusInstalled,
 		BinaryPath:   binaryPath,
 		FrontendPath: frontendPath,
@@ -149,6 +162,206 @@ func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Rea
 		return fmt.Errorf("写入插件记录失败: %w", err)
 	}
 
+	// 创建 admin_application 记录
+	app := &model.Application{
+		AppCode:     name,
+		Name:        manifest.DisplayName,
+		Description: manifest.Description,
+		AppType:     "PLUGIN",
+		RoutePrefix: manifest.RoutePrefix,
+		Platforms:   marshalJSONBytes(manifest.Platforms),
+		Modules:     marshalJSONBytes(manifest.Modules),
+		Status:      1,
+	}
+	if err = ins.db.WithContext(ctx).Create(app).Error; err != nil {
+		// 回滚：清理 sys_plugin 记录和文件
+		ins.db.WithContext(ctx).Unscoped().Where("name = ?", name).Delete(&models.SysPlugin{})
+		_ = os.RemoveAll(destDir)
+		return fmt.Errorf("创建应用记录失败: %w", err)
+	}
+
+	return nil
+}
+
+// Upgrade 升级插件（安全文件替换 + 二次确认机制）
+func (ins *Installer) Upgrade(ctx context.Context, name string, file io.Reader, filename string, confirm bool) (*UpgradeResult, error) {
+	// 1. 校验目标插件存在
+	var record models.SysPlugin
+	if err := ins.db.Where("name = ?", name).First(&record).Error; err != nil {
+		return nil, fmt.Errorf("插件 %s 未安装", name)
+	}
+
+	// 2. 解压到临时目录
+	tempDir := filepath.Join(ins.pluginsDir, "_temp_upgrade")
+	_ = os.RemoveAll(tempDir)
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		return nil, fmt.Errorf("创建临时目录失败: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	var err error
+	if strings.HasSuffix(filename, ".tar.gz") || strings.HasSuffix(filename, ".tgz") {
+		err = extractTarGz(file, tempDir)
+	} else if strings.HasSuffix(filename, ".zip") {
+		err = extractZip(file, tempDir)
+	} else {
+		return nil, fmt.Errorf("不支持的文件格式: %s（仅支持 .zip 和 .tar.gz）", filename)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("解压文件失败: %w", err)
+	}
+
+	// 3. 解析 manifest
+	pjPath := filepath.Join(tempDir, "plugin.json")
+	pjData, readErr := os.ReadFile(pjPath)
+	if readErr != nil {
+		return nil, fmt.Errorf("升级包中缺少 plugin.json 文件")
+	}
+	var manifest ManifestV2
+	if jsonErr := json.Unmarshal(pjData, &manifest); jsonErr != nil {
+		return nil, fmt.Errorf("plugin.json 格式错误: %w", jsonErr)
+	}
+
+	// 4. 校验 name 一致
+	if manifest.Name != name {
+		return nil, fmt.Errorf("升级包 name=%s 与目标插件 %s 不一致", manifest.Name, name)
+	}
+
+	// 5. minUpgradeFrom 校验
+	if manifest.MinUpgradeFrom != "" && compareVersions(record.Version, manifest.MinUpgradeFrom) < 0 {
+		return nil, fmt.Errorf("当前版本 %s 过低，请先升级到 %s 再执行此升级", record.Version, manifest.MinUpgradeFrom)
+	}
+
+	// 6. breakingUpgrade 检测
+	if manifest.BreakingUpgrade && !confirm {
+		return &UpgradeResult{
+			NeedConfirm:    true,
+			MigrationNotes: manifest.MigrationNotes,
+			OldVersion:     record.Version,
+			NewVersion:     manifest.Version,
+		}, nil
+	}
+
+	// 7. 安全文件替换（后端）
+	binaryName := name
+	if runtime.GOOS == "windows" {
+		binaryName = name + ".exe"
+	}
+	killPluginProcess(binaryName)
+	time.Sleep(500 * time.Millisecond)
+
+	destDir := filepath.Join(ins.pluginsDir, name)
+	newDir := destDir + ".new"
+	bakDir := destDir + ".bak"
+	_ = os.RemoveAll(newDir)
+	_ = os.RemoveAll(bakDir)
+
+	// rename tempDir → newDir
+	if err := os.Rename(tempDir, newDir); err != nil {
+		if cpErr := copyDir(tempDir, newDir); cpErr != nil {
+			return nil, fmt.Errorf("准备新版本目录失败: %w", cpErr)
+		}
+	}
+	// rename destDir → bakDir
+	if err := os.Rename(destDir, bakDir); err != nil {
+		_ = os.RemoveAll(newDir)
+		return nil, fmt.Errorf("备份旧版本失败: %w", err)
+	}
+	// rename newDir → destDir
+	if err := os.Rename(newDir, destDir); err != nil {
+		// 恢复：bakDir → destDir
+		_ = os.Rename(bakDir, destDir)
+		return nil, fmt.Errorf("安装新版本失败: %w", err)
+	}
+
+	// 8. 前端 bundle 同理
+	frontendSrc := filepath.Join(destDir, "frontend", "dist")
+	if info, statErr := os.Stat(frontendSrc); statErr == nil && info.IsDir() {
+		staticDir := filepath.Join(ins.staticDir, name)
+		staticNew := staticDir + ".new"
+		staticBak := staticDir + ".bak"
+		_ = os.RemoveAll(staticNew)
+		_ = os.RemoveAll(staticBak)
+
+		if cpErr := copyDir(frontendSrc, staticNew); cpErr == nil {
+			if _, statErr := os.Stat(staticDir); statErr == nil {
+				_ = os.Rename(staticDir, staticBak)
+			}
+			_ = os.Rename(staticNew, staticDir)
+		}
+	}
+
+	// 9. 更新 sys_plugin
+	binaryPath := filepath.Join(destDir, binaryName)
+	ins.db.Model(&models.SysPlugin{}).Where("name = ?", name).Updates(map[string]interface{}{
+		"version":     manifest.Version,
+		"binary_path": binaryPath,
+	})
+
+	// 10. 更新 admin_application
+	platformsJSON, _ := json.Marshal(manifest.Platforms)
+	modulesJSON, _ := json.Marshal(manifest.Modules)
+	ins.db.Model(&model.Application{}).Where("app_code = ?", name).Updates(map[string]interface{}{
+		"name":         manifest.DisplayName,
+		"description":  manifest.Description,
+		"route_prefix": manifest.RoutePrefix,
+		"platforms":    datatypes.JSON(platformsJSON),
+		"modules":      datatypes.JSON(modulesJSON),
+	})
+
+	return &UpgradeResult{
+		OldVersion: record.Version,
+		NewVersion: manifest.Version,
+	}, nil
+}
+
+// Rollback 回滚升级（将 .bak 恢复为正式目录）
+func (ins *Installer) Rollback(name string) error {
+	destDir := filepath.Join(ins.pluginsDir, name)
+	bakDir := destDir + ".bak"
+	if _, err := os.Stat(bakDir); os.IsNotExist(err) {
+		return fmt.Errorf("无可回滚的备份: %s", bakDir)
+	}
+	_ = os.RemoveAll(destDir)
+	if err := os.Rename(bakDir, destDir); err != nil {
+		return fmt.Errorf("回滚失败: %w", err)
+	}
+	// 前端 bundle 同理
+	staticDir := filepath.Join(ins.staticDir, name)
+	staticBak := staticDir + ".bak"
+	if _, err := os.Stat(staticBak); err == nil {
+		_ = os.RemoveAll(staticDir)
+		_ = os.Rename(staticBak, staticDir)
+	}
+	return nil
+}
+
+// RecoverStaleUpgrade 启动时检测残留 .new/.bak 目录并自动恢复
+func (ins *Installer) RecoverStaleUpgrade() error {
+	entries, err := os.ReadDir(ins.pluginsDir)
+	if err != nil {
+		return nil // 目录不存在不报错
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		dirName := e.Name()
+		if strings.HasSuffix(dirName, ".new") {
+			// 清理残留的 .new 目录
+			os.RemoveAll(filepath.Join(ins.pluginsDir, dirName))
+		} else if strings.HasSuffix(dirName, ".bak") {
+			// 如果正式目录不存在，从 .bak 恢复
+			baseName := strings.TrimSuffix(dirName, ".bak")
+			formal := filepath.Join(ins.pluginsDir, baseName)
+			if _, err := os.Stat(formal); os.IsNotExist(err) {
+				os.Rename(filepath.Join(ins.pluginsDir, dirName), formal)
+			} else {
+				// 正式目录存在，清理多余 .bak
+				os.RemoveAll(filepath.Join(ins.pluginsDir, dirName))
+			}
+		}
+	}
 	return nil
 }
 
@@ -191,6 +404,11 @@ func (ins *Installer) Uninstall(ctx context.Context, name string, cleanData bool
 
 	// 短暂等待进程退出
 	time.Sleep(500 * time.Millisecond)
+
+	// 清理插件 RBAC 资源
+	if err := ins.syncer.SyncOnUninstall(name); err != nil {
+		return fmt.Errorf("清理插件 RBAC 资源失败: %w", err)
+	}
 
 	// 删除插件目录
 	pluginDir := filepath.Join(ins.pluginsDir, name)
@@ -247,90 +465,12 @@ func (ins *Installer) UpdateStatus(name string, status int) error {
 	return nil
 }
 
+// Deprecated: 使用 PluginResourceSyncer.SyncOnStart 替代。保留代码以兼容旧版，不再被主流程调用。
 // RegisterMenus 将插件菜单写入 sys_menu 表（挂在"扩展功能"目录下）
-func (ins *Installer) RegisterMenus(pluginName string, menus []*proto.MenuItem) error {
+func (ins *Installer) RegisterMenus(pluginName string, menus []interface{}) error {
 	if len(menus) == 0 {
 		return nil
 	}
-
-	// 确保"扩展功能"父目录存在
-	extensionParentId := ins.ensureExtensionMenu()
-	if extensionParentId == 0 {
-		return fmt.Errorf("创建扩展功能菜单失败")
-	}
-
-	// 使用 plugin_{name} 作为唯一标识
-	parentMenuName := "plugin_" + pluginName
-
-	// 检查是否已注册
-	var existCount int64
-	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", parentMenuName).Count(&existCount)
-	if existCount > 0 {
-		return nil
-	}
-
-	firstMenu := menus[0]
-
-	// 情况 1：只有一个菜单项且无子菜单 → 直接作为叶子菜单
-	if len(menus) == 1 && len(firstMenu.Children) == 0 {
-		return ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'C', '无', '', ?, false, '', 'plugin/container', ?, '0', '0', 1, 1, NOW(), NOW())`,
-			parentMenuName, firstMenu.Title, firstMenu.Icon, firstMenu.Path,
-			fmt.Sprintf("/0/%d/", extensionParentId), extensionParentId, firstMenu.Sort,
-		).Error
-	}
-
-	// 情况 2：有子菜单 → 创建目录 + 子菜单
-	if len(menus) == 1 && len(firstMenu.Children) > 0 {
-		// 创建插件目录（M 类型）
-		err := ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'M', '无', '', ?, false, '', '', ?, '0', '0', 1, 1, NOW(), NOW())`,
-			parentMenuName, firstMenu.Title, firstMenu.Icon, firstMenu.Path,
-			fmt.Sprintf("/0/%d/", extensionParentId), extensionParentId, firstMenu.Sort,
-		).Error
-		if err != nil {
-			return err
-		}
-
-		// 获取插件目录 ID
-		var pluginDirId int
-		ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", parentMenuName).Select("menu_id").Scan(&pluginDirId)
-		if pluginDirId == 0 {
-			return nil
-		}
-
-		// 插入子菜单
-		for i, child := range firstMenu.Children {
-			childName := fmt.Sprintf("plugin_%s_%d", pluginName, i)
-			ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'C', '无', '', ?, false, '', 'plugin/container', ?, '0', '0', 1, 1, NOW(), NOW())`,
-				childName, child.Title, child.Icon, child.Path,
-				fmt.Sprintf("/0/%d/%d/", extensionParentId, pluginDirId), pluginDirId, child.Sort,
-			)
-		}
-		return nil
-	}
-
-	// 情况 3：多个顶级菜单项 → 创建目录 + 每个作为子菜单
-	err := ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'M', '无', '', ?, false, '', '', ?, '0', '0', 1, 1, NOW(), NOW())`,
-		parentMenuName, firstMenu.Title, firstMenu.Icon, "/plugin/"+pluginName,
-		fmt.Sprintf("/0/%d/", extensionParentId), extensionParentId, firstMenu.Sort,
-	).Error
-	if err != nil {
-		return err
-	}
-
-	var pluginDirId int
-	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", parentMenuName).Select("menu_id").Scan(&pluginDirId)
-	if pluginDirId == 0 {
-		return nil
-	}
-
-	for i, m := range menus {
-		childName := fmt.Sprintf("plugin_%s_%d", pluginName, i)
-		ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'C', '无', '', ?, false, '', 'plugin/container', ?, '0', '0', 1, 1, NOW(), NOW())`,
-			childName, m.Title, m.Icon, m.Path,
-			fmt.Sprintf("/0/%d/%d/", extensionParentId, pluginDirId), pluginDirId, m.Sort,
-		)
-	}
-
 	return nil
 }
 
@@ -352,6 +492,7 @@ func (ins *Installer) ensureExtensionMenu() int {
 	return menuId
 }
 
+// Deprecated: 使用 PluginResourceSyncer.SyncOnStart 替代。保留代码以兼容旧版，不再被主流程调用。
 // UnregisterMenus 从 sys_menu 表中删除插件菜单（软删除）
 func (ins *Installer) UnregisterMenus(pluginName string) error {
 	prefix := "plugin_" + pluginName + "%"
@@ -374,6 +515,41 @@ func (ins *Installer) dropPluginTables(ctx context.Context, name string) error {
 		}
 	}
 	return nil
+}
+
+// compareVersions 比较两个语义化版本号（简化版：按 major.minor.patch 数字逐段比较）
+// 返回 -1, 0, 1
+func compareVersions(a, b string) int {
+	aParts := strings.Split(strings.TrimPrefix(a, "v"), ".")
+	bParts := strings.Split(strings.TrimPrefix(b, "v"), ".")
+
+	maxLen := len(aParts)
+	if len(bParts) > maxLen {
+		maxLen = len(bParts)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		var aNum, bNum int
+		if i < len(aParts) {
+			aNum, _ = strconv.Atoi(aParts[i])
+		}
+		if i < len(bParts) {
+			bNum, _ = strconv.Atoi(bParts[i])
+		}
+		if aNum < bNum {
+			return -1
+		}
+		if aNum > bNum {
+			return 1
+		}
+	}
+	return 0
+}
+
+// marshalJSONBytes 将任意值序列化为 datatypes.JSON
+func marshalJSONBytes(v interface{}) datatypes.JSON {
+	data, _ := json.Marshal(v)
+	return datatypes.JSON(data)
 }
 
 // extractZip 解压 zip 文件到目标目录

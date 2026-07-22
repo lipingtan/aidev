@@ -1,5 +1,14 @@
 <template>
   <div class="perm-tab">
+    <!-- 插件已停止提示 -->
+    <el-alert
+      v-if="pluginStopped"
+      title="该应用对应的插件已停止，权限配置仍可操作"
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 12px;"
+    />
     <!-- 资源树 -->
     <el-tree
       ref="treeRef"
@@ -24,6 +33,8 @@ import { ElMessage } from 'element-plus'
 import type { ElTree } from 'element-plus'
 import { getResourceTree, getRoleResources, assignRoleResources, getAssignableResources } from '@/api/role'
 import type { ResourceTreeNode, AssignResult } from '@/api/role'
+import { getPluginList } from '@/api/plugin'
+import type { PluginItem } from '@/api/plugin'
 
 const props = defineProps<{ roleId: string; appCode: string; parentId?: string | null }>()
 
@@ -34,6 +45,9 @@ const checkedKeys = ref<string[]>([])
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const isDirty = ref(false)
 const assignableIds = ref<string[] | null>(null)
+// 插件状态
+const pluginStopped = ref(false)
+const pluginStatusMap = ref<Record<string, string>>({})
 
 defineExpose({ isDirty })
 
@@ -49,7 +63,8 @@ async function loadData() {
   try {
     const requests: Promise<any>[] = [
       getResourceTree(props.appCode),
-      getRoleResources(props.roleId)
+      getRoleResources(props.roleId),
+      getPluginList()
     ]
     // 如果有 parentId，获取可分配范围
     if (props.parentId) {
@@ -58,7 +73,20 @@ async function loadData() {
     const results = await Promise.all(requests)
     const tree: ResourceTreeNode[] = results[0]
     const ids: string[] = results[1]
-    assignableIds.value = results[2] || null
+    // 构建插件状态 map
+    const pluginRes: any = results[2]
+    const pluginData = pluginRes?.data || pluginRes
+    const pluginList: PluginItem[] = pluginData?.list || []
+    const map: Record<string, string> = {}
+    pluginList.forEach((p) => {
+      map[p.name] = p.runStatus
+    })
+    pluginStatusMap.value = map
+    // 判断当前 appCode 对应插件是否已停止
+    const currentStatus = map[props.appCode]
+    pluginStopped.value = !!currentStatus && currentStatus !== 'running'
+
+    assignableIds.value = props.parentId ? (results[3] || null) : null
 
     resourceTree.value = tree
     // 只勾选叶子节点避免父节点自动全选

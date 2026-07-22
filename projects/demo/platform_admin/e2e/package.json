@@ -2,15 +2,18 @@
   "name": "platform-admin-e2e",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Platform Admin E2E Tests (Playwright)",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --reporter=list",
+    "test:report": "playwright test --reporter=html",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "report": "playwright show-report"
   },
   "devDependencies": {
-    "@playwright/test": "^1.45.0"
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.14.0"
   }
 }

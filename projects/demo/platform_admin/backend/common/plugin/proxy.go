@@ -42,10 +42,19 @@ func (p *PluginProxy) Handler() gin.HandlerFunc {
 
 		// 获取插件实例
 		inst, exists := p.mgr.GetPlugin(name)
-		if !exists || inst.Status != StatusRunning {
+		if !exists {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code": 40400,
+				"msg":  "插件不存在",
+			})
+			c.Abort()
+			return
+		}
+		if inst.Status != StatusRunning {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"code": 503,
-				"msg":  "插件未运行或不存在: " + name,
+				"code":  50301,
+				"msg":   "插件维护中，请稍后再试",
+				"data": gin.H{"plugin": name, "status": "stopped"},
 			})
 			c.Abort()
 			return

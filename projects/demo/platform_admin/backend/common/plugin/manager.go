@@ -3,27 +3,36 @@
 import (
 	"context"
 	"fmt"
+	"log"
 	"os/exec"
+	"path/filepath"
 	"sync"
 
 	goplugin "github.com/hashicorp/go-plugin"
+	"gorm.io/gorm"
 	"platform-admin/plugin-sdk/proto"
 	"platform-admin/plugin-sdk/shared"
 )
 
 // PluginManager 插件生命周期管理器
 type PluginManager struct {
-	mu       sync.RWMutex
-	plugins  map[string]*PluginInstance // name → instance
-	registry *Registry
-	eventBus *EventBus
+	mu             sync.RWMutex
+	plugins        map[string]*PluginInstance // name → instance
+	registry       *Registry
+	eventBus       *EventBus
+	syncer         *PluginResourceSyncer
+	actionRegistry *ActionRegistry
+	pluginsDir     string
 }
 
 // NewPluginManager 创建插件管理器
-func NewPluginManager() *PluginManager {
+func NewPluginManager(db *gorm.DB, pluginsDir string) *PluginManager {
 	m := &PluginManager{
-		plugins:  make(map[string]*PluginInstance),
-		registry: NewRegistry(),
+		plugins:        make(map[string]*PluginInstance),
+		registry:       NewRegistry(),
+		syncer:         NewPluginResourceSyncer(db),
+		actionRegistry: NewActionRegistry(),
+		pluginsDir:     pluginsDir,
 	}
 	m.eventBus = NewEventBus(m)
 	return m
@@ -37,6 +46,11 @@ func (m *PluginManager) Registry() *Registry {
 // EventBus 获取事件总线实例
 func (m *PluginManager) EventBus() *EventBus {
 	return m.eventBus
+}
+
+// ActionRegistry 获取 Action 注册表实例
+func (m *PluginManager) ActionRegistry() *ActionRegistry {
+	return m.actionRegistry
 }
 
 // HostService 获取 HostService 实例
@@ -85,6 +99,24 @@ func (m *PluginManager) Start(name string) error {
 
 	// 注册路由/菜单/权限到 Registry
 	m.registry.RegisterPlugin(info)
+
+	// 解析 manifest 并同步资源（进程内模式：失败不阻塞启动）
+	manifest, err := ParseManifest(filepath.Join(m.pluginsDir, name))
+	if err != nil {
+		log.Printf("[PluginManager] 插件 %s 解析 manifest 失败（进程内模式，跳过同步）: %v", name, err)
+		return nil
+	}
+
+	if err := m.syncer.SyncOnStart(name, manifest); err != nil {
+		log.Printf("[PluginManager] 插件 %s 资源同步失败: %v", name, err)
+		// syncer 失败回滚状态
+		inst.Status = StatusError
+		m.registry.UnregisterPlugin(name)
+		return fmt.Errorf("插件 %s 资源同步失败: %w", name, err)
+	}
+
+	m.actionRegistry.Register(name, manifest.ExposedActions)
+	m.eventBus.Subscribe(name, manifest.SubscribedEvents)
 
 	return nil
 }
@@ -146,6 +178,26 @@ func (m *PluginManager) StartProcess(name, binaryPath string) error {
 	// 注册路由/菜单/权限
 	m.registry.RegisterPlugin(info)
 
+	// 解析 manifest 并同步资源（子进程模式：失败视为错误）
+	manifest, err := ParseManifest(filepath.Join(m.pluginsDir, name))
+	if err != nil {
+		// 子进程模式必须有 plugin.json，解析失败需回滚
+		m.registry.UnregisterPlugin(name)
+		m.plugins[name].Status = StatusError
+		client.Kill()
+		return fmt.Errorf("插件 %s 解析 manifest 失败: %w", name, err)
+	}
+
+	if err := m.syncer.SyncOnStart(name, manifest); err != nil {
+		m.registry.UnregisterPlugin(name)
+		m.plugins[name].Status = StatusError
+		client.Kill()
+		return fmt.Errorf("插件 %s 资源同步失败: %w", name, err)
+	}
+
+	m.actionRegistry.Register(name, manifest.ExposedActions)
+	m.eventBus.Subscribe(name, manifest.SubscribedEvents)
+
 	return nil
 }
 
@@ -164,6 +216,9 @@ func (m *PluginManager) Stop(name string) error {
 
 	// 从 Registry 注销
 	m.registry.UnregisterPlugin(name)
+
+	// 注销 Action 注册
+	m.actionRegistry.Unregister(name)
 
 	// 注销事件订阅
 	m.eventBus.Unsubscribe(name)
@@ -186,6 +241,7 @@ func (m *PluginManager) StopAll() {
 	for name, inst := range m.plugins {
 		if inst.Status == StatusRunning {
 			m.registry.UnregisterPlugin(name)
+			m.actionRegistry.Unregister(name)
 			m.eventBus.Unsubscribe(name)
 			// 终止子进程（如果是子进程模式）
 			if inst.client != nil {

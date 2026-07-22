@@ -423,6 +423,7 @@ type CallPluginRequest struct {
 	TargetPlugin  string                 `protobuf:"bytes,1,opt,name=target_plugin,json=targetPlugin,proto3" json:"target_plugin,omitempty"`
 	Method        string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
 	Payload       []byte                 `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	ActionVersion string                 `protobuf:"bytes,4,opt,name=action_version,json=actionVersion,proto3" json:"action_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -476,6 +477,13 @@ func (x *CallPluginRequest) GetPayload() []byte {
 		return x.Payload
 	}
 	return nil
+}
+
+func (x *CallPluginRequest) GetActionVersion() string {
+	if x != nil {
+		return x.ActionVersion
+	}
+	return ""
 }
 
 type CallPluginResponse struct {

@@ -65,21 +65,30 @@ test.describe('Phase1 角色继承 — 正向测试', () => {
     api = await request.newContext();
     token = await loginAdmin(api);
 
-    // 获取现有资源 ID（取前4个）
-    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources`, auth(token));
+    // 获取现有资源 ID（从资源树递归提取）
+    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources/tree?app_code=platform_admin`, auth(token));
     const resBody = await resResp.json();
-    const allRes: any[] = resBody?.data?.list ?? resBody?.data ?? [];
-    [res1, res2, res3, res4] = allRes.slice(0, 4).map((r: any) =>
-      String(r.id)
-    );
+    function extractResIDs(nodes: any[]): any[] {
+      const ids: any[] = [];
+      for (const n of nodes) { ids.push(n.id); if (n.children?.length > 0) ids.push(...extractResIDs(n.children)); }
+      return ids;
+    }
+    const allRes = extractResIDs(resBody?.data ?? []);
+    [res1, res2, res3, res4] = allRes.slice(0, 4).map((id: any) => String(id));
 
-    // 获取现有 API 权限 ID（取前3个）
-    const apiResp = await api.get(`${API_BASE}/api/v1/admin/api-permissions`, auth(token));
+    // 获取现有 API 权限 ID（从 API 权限树递归提取 ENDPOINT）
+    const apiResp = await api.get(`${API_BASE}/api/v1/admin/api-permissions/tree?app_code=platform_admin`, auth(token));
     const apiBody = await apiResp.json();
-    const allApis: any[] = apiBody?.data?.list ?? apiBody?.data ?? [];
-    [api1, api2, api3] = allApis.slice(0, 3).map((r: any) =>
-      String(r.id)
-    );
+    function extractApiIDs(nodes: any[]): any[] {
+      const ids: any[] = [];
+      for (const n of nodes) {
+        if (n.type === 'ENDPOINT') ids.push(n.id);
+        if (n.children?.length > 0) ids.push(...extractApiIDs(n.children));
+      }
+      return ids;
+    }
+    const allApis = extractApiIDs(apiBody?.data ?? []);
+    [api1, api2, api3] = allApis.slice(0, 3).map((id: any) => String(id));
 
     // 创建父角色（顶级）
     const suffix = Date.now();
@@ -425,16 +434,24 @@ test.describe('Phase1 角色继承 — 反向测试', () => {
     api = await request.newContext();
     token = await loginAdmin(api);
 
-    // 获取资源 ID
-    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources`, auth(token));
+    // 获取资源 ID（从资源树递归提取）
+    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources/tree?app_code=platform_admin`, auth(token));
     const resBody = await resResp.json();
-    const allRes: any[] = resBody?.data?.list ?? resBody?.data ?? [];
-    [res1, res2] = allRes.slice(0, 2).map((r: any) => String(r.id));
+    function extractResIDs(nodes: any[]): any[] {
+      const ids: any[] = [];
+      for (const n of nodes) { ids.push(n.id); if (n.children?.length > 0) ids.push(...extractResIDs(n.children)); }
+      return ids;
+    }
+    [res1, res2] = extractResIDs(resBody?.data ?? []).slice(0, 2).map((id: any) => String(id));
 
-    const apiResp = await api.get(`${API_BASE}/api/v1/admin/api-permissions`, auth(token));
+    const apiResp = await api.get(`${API_BASE}/api/v1/admin/api-permissions/tree?app_code=platform_admin`, auth(token));
     const apiBody = await apiResp.json();
-    const allApis: any[] = apiBody?.data?.list ?? apiBody?.data ?? [];
-    [api1] = allApis.slice(0, 1).map((r: any) => String(r.id));
+    function extractApiIDs(nodes: any[]): any[] {
+      const ids: any[] = [];
+      for (const n of nodes) { if (n.type === 'ENDPOINT') ids.push(n.id); if (n.children?.length > 0) ids.push(...extractApiIDs(n.children)); }
+      return ids;
+    }
+    [api1] = extractApiIDs(apiBody?.data ?? []).slice(0, 1).map((id: any) => String(id));
 
     const suffix = Date.now();
     // 父角色 [R1,R2]
@@ -491,11 +508,25 @@ test.describe('Phase1 角色继承 — 反向测试', () => {
   });
 
   // TC-N02: 子角色分配超出父角色范围的 API — 被拒绝
+  // 注意：AssignApis 对不存在的 ID 会静默忽略（先 query 再取交集）
+  // 所以需要用真实存在但不在父角色范围内的 ID 来测试
   test('TC-N02 子角色超集API分配被拒绝', async () => {
     test.skip(!api1, 'API 不足，跳过');
+    // 获取所有 ENDPOINT ID，找一个不在父角色范围内的
+    const allApiResp = await api.get(`${API_BASE}/api/v1/admin/api-permissions/tree?app_code=platform_admin`, auth(token));
+    const allApiBody = await allApiResp.json();
+    function findEndpoints(nodes: any[]): string[] {
+      const ids: string[] = [];
+      for (const n of nodes) { if (n.type === 'ENDPOINT') ids.push(String(n.id)); if (n.children?.length > 0) ids.push(...findEndpoints(n.children)); }
+      return ids;
+    }
+    const allEndpoints = findEndpoints(allApiBody?.data ?? []);
+    // 父角色只有 api1，找一个不是 api1 的
+    const outsideID = allEndpoints.find(id => id !== api1);
+    if (!outsideID) { test.skip(); return; }
     const resp = await api.put(`${API_BASE}/api/v1/admin/roles/${childRoleID}/apis`, {
       ...auth(token),
-      data: { api_permission_ids: [api1, '99999999'].map(String) },
+      data: { api_permission_ids: [api1, outsideID] },
     });
     expect(resp.status()).toBe(400);
     const body = await resp.json();
@@ -735,9 +766,14 @@ test.describe('边界测试 Boundary', () => {
     api = await request.newContext();
     token = await loginAdmin(api);
 
-    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources`, auth(token));
-    const allRes: any[] = (await resResp.json())?.data?.list ?? (await resResp.json())?.data ?? [];
-    [res1, res2, res3] = allRes.slice(0, 3).map((r: any) => String(r.id));
+    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources/tree?app_code=platform_admin`, auth(token));
+    const resBody = await resResp.json();
+    function extractIDs(nodes: any[]): any[] {
+      const ids: any[] = [];
+      for (const n of nodes) { ids.push(n.id); if (n.children?.length > 0) ids.push(...extractIDs(n.children)); }
+      return ids;
+    }
+    [res1, res2, res3] = extractIDs(resBody?.data ?? []).slice(0, 3).map((id: any) => String(id));
 
     const suffix = Date.now();
     const pResp = await api.post(`${API_BASE}/api/v1/admin/roles`, {
@@ -823,9 +859,14 @@ test.describe('回归测试 Regression', () => {
     api = await request.newContext();
     token = await loginAdmin(api);
 
-    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources`, auth(token));
-    const allRes: any[] = (await resResp.json())?.data?.list ?? (await resResp.json())?.data ?? [];
-    const ids = allRes.slice(0, 2).map((r: any) => String(r.id));
+    const resResp = await api.get(`${API_BASE}/api/v1/admin/resources/tree?app_code=platform_admin`, auth(token));
+    const resBody = await resResp.json();
+    function extractIDs(nodes: any[]): any[] {
+      const ids: any[] = [];
+      for (const n of nodes) { ids.push(n.id); if (n.children?.length > 0) ids.push(...extractIDs(n.children)); }
+      return ids;
+    }
+    const ids = extractIDs(resBody?.data ?? []).slice(0, 2).map((id: any) => String(id));
 
     const suffix = Date.now();
     const pResp = await api.post(`${API_BASE}/api/v1/admin/roles`, {
