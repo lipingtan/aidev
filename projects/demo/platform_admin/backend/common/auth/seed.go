@@ -129,6 +129,7 @@ func seedMenus(db *gorm.DB) error {
 		{ParentID: &sysParentID, Type: "MENU", Name: "系统配置", Path: "/system/config", Icon: "Setting", PermissionCode: "system:config:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "config-mgmt", SortOrder: 6, Status: 1, Version: 1},
 		{ParentID: &sysParentID, Type: "MENU", Name: "接口管理", Path: "/system/api", Icon: "Connection", PermissionCode: "system:api:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "api-perm-mgmt", SortOrder: 7, Status: 1, Version: 1},
 		{ParentID: &sysParentID, Type: "MENU", Name: "插件管理", Path: "/system/plugins", Icon: "Box", PermissionCode: "system:plugin:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "plugin-mgmt", SortOrder: 8, Status: 1, Version: 1},
+		{ParentID: &sysParentID, Type: "MENU", Name: "字段对象管理", Path: "/system/field-objects", Icon: "Grid", PermissionCode: "system:field-object:list", AppCode: "platform_admin", Platform: "admin", ModuleCode: "field-perm-mgmt", SortOrder: 9, Status: 1, Version: 1},
 	}
 	if err := db.Create(&sysChildren).Error; err != nil {
 		return err
@@ -151,6 +152,37 @@ func seedMenus(db *gorm.DB) error {
 	}
 	if err := db.Create(&monChildren).Error; err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// SeedCR2Menus 补充 CR-2 新增菜单（幂等，可多次执行）
+func SeedCR2Menus(db *gorm.DB) error {
+	// 字段对象管理菜单（系统管理下）
+	var fieldObjCount int64
+	db.Model(&model.Resource{}).Where("path = ?", "/system/field-objects").Count(&fieldObjCount)
+	if fieldObjCount == 0 {
+		var sysParent model.Resource
+		if err := db.Where("path = ? AND app_code = ?", "/system", "platform_admin").First(&sysParent).Error; err == nil {
+			sysID := sysParent.ID
+			fieldObjMenu := &model.Resource{
+				ParentID: &sysID, Type: "MENU", Name: "字段对象管理", Path: "/system/field-objects",
+				Icon: "Grid", PermissionCode: "system:field-object:list",
+				AppCode: "platform_admin", Platform: "admin", ModuleCode: "field-perm-mgmt",
+				SortOrder: 9, Status: 1, Version: 1,
+			}
+			db.Create(fieldObjMenu)
+		}
+	}
+
+	// 清理旧的"权限管理/权限演示"菜单组（如果存在）
+	var permParent model.Resource
+	if err := db.Where("path = ? AND app_code = ?", "/permission", "platform_admin").First(&permParent).Error; err == nil {
+		// 删除子菜单
+		db.Where("parent_id = ?", permParent.ID).Delete(&model.Resource{})
+		// 删除父菜单
+		db.Delete(&permParent)
 	}
 
 	return nil

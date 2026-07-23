@@ -93,24 +93,35 @@
     </el-dialog>
 
     <!-- 角色分配对话框 -->
-    <el-dialog v-model="roleDialogVisible" title="角色分配" width="500px" destroy-on-close>
-      <el-checkbox-group v-model="selectedRoleIds">
-        <el-checkbox
-          v-for="role in currentTenantRoles"
-          :key="role.id"
-          :label="role.id"
-          :value="role.id"
-          style="display: flex; align-items: center; margin-bottom: 4px;"
-        >
-          {{ role.name }}（{{ role.code }}）
-          <el-tag
-            v-if="role.roleType === 'PERMISSION_SET'"
-            size="small"
-            type="warning"
-            style="margin-left: 6px"
-          >权限集</el-tag>
-        </el-checkbox>
-      </el-checkbox-group>
+    <el-dialog v-model="roleDialogVisible" title="角色分配" width="560px" destroy-on-close>
+      <div style="max-height: 400px; overflow-y: auto;">
+        <h4 style="margin: 0 0 8px;">角色</h4>
+        <el-checkbox-group v-model="selectedRoleIds">
+          <el-checkbox
+            v-for="role in normalRoles"
+            :key="role.id"
+            :label="role.id"
+            :value="role.id"
+            style="display: flex; align-items: center; margin-bottom: 4px;"
+          >
+            {{ role.name }}（{{ role.code }}）
+          </el-checkbox>
+        </el-checkbox-group>
+        <el-divider v-if="permissionSetRoles.length" />
+        <h4 v-if="permissionSetRoles.length" style="margin: 0 0 8px;">权限集</h4>
+        <el-checkbox-group v-model="selectedRoleIds">
+          <el-checkbox
+            v-for="role in permissionSetRoles"
+            :key="role.id"
+            :label="role.id"
+            :value="role.id"
+            style="display: flex; align-items: center; margin-bottom: 4px;"
+          >
+            {{ role.name }}（{{ role.code }}）
+            <el-tag size="small" type="warning" style="margin-left: 6px">权限集</el-tag>
+          </el-checkbox>
+        </el-checkbox-group>
+      </div>
       <template #footer>
         <el-button @click="roleDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="roleSaving" @click="handleRoleSave">确定</el-button>
@@ -120,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
@@ -250,6 +261,9 @@ const roleUserId = ref('')
 const selectedRoleIds = ref<string[]>([])
 const currentTenantRoles = ref<{ id: string; name: string; code: string; roleType: string }[]>([])
 
+// 分离普通角色和权限集
+const normalRoles = computed(() => currentTenantRoles.value.filter(r => r.roleType !== 'PERMISSION_SET'))
+const permissionSetRoles = computed(() => currentTenantRoles.value.filter(r => r.roleType === 'PERMISSION_SET'))
 async function handleRoleAssign(row: UserPageItem) {
   roleUserId.value = row.id
   roleDialogVisible.value = true

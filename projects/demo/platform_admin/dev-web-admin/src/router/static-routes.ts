@@ -139,24 +139,30 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '服务监控', icon: 'Monitor', permission: 'monitor:server' }
       },
 
-      // 权限演示
+      // 权限演示（hidden，仅供字段对象管理页帮助 Drawer 引用）
       {
         path: 'permission/button',
         name: 'permission-button',
         component: () => import('@/views/permission/button/ButtonPermission.vue'),
-        meta: { title: '按钮权限', icon: 'Lock', permission: 'permission:button' }
+        meta: { title: '按钮权限', icon: 'Lock', permission: 'permission:button', hidden: true }
       },
       {
         path: 'permission/page',
         name: 'permission-page',
         component: () => import('@/views/permission/page/PagePermission.vue'),
-        meta: { title: '页面权限', icon: 'Key', permission: 'permission:page' }
+        meta: { title: '页面权限', icon: 'Key', permission: 'permission:page', hidden: true }
       },
       {
         path: 'permission/field',
         name: 'permission-field',
         component: () => import('@/views/permission/field-permission/index.vue'),
-        meta: { title: '字段权限', icon: 'Grid', permission: 'permission:field:list' }
+        meta: { title: '字段权限', icon: 'Grid', permission: 'permission:field:list', hidden: true }
+      },
+      {
+        path: 'system/field-objects',
+        name: 'system-field-objects',
+        component: () => import('@/views/system/field-objects/index.vue'),
+        meta: { title: '字段对象管理', icon: 'Grid', permission: 'system:field-object:list' }
       },
       // 插件容器
       {

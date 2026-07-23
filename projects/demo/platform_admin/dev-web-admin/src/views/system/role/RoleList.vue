@@ -102,6 +102,9 @@
         <el-tab-pane label="数据权限" name="data">
           <DataScopeTab :role-id="currentRole!.id" />
         </el-tab-pane>
+        <el-tab-pane label="字段权限" name="field">
+          <FieldPermTab :role-id="currentRole!.id" />
+        </el-tab-pane>
       </el-tabs>
     </el-drawer>
 
@@ -122,6 +125,7 @@ import RoleForm from './RoleForm.vue'
 import MenuPermTab from './MenuPermTab.vue'
 import ApiPermTab from './ApiPermTab.vue'
 import DataScopeTab from './DataScopeTab.vue'
+import FieldPermTab from './FieldPermTab.vue'
 
 const treeLoading = ref(false)
 const roleTree = ref<RoleItem[]>([])
@@ -173,11 +177,26 @@ function isPluginStopped(appCode: string): boolean {
 async function loadRoleTree() {
   treeLoading.value = true
   try {
-    const roleType = activeTab.value === 'permission_set' ? 'PERMISSION_SET' : undefined
-    roleTree.value = await getRoleList(roleType)
+    if (activeTab.value === 'permission_set') {
+      roleTree.value = await getRoleList('PERMISSION_SET')
+    } else {
+      // 角色 Tab：获取全部后过滤掉 PERMISSION_SET
+      const all = await getRoleList()
+      roleTree.value = filterOutPermissionSet(all)
+    }
   } finally {
     treeLoading.value = false
   }
+}
+
+/** 递归过滤掉 PERMISSION_SET 类型角色 */
+function filterOutPermissionSet(nodes: RoleItem[]): RoleItem[] {
+  return nodes
+    .filter(n => n.role_type !== 'PERMISSION_SET')
+    .map(n => ({
+      ...n,
+      children: n.children ? filterOutPermissionSet(n.children) : undefined
+    }))
 }
 
 /** Tab 切换处理 */

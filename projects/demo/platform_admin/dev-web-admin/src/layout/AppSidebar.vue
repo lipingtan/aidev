@@ -46,12 +46,10 @@ function buildMenuFromRoutes(): MenuItem[] {
   const systemItems = children.filter(r => r.path?.startsWith('system/'))
   const logItems = children.filter(r => r.path?.startsWith('log/'))
   const monitorItems = children.filter(r => r.path?.startsWith('monitor/'))
-  const permissionItems = children.filter(r => r.path?.startsWith('permission/'))
   const otherItems = children.filter(r =>
     !r.path?.startsWith('system/') &&
     !r.path?.startsWith('log/') &&
-    !r.path?.startsWith('monitor/') &&
-    !r.path?.startsWith('permission/')
+    !r.path?.startsWith('monitor/')
   )
 
   const result: MenuItem[] = []
@@ -113,22 +111,6 @@ function buildMenuFromRoutes(): MenuItem[] {
       }))
     })
   }
-  if (permissionItems.length) {
-    result.push({
-      id: 0,
-      name: '权限演示',
-      path: '',
-      icon: 'Lock',
-      children: permissionItems.map(r => ({
-        id: 0,
-        name: (r.meta?.title as string) || '',
-        path: '/' + r.path,
-        icon: (r.meta?.icon as string) || '',
-        permission_code: r.meta?.permission as string
-      }))
-    })
-  }
-
   return result
 }
 

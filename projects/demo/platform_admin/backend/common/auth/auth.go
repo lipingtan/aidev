@@ -53,6 +53,10 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	if err := SeedConfigDefaults(db); err != nil {
 		log.Printf("[auth-rbac] Seed 配置默认值失败: %v", err)
 	}
+	// Seed CR-2 权限管理菜单（增量，幂等）
+	if err := SeedCR2Menus(db); err != nil {
+		log.Printf("[auth-rbac] Seed CR-2 菜单失败: %v", err)
+	}
 
 	// 清理 sys_menu 中遗留的插件菜单（一次性迁移）
 	cleanLegacyPluginMenus(db)
