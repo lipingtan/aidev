@@ -21,10 +21,11 @@ type Config struct {
 
 // JWTConfig JWT 相关配置
 type JWTConfig struct {
-	Secret           string        `yaml:"secret"`
-	PlatformTokenTTL time.Duration `yaml:"platform-token-ttl"`
-	AccessTokenTTL   time.Duration `yaml:"access-token-ttl"`
-	Issuer           string        `yaml:"issuer"`
+	Secret             string        `yaml:"secret"`
+	PlatformTokenTTL   time.Duration `yaml:"platform-token-ttl"`
+	AccessTokenTTL     time.Duration `yaml:"access-token-ttl"`
+	UserAccessTokenTTL time.Duration `yaml:"user-access-token-ttl"` // C端 token 有效期，默认 7 天
+	Issuer             string        `yaml:"issuer"`
 }
 
 // PermConfig 权限相关配置
@@ -89,10 +90,11 @@ func DefaultConfig() *Config {
 		CacheType:  "local",
 		IDStrategy: "snowflake",
 		JWT: JWTConfig{
-			Secret:           "change-me-in-production",
-			PlatformTokenTTL: 168 * time.Hour,
-			AccessTokenTTL:   2 * time.Hour,
-			Issuer:           "auth-rbac",
+			Secret:             "change-me-in-production",
+			PlatformTokenTTL:   168 * time.Hour,
+			AccessTokenTTL:     2 * time.Hour,
+			UserAccessTokenTTL: 7 * 24 * time.Hour,
+			Issuer:             "auth-rbac",
 		},
 		Permission: PermConfig{
 			WildcardEnabled:     true,

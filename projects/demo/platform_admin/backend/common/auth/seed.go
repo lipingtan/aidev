@@ -157,6 +157,35 @@ func seedMenus(db *gorm.DB) error {
 	return nil
 }
 
+// SeedCR5Menus 补充 CR-5 新增菜单：C端用户管理（幂等，可多次执行）
+func SeedCR5Menus(db *gorm.DB) error {
+	var count int64
+	db.Model(&model.Resource{}).Where("path = ?", "/system/biz-user").Count(&count)
+	if count > 0 {
+		return nil // 已存在，幂等跳过
+	}
+	var sysParent model.Resource
+	if err := db.Where("path = ? AND app_code = ?", "/system", "platform_admin").First(&sysParent).Error; err != nil {
+		return nil // 系统管理父菜单不存在时跳过
+	}
+	sysID := sysParent.ID
+	menu := &model.Resource{
+		ParentID:       &sysID,
+		Type:           "MENU",
+		Name:           "C端用户管理",
+		Path:           "/system/biz-user",
+		Icon:           "Avatar",
+		PermissionCode: "biz:user:list",
+		AppCode:        "platform_admin",
+		Platform:       "admin",
+		ModuleCode:     "biz-user-mgmt",
+		SortOrder:      10,
+		Status:         1,
+		Version:        1,
+	}
+	return db.Create(menu).Error
+}
+
 // SeedCR2Menus 补充 CR-2 新增菜单（幂等，可多次执行）
 func SeedCR2Menus(db *gorm.DB) error {
 	// 字段对象管理菜单（系统管理下）
@@ -207,4 +236,33 @@ func SeedConfigDefaults(db *gorm.DB) error {
 		db.Create(&cfg)
 	}
 	return nil
+}
+
+// SeedCR6Menus 补充 CR-6 新增菜单：域名管理（幂等，可多次执行）
+func SeedCR6Menus(db *gorm.DB) error {
+	var count int64
+	db.Model(&model.Resource{}).Where("path = ?", "/system/tenant-domain").Count(&count)
+	if count > 0 {
+		return nil // 已存在，幂等跳过
+	}
+	var sysParent model.Resource
+	if err := db.Where("path = ? AND app_code = ?", "/system", "platform_admin").First(&sysParent).Error; err != nil {
+		return nil // 系统管理父菜单不存在时跳过
+	}
+	sysID := sysParent.ID
+	menu := &model.Resource{
+		ParentID:       &sysID,
+		Type:           "MENU",
+		Name:           "域名管理",
+		Path:           "/system/tenant-domain",
+		Icon:           "Link",
+		PermissionCode: "system:tenant-domain:list",
+		AppCode:        "platform_admin",
+		Platform:       "admin",
+		ModuleCode:     "tenant-domain-mgmt",
+		SortOrder:      11,
+		Status:         1,
+		Version:        1,
+	}
+	return db.Create(menu).Error
 }

@@ -12,6 +12,7 @@ import (
 	"go-admin/common/auth/middleware"
 	"go-admin/common/auth/model"
 	"go-admin/common/auth/service"
+	"go-admin/common/auth/strategy"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -121,7 +122,7 @@ func TestLogin_Success_MultiTenant(t *testing.T) {
 		Data struct {
 			TokenType string             `json:"token_type"`
 			Token     string             `json:"token"`
-			Tenants   []service.TenantInfo `json:"tenants"`
+			Tenants   []strategy.TenantInfo `json:"tenants"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)

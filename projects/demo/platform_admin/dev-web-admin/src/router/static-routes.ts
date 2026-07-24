@@ -201,6 +201,22 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '租户插件', icon: 'Connection', permission: 'system:plugin:tenant' }
       },
 
+      // C端用户管理
+      {
+        path: 'system/biz-user',
+        name: 'biz-user',
+        component: () => import('@/views/biz-user/index.vue'),
+        meta: { title: 'C端用户管理', icon: 'Avatar', permission: 'biz:user:list' }
+      },
+
+      // 域名管理
+      {
+        path: 'system/tenant-domain',
+        name: 'system-tenant-domain',
+        component: () => import('@/views/system/tenant-domain/index.vue'),
+        meta: { title: '域名管理', icon: 'Link', permission: 'system:tenant-domain:list' }
+      },
+
     ]
   }
 ]

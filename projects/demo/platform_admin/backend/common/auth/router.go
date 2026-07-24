@@ -64,6 +64,10 @@ type Dependencies struct {
 	// 应用目录与订阅管理
 	AppCatalogHandler *handler.AppCatalogHandler
 
+	// 域名-租户映射
+	TenantDomainService *service.TenantDomainService
+	TenantDomainHandler *handler.TenantDomainHandler
+
 	// 插件管理（可选，Task 11 负责注入）
 	PluginHandler *handler.PluginHandler
 
@@ -75,10 +79,18 @@ type Dependencies struct {
 }
 
 // RegisterRoutes 注册 auth 模块所有路由到指定路由组
-// 路由组结构: /auth（公开）+ /api/v1/common（仅认证）+ /api/v1/admin（完整中间件链）
+// 路由组结构: /auth（公开）+ /api/v1/public（公开业务）+ /api/v1/common（仅认证）+ /api/v1/admin（完整中间件链）
 func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 	// 认证路由（公开，不走任何中间件）
 	deps.AuthHandler.RegisterRoutes(rg)
+
+	// 公开业务路由（无需认证）
+	public := rg.Group("/api/v1/public")
+	{
+		if deps.TenantDomainHandler != nil {
+			public.GET("/tenant-domain", deps.TenantDomainHandler.QueryByDomain)
+		}
+	}
 
 	// 公共路由（仅需认证，不走权限中间件）
 	common := rg.Group("/api/v1/common")
@@ -157,6 +169,11 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		// 应用目录与订阅管理路由
 		if deps.AppCatalogHandler != nil {
 			deps.AppCatalogHandler.RegisterRoutes(admin)
+		}
+
+		// 域名-租户映射管理路由
+		if deps.TenantDomainHandler != nil {
+			deps.TenantDomainHandler.RegisterRoutes(admin)
 		}
 
 		// Stub 路由

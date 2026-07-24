@@ -1,62 +1,30 @@
 /**
- * 认证 API（H5 端）
- * 业主手机号密码登录、短信验证码登录
+ * 认证相关 API
+ * - 发送验证码
+ * - 登录（手机号 + 验证码 + 租户编码）
+ * - 登出
+ * - 获取菜单
  */
+
 import request from '@/utils/request'
+import type { MenuItem } from '@/types'
 
-// ==================== 类型定义 ====================
-
-export interface LoginParams {
-  username: string
-  password: string
-  captchaCode: string
-  captchaKey: string
-  clientType: string
+/** 发送验证码 */
+export function sendCode(phone: string, tenantCode: string) {
+  return request.post('/auth/send-code', { phone, tenantCode })
 }
 
-export interface SmsLoginParams {
-  phone: string
-  smsCode: string
-  clientType: string
-}
-
-export interface TokenResult {
-  accessToken: string
-  refreshToken: string
-  userId: number
-  username: string
-  realName: string
-  avatar: string
-}
-
-export interface CaptchaResult {
-  captchaKey: string
-  captchaImage: string
-}
-
-// ==================== API 方法 ====================
-
-/** 获取图形验证码 */
-export function getCaptcha(): Promise<CaptchaResult> {
-  return request.get('/user/auth/captcha')
-}
-
-/** 用户名密码登录 */
-export function login(data: LoginParams): Promise<TokenResult> {
-  return request.post('/user/auth/login', data)
-}
-
-/** 手机号短信验证码登录 */
-export function loginBySms(data: SmsLoginParams): Promise<TokenResult> {
-  return request.post('/user/auth/login/sms', data)
-}
-
-/** 发送短信验证码 */
-export function sendSmsCode(phone: string): Promise<void> {
-  return request.post(`/user/auth/sms-code?phone=${phone}`)
+/** 登录 */
+export function login(phone: string, code: string, tenantCode: string) {
+  return request.post<any, { token: string }>('/auth/login', { phone, code, tenantCode })
 }
 
 /** 登出 */
-export function logout(): Promise<void> {
-  return request.post('/user/auth/logout')
+export function logout() {
+  return request.post('/auth/logout')
+}
+
+/** 获取当前用户菜单 */
+export function getMenu() {
+  return request.get<any, MenuItem[]>('/menu')
 }

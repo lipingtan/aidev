@@ -17,7 +17,7 @@ func RegisterDataScopeCallback(db *gorm.DB, enabled bool, orgProvider spi.Organi
 		return
 	}
 	dataScopeOrgProvider = orgProvider
-	_ = db.Callback().Query().Before("gorm:query").Register("auth:data_scope", dataScopeQueryCallback)
+	_ = db.Callback().Query().After("auth:tenant_query").Before("gorm:query").Register("auth:data_scope", dataScopeQueryCallback)
 }
 
 // dataScopeQueryCallback GORM Callback 实现：自动注入数据权限 WHERE 条件

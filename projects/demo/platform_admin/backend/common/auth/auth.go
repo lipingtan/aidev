@@ -3,7 +3,15 @@ package auth
 import (
 	"log"
 
+	userAuth "go-admin/app/user_auth"
+	userAuthHandler "go-admin/app/user_auth/handler"
+	userAuthModel "go-admin/app/user_auth/model"
+	userAuthRepo "go-admin/app/user_auth/repository"
+	userAuthService "go-admin/app/user_auth/service"
+	userAuthSpi "go-admin/app/user_auth/spi"
+	userStrategy "go-admin/app/user_auth/strategy"
 	pluginRouter "go-admin/app/plugin/router"
+	"go-admin/common/auth/cache"
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/discovery"
 	"go-admin/common/auth/handler"
@@ -45,6 +53,9 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	rg := engine.Group("")
 	RegisterRoutes(rg, deps)
 
+	// 注册 user_auth 域路由
+	initUserAuth(cfg, deps, engine)
+
 	// Seed 初始数据
 	if err := SeedInitialData(db); err != nil {
 		log.Printf("[auth-rbac] Seed 失败: %v", err)
@@ -56,6 +67,14 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	// Seed CR-2 权限管理菜单（增量，幂等）
 	if err := SeedCR2Menus(db); err != nil {
 		log.Printf("[auth-rbac] Seed CR-2 菜单失败: %v", err)
+	}
+	// Seed CR-5 C端用户管理菜单（增量，幂等）
+	if err := SeedCR5Menus(db); err != nil {
+		log.Printf("[auth-rbac] Seed CR-5 菜单失败: %v", err)
+	}
+	// Seed CR-6 域名管理菜单（增量，幂等）
+	if err := SeedCR6Menus(db); err != nil {
+		log.Printf("[auth-rbac] Seed CR-6 菜单失败: %v", err)
 	}
 
 	// 清理 sys_menu 中遗留的插件菜单（一次性迁移）
@@ -77,6 +96,9 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	if err := deps.AdminConfigService.MigrateFromSysConfig(); err != nil {
 		log.Printf("[auth-rbac] sys_config 迁移失败: %v", err)
 	}
+
+	// 注册租户隔离 GORM Callback（必须在 DataScope 之前注册）
+	middleware.RegisterTenantIsolationCallback(db)
 
 	// 注册数据权限 GORM Callback（含 OrganizationProvider）
 	orgProvider := &spi.DefaultOrganizationProvider{DB: db}
@@ -126,6 +148,10 @@ func autoMigrate(db *gorm.DB) error {
 		&model.OrgUnit{},
 		&model.UserOrg{},
 		&model.AdminConfig{},
+		// CR5: C端用户表
+		&userAuthModel.BizUser{},
+		// CR6: 域名-租户映射表
+		&model.TenantDomain{},
 	)
 }
 
@@ -199,6 +225,12 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	pluginHandler := handler.NewPluginHandler(pluginMgr, pluginInstaller)
 	appCatalogHandler := handler.NewAppCatalogHandler(db, pluginMgr)
 
+	// 域名-租户映射
+	domainRepo := repository.NewTenantDomainRepository()
+	tenantDomainCache := cache.NewLocalCache()
+	tenantDomainSvc := service.NewTenantDomainService(db, domainRepo, tenantRepo, tenantDomainCache)
+	tenantDomainHandler := handler.NewTenantDomainHandler(tenantDomainSvc)
+
 	return &Dependencies{
 		DB:  db,
 		Cfg: cfg,
@@ -251,6 +283,9 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 		AppCatalogHandler: appCatalogHandler,
 		PluginHandler:     pluginHandler,
 
+		TenantDomainService: tenantDomainSvc,
+		TenantDomainHandler: tenantDomainHandler,
+
 		AppPrefixMap:         middleware.NewAppPrefixMap(),
 		ModuleCodeCache:      middleware.NewModuleCodeCache(),
 		FieldObjectRegistry:  middleware.NewFieldObjectRegistry(),
@@ -276,4 +311,45 @@ func cleanLegacyPluginMenus(db *gorm.DB) {
 	if result.RowsAffected > 0 {
 		log.Printf("[auth-rbac] 清理了 %d 条遗留插件菜单", result.RowsAffected)
 	}
+}
+
+// initUserAuth 初始化 user_auth 域：实例化依赖、注册路由、注册 SmsStrategy
+func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
+	db := deps.DB
+
+	// 实例化 user_auth 域依赖
+	smsSender := &userAuthSpi.ConsoleMockSender{}
+	codeStore := userAuthService.NewMemoryCodeStore()
+	smsSvc := userAuthService.NewSmsService(smsSender, codeStore)
+	bizUserRepo := userAuthRepo.NewBizUserRepository()
+	bizUserSvc := userAuthService.NewBizUserService(db, bizUserRepo)
+	menuSvc := userAuthService.NewUserMenuService(db)
+	smsStrategy := userStrategy.NewSmsStrategy(smsSvc, bizUserSvc, bizUserRepo, cfg, db)
+
+	// 实例化 Handler
+	uaHandler := userAuthHandler.NewUserAuthHandler(smsSvc, bizUserSvc, menuSvc, cfg, db)
+	bizHandler := userAuthHandler.NewBizUserHandler(bizUserSvc)
+
+	// C端公开路由（无需认证）
+	publicGroup := engine.Group("/api/v1/user/auth")
+
+	// C端认证路由（需 auth 中间件 + C端用户检查）
+	userGroup := engine.Group("/api/v1/user/auth")
+	userGroup.Use(middleware.AuthMiddleware(deps.AuthService, bizUserSvc))
+
+	// 管理端路由（需 auth + 应用解析 + 动态权限中间件）
+	adminGroup := engine.Group("/api/v1/admin")
+	adminGroup.Use(middleware.AuthMiddleware(deps.AuthService))
+	if deps.AppPrefixMap != nil && deps.ModuleCodeCache != nil {
+		adminGroup.Use(middleware.AppResolveMiddleware(deps.AppPrefixMap, deps.ModuleCodeCache, db))
+	}
+	adminGroup.Use(middleware.DynamicPermissionMiddleware(db, cfg, deps.AdminConfigService))
+
+	// 注册路由
+	userAuth.RegisterRoutes(publicGroup, userGroup, adminGroup, uaHandler, bizHandler)
+
+	// 注册 SmsStrategy 到 AuthHandler 的 StrategyRouter
+	userAuth.RegisterSmsStrategy(deps.AuthHandler.GetStrategyRouter(), smsStrategy)
+
+	log.Println("[user_auth] C端认证域路由注册完成")
 }

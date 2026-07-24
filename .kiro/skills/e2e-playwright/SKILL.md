@@ -394,7 +394,82 @@ function extractID(body: any): string {
 
 ---
 
-### Step 3: 执行测试
+## 登录会话复用规则（强制）
+
+**核心原则**：避免每个测试用例都重复执行登录操作。登录应作为共享状态复用，除非测试场景本身与登录逻辑强相关。
+
+### API 测试中的登录复用
+
+```typescript
+// ✅ 正确：在 describe 级别共享 token
+test.describe('biz_user 管理接口', () => {
+  let token: string;
+  
+  test.beforeAll(async ({ request }) => {
+    token = await loginAdmin(request);
+  });
+
+  test('列表查询', async ({ request }) => {
+    const resp = await request.get(`${API_BASE}/api/v1/admin/biz-users`, auth(token));
+    // ...
+  });
+
+  test('创建用户', async ({ request }) => {
+    const resp = await request.post(`${API_BASE}/api/v1/admin/biz-users`, {
+      ...auth(token),
+      data: { phone: '13800138000' },
+    });
+    // ...
+  });
+});
+
+// ❌ 错误：每个 test 都重新登录
+test('列表查询', async ({ request }) => {
+  const token = await loginAdmin(request);  // 浪费时间！
+  // ...
+});
+```
+
+### UI 测试中的登录复用
+
+```typescript
+// ✅ 正确：使用 storageState 复用浏览器会话
+// playwright.config.ts 中配置 globalSetup 执行一次登录并保存状态
+// 或在 beforeAll 中通过 API 获取 token 注入 localStorage
+
+test.describe('C端用户管理页面', () => {
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    await uiLogin(page, 'admin', 'admin123');
+    await page.context().storageState({ path: 'tests/.auth/admin.json' });
+    await page.close();
+  });
+
+  test.use({ storageState: 'tests/.auth/admin.json' });
+
+  test('列表页展示正确', async ({ page }) => {
+    // 直接导航，无需再次登录
+    await navigateTo(page, '/system/biz-user');
+    await expect(page.locator('.el-table')).toBeVisible();
+  });
+});
+```
+
+### 必须重新登录的场景（例外）
+
+仅当以下场景时才在 test 内部执行登录：
+
+| 场景 | 原因 |
+|------|------|
+| 测试登录页面本身的功能（验证码/错误提示） | 登录是被测对象 |
+| 测试登出后的行为 | 需要先登出再验证 |
+| 测试"强制登出后 token 失效" | 需要重新登录获取新 token 对比 |
+| 测试不同角色/不同租户的权限差异 | 需要以不同身份登录 |
+| 测试"重新登录后菜单/权限已更新" | 验证登录触发的刷新逻辑 |
+
+**规则总结**：如果用例的核心验证点不是「登录本身」或「登录触发的副作用」，必须复用已有会话，不得重复登录。
+
+---
 
 #### 3.1 确认后端已启动
 

@@ -7,56 +7,22 @@ import (
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/errors"
 	"go-admin/common/auth/model"
+	"go-admin/common/auth/strategy"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
-
-// TenantInfo 租户简要信息（嵌入 JWT claims）
-type TenantInfo struct {
-	ID   int64  `json:"id,string"`
-	Code string `json:"code"`
-	Name string `json:"name"`
-}
-
-// PlatformClaims platform_token 的 JWT claims
-type PlatformClaims struct {
-	jwt.RegisteredClaims
-	UserID  int64        `json:"user_id"`
-	Tenants []TenantInfo `json:"tenants"`
-}
-
-// AccessClaims access_token 的 JWT claims
-type AccessClaims struct {
-	jwt.RegisteredClaims
-	UserID   int64   `json:"user_id"`
-	TenantID int64   `json:"tenant_id"`
-	Roles    []int64 `json:"roles"`
-}
-
-// LoginResponse 登录响应
-type LoginResponse struct {
-	TokenType     string       `json:"token_type"`               // "platform" 或 "access"
-	Token         string       `json:"token"`                    // platform_token 或 access_token
-	AccessToken   string       `json:"access_token,omitempty"`   // 单租户时直接返回
-	Tenants       []TenantInfo `json:"tenants,omitempty"`        // 可用租户列表
-	ExpiresIn     int64        `json:"expires_in"`               // 过期秒数
-	PlatformToken string       `json:"platform_token,omitempty"` // 单租户时也返回 platform_token 用于后续刷新
-}
-
-// SelectTenantResponse 选择租户响应
-type SelectTenantResponse struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int64  `json:"expires_in"`
-}
 
 // AuthService 认证服务
 type AuthService struct {
 	db        *gorm.DB
 	cfg       *config.Config
 	blacklist sync.Map // token JTI -> 过期时间
+}
+
+// GetConfig 返回配置（供中间件等外部调用方使用）
+func (s *AuthService) GetConfig() *config.Config {
+	return s.cfg
 }
 
 // CheckTenantStatus 检查租户状态
@@ -91,7 +57,7 @@ func NewAuthService(db *gorm.DB, cfg *config.Config) *AuthService {
 }
 
 // Login 用户登录
-func (s *AuthService) Login(username, password string) (*LoginResponse, error) {
+func (s *AuthService) Login(username, password string) (*strategy.LoginResponse, error) {
 	// 查询用户
 	var user model.User
 	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
@@ -144,9 +110,9 @@ func (s *AuthService) Login(username, password string) (*LoginResponse, error) {
 		return nil, errors.NewAuthError(errors.ErrTenantDisabled, "所有关联租户均已禁用")
 	}
 
-	tenantInfos := make([]TenantInfo, len(tenants))
+	tenantInfos := make([]strategy.TenantInfo, len(tenants))
 	for i, t := range tenants {
-		tenantInfos[i] = TenantInfo{
+		tenantInfos[i] = strategy.TenantInfo{
 			ID:   t.ID,
 			Code: t.TenantCode,
 			Name: t.Name,
@@ -155,17 +121,26 @@ func (s *AuthService) Login(username, password string) (*LoginResponse, error) {
 
 	// 单租户优化：直接签发 access_token
 	if len(tenantInfos) == 1 {
-		platformToken, err := s.generatePlatformToken(user.ID, tenantInfos)
+		platformToken, err := strategy.GeneratePlatformToken(s.cfg, user.ID, tenantInfos)
 		if err != nil {
 			return nil, err
 		}
 
-		accessToken, err := s.generateAccessToken(user.ID, tenantInfos[0].ID)
+		// 查询用户在该租户下的角色
+		roleIDs := s.getUserRoles(user.ID, tenantInfos[0].ID)
+
+		accessToken, err := strategy.GenerateAccessToken(s.cfg, &strategy.AccessTokenOptions{
+			UserID:       user.ID,
+			TenantID:     tenantInfos[0].ID,
+			Roles:        roleIDs,
+			UserPool:     strategy.UserPoolAdmin,
+			TokenVersion: 0,
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		return &LoginResponse{
+		return &strategy.LoginResponse{
 			TokenType:     "access",
 			Token:         accessToken,
 			AccessToken:   accessToken,
@@ -176,12 +151,12 @@ func (s *AuthService) Login(username, password string) (*LoginResponse, error) {
 	}
 
 	// 多租户：签发 platform_token
-	platformToken, err := s.generatePlatformToken(user.ID, tenantInfos)
+	platformToken, err := strategy.GeneratePlatformToken(s.cfg, user.ID, tenantInfos)
 	if err != nil {
 		return nil, err
 	}
 
-	return &LoginResponse{
+	return &strategy.LoginResponse{
 		TokenType: "platform",
 		Token:     platformToken,
 		Tenants:   tenantInfos,
@@ -190,9 +165,9 @@ func (s *AuthService) Login(username, password string) (*LoginResponse, error) {
 }
 
 // SelectTenant 选择租户，签发 access_token
-func (s *AuthService) SelectTenant(platformTokenStr string, tenantID int64) (*SelectTenantResponse, error) {
+func (s *AuthService) SelectTenant(platformTokenStr string, tenantID int64) (*strategy.SelectTenantResponse, error) {
 	// 解析 platform_token
-	claims, err := s.ParsePlatformToken(platformTokenStr)
+	claims, err := strategy.ParsePlatformToken(s.cfg, platformTokenStr)
 	if err != nil {
 		return nil, err
 	}
@@ -227,20 +202,29 @@ func (s *AuthService) SelectTenant(platformTokenStr string, tenantID int64) (*Se
 		return nil, err
 	}
 
+	// 查询用户在该租户下的角色
+	roleIDs := s.getUserRoles(claims.UserID, tenantID)
+
 	// 签发 access_token
-	accessToken, err := s.generateAccessToken(claims.UserID, tenantID)
+	accessToken, err := strategy.GenerateAccessToken(s.cfg, &strategy.AccessTokenOptions{
+		UserID:       claims.UserID,
+		TenantID:     tenantID,
+		Roles:        roleIDs,
+		UserPool:     strategy.UserPoolAdmin,
+		TokenVersion: 0,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &SelectTenantResponse{
+	return &strategy.SelectTenantResponse{
 		AccessToken: accessToken,
 		ExpiresIn:   int64(s.cfg.JWT.AccessTokenTTL.Seconds()),
 	}, nil
 }
 
 // Refresh 用 platform_token 刷新 access_token
-func (s *AuthService) Refresh(platformTokenStr string, tenantID int64) (*SelectTenantResponse, error) {
+func (s *AuthService) Refresh(platformTokenStr string, tenantID int64) (*strategy.SelectTenantResponse, error) {
 	// 逻辑与 SelectTenant 相同
 	return s.SelectTenant(platformTokenStr, tenantID)
 }
@@ -248,7 +232,7 @@ func (s *AuthService) Refresh(platformTokenStr string, tenantID int64) (*SelectT
 // Logout 将 token 加入黑名单
 func (s *AuthService) Logout(tokenStr string) error {
 	// 解析 access_token 获取 JTI 和过期时间
-	claims, err := s.ParseAccessToken(tokenStr)
+	claims, err := strategy.ParseAccessToken(s.cfg, tokenStr)
 	if err != nil {
 		// 即使 token 过期也允许 logout
 		return nil
@@ -279,67 +263,22 @@ func (s *AuthService) IsBlacklisted(jti string) bool {
 	return true
 }
 
-// ParsePlatformToken 解析 platform_token
-func (s *AuthService) ParsePlatformToken(tokenStr string) (*PlatformClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &PlatformClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return []byte(s.cfg.JWT.Secret), nil
-	})
-	if err != nil {
-		return nil, errors.NewAuthError(errors.ErrTokenExpired, "platform_token 无效或已过期")
-	}
-
-	claims, ok := token.Claims.(*PlatformClaims)
-	if !ok || !token.Valid {
-		return nil, errors.NewAuthError(errors.ErrTokenExpired, "platform_token 无效")
-	}
-
-	return claims, nil
+// ParsePlatformToken 解析 platform_token（保留方法签名兼容）
+func (s *AuthService) ParsePlatformToken(tokenStr string) (*strategy.PlatformClaims, error) {
+	return strategy.ParsePlatformToken(s.cfg, tokenStr)
 }
 
-// ParseAccessToken 解析 access_token
-func (s *AuthService) ParseAccessToken(tokenStr string) (*AccessClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &AccessClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return []byte(s.cfg.JWT.Secret), nil
-	})
-	if err != nil {
-		return nil, errors.NewAuthError(errors.ErrTokenExpired, "access_token 无效或已过期")
-	}
-
-	claims, ok := token.Claims.(*AccessClaims)
-	if !ok || !token.Valid {
-		return nil, errors.NewAuthError(errors.ErrTokenExpired, "access_token 无效")
-	}
-
-	return claims, nil
+// ParseAccessToken 解析 access_token（保留方法签名兼容）
+func (s *AuthService) ParseAccessToken(tokenStr string) (*strategy.AccessClaims, error) {
+	return strategy.ParseAccessToken(s.cfg, tokenStr)
 }
 
-// generatePlatformToken 生成 platform_token
-func (s *AuthService) generatePlatformToken(userID int64, tenants []TenantInfo) (string, error) {
-	now := time.Now()
-	claims := &PlatformClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        uuid.New().String(),
-			Issuer:    s.cfg.JWT.Issuer,
-			Subject:   "platform",
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.JWT.PlatformTokenTTL)),
-		},
-		UserID:  userID,
-		Tenants: tenants,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(s.cfg.JWT.Secret))
-}
-
-// generateAccessToken 生成 access_token
-func (s *AuthService) generateAccessToken(userID, tenantID int64) (string, error) {
-	// 查询用户在该租户下的角色
+// getUserRoles 查询用户在指定租户下的有效角色 ID 列表
+func (s *AuthService) getUserRoles(userID, tenantID int64) []int64 {
 	var userRoles []model.UserRole
 	now := time.Now()
 	s.db.Where("user_id = ? AND tenant_id = ?", userID, tenantID).Find(&userRoles)
 
-	// 过滤有效时间窗口内的角色
 	roleIDs := make([]int64, 0, len(userRoles))
 	for _, ur := range userRoles {
 		if ur.EffectiveStart != nil && now.Before(*ur.EffectiveStart) {
@@ -350,20 +289,5 @@ func (s *AuthService) generateAccessToken(userID, tenantID int64) (string, error
 		}
 		roleIDs = append(roleIDs, ur.RoleID)
 	}
-
-	claims := &AccessClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        uuid.New().String(),
-			Issuer:    s.cfg.JWT.Issuer,
-			Subject:   "access",
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.JWT.AccessTokenTTL)),
-		},
-		UserID:   userID,
-		TenantID: tenantID,
-		Roles:    roleIDs,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(s.cfg.JWT.Secret))
+	return roleIDs
 }

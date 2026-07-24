@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"go-admin/common/auth/service"
+	"go-admin/common/auth/strategy"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-admin-team/go-admin-core/sdk/pkg/captcha"
@@ -12,11 +13,23 @@ import (
 // AuthHandler 认证 HTTP Handler
 type AuthHandler struct {
 	authSvc *service.AuthService
+	router  *strategy.StrategyRouter
 }
 
 // NewAuthHandler 构造认证 Handler
 func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
-	return &AuthHandler{authSvc: authSvc}
+	h := &AuthHandler{
+		authSvc: authSvc,
+		router:  strategy.NewStrategyRouter(),
+	}
+	// 注册密码策略
+	h.router.Register(strategy.NewPasswordStrategy(authSvc.Login))
+	return h
+}
+
+// GetStrategyRouter 返回策略路由器（供外部注册新策略）
+func (h *AuthHandler) GetStrategyRouter() *strategy.StrategyRouter {
+	return h.router
 }
 
 // RegisterRoutes 注册 /auth 路由组
@@ -46,10 +59,11 @@ func (h *AuthHandler) Captcha(c *gin.Context) {
 
 // LoginRequest 登录请求
 type LoginRequest struct {
-	Username   string `json:"username" binding:"required"`
-	Password   string `json:"password" binding:"required"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
 	CaptchaKey  string `json:"captcha_key"`
 	CaptchaCode string `json:"captcha_code"`
+	GrantType   string `json:"grant_type"`
 }
 
 // Login 用户登录
@@ -57,6 +71,41 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		Error(c, &errBadRequest{message: "参数错误: " + err.Error()})
+		return
+	}
+
+	// grant_type 为空或 "password" → 执行现有密码登录逻辑
+	if req.GrantType == "" || req.GrantType == "password" {
+		h.handlePasswordLogin(c, &req)
+		return
+	}
+
+	// 其他 grant_type → 通过策略路由分发
+	s, err := h.router.Route(req.GrantType)
+	if err != nil {
+		Error(c, &errBadRequest{message: "不支持的认证类型: " + req.GrantType})
+		return
+	}
+
+	_, authErr := s.Authenticate(c)
+	if authErr != nil {
+		Error(c, authErr)
+		return
+	}
+
+	// 从 context 获取登录响应（由策略写入）
+	respVal, exists := c.Get("login_response")
+	if !exists {
+		Error(c, &errBadRequest{message: "认证策略未返回结果"})
+		return
+	}
+	Success(c, respVal)
+}
+
+// handlePasswordLogin 处理密码登录（保持原有逻辑不变）
+func (h *AuthHandler) handlePasswordLogin(c *gin.Context, req *LoginRequest) {
+	if req.Username == "" || req.Password == "" {
+		Error(c, &errBadRequest{message: "用户名和密码不能为空"})
 		return
 	}
 

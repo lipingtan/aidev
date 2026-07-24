@@ -34,28 +34,32 @@
 - [Question-1] C 端登录流程是否也采用两阶段 JWT？C 端用户通常单租户绑定，是否直接签发 access_token（跳过 platform_token + 选租户阶段）？
   **行业实践**：大多数 C 端产品（如微信小程序、电商 APP）因用户绑定单一商户/租户，登录后直接签发业务 token，不需要选租户步骤。推荐 C 端直接签发 access_token。
   [Answer-1]
-
+ 同意直接签发
 - [Question-2] SmsStrategy 的验证码有效期、长度、发送频率限制如何定义？建议：6 位数字，5 分钟有效，同一手机号 60 秒内限发一次。
   [Answer-2]
-
+4位数字5 分钟有效，同一手机号 60 秒内限发一次
 - [Question-3] TenantIsolationCallback 对 Create 操作是否自动填充 tenant_id？还是仅在 Query/Update/Delete 时注入 WHERE 条件？
   **行业实践**：GORM 的全局 Callback 通常同时覆盖 Create（自动填充）和 Query/Update/Delete（自动过滤），确保租户隔离无死角。推荐 Create 也自动填充。
   [Answer-3]
-
+同意
 - [Question-4] 管理端 biz_user CRUD 是否需要支持"重置密码"和"强制登出"操作？
   [Answer-4]
-
+需要支持
 - [Question-5] C 端 GetUserMenu 的结果是否需要缓存？C 端用户量级大（万~百万），每次请求都查库可能有性能问题。
   **行业实践**：C 端菜单通常按租户维度缓存（同一租户所有 C 端用户看到相同菜单），缓存粒度为 tenant_id，权限变更时失效。推荐租户级缓存。
   [Answer-5]
-
+同意，缓存的更新机制需要在设计中细化
 - [Question-6] dev-web-user 前端是在现有 frontend/ 目录下新建子目录，还是独立的前端工程？如果独立工程，放在 projects/demo/platform_admin/ 下什么位置？
   **参考 design_v2.md 部署架构**：dev-web-admin 和 dev-web-user 是独立的前端应用。建议放在 `projects/demo/platform_admin/frontend-user/` 或 `projects/demo/platform_admin/dev-web-user/`。
   [Answer-6]
-
+projects/demo/platform_admin/dev-web-user/
 - [Question-7] 现有 AuthService.Login 的 Captcha 验证逻辑在策略模式重构后如何处理？是放在 StrategyRouter 层（所有策略通用），还是放在 PasswordStrategy 内部（仅密码登录需要验证码）？
   **推荐**：验证码属于 PasswordStrategy 特有逻辑（短信登录不需要图形验证码），建议放在 PasswordStrategy 内部或 Handler 层（在调用策略前校验）。
   [Answer-7]
+同意
+- [Question-8] C 端认证模块的包组织倾向于 `app/user_auth/`（独立 app 域）还是 `common/auth/user_strategy/`（auth 包下独立子包）？前者更利于未来拆分为独立服务。
+  **行业实践**：微服务演进路径通常建议先按业务域隔离为独立模块（bounded context），再整体抽出为独立服务。独立 app 域代码自包含、依赖方向清晰，拆分成本最低。
+  [Answer-8] 独立 app 域 `app/user_auth/`
 
 ## 非功能需求建议
 

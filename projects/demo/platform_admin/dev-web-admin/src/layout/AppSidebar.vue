@@ -13,20 +13,13 @@ import { useAppStore } from '@/store/modules/app'
 import { useMenuStore } from '@/store/modules/menu'
 import type { MenuItem } from '@/store/modules/menu'
 import { asyncRoutes } from '@/router/static-routes'
-import {
-  HomeFilled, Setting, User, UserFilled, Tickets, Lock,
-  Menu, Document, Notebook, Avatar, Key, Box, Connection, DataAnalysis, Monitor as MonitorIcon
-} from '@element-plus/icons-vue'
-import type { Component } from 'vue'
 
 const route = useRoute()
 const appStore = useAppStore()
 const menuStore = useMenuStore()
 
-const iconMap: Record<string, Component> = {
-  HomeFilled, Setting, User, UserFilled, Tickets, Lock,
-  Menu, Document, Notebook, Avatar, Key, Box, Connection, DataAnalysis, Monitor: MonitorIcon
-}
+// 图标不再需要 iconMap —— main.ts 中已全局注册所有 Element Plus 图标组件
+// 直接用 <component :is="iconName"> 动态渲染
 
 /** 动态菜单树（仅后端数据，无权限则不显示菜单） */
 const dynamicMenuTree = computed<MenuItem[]>(() => {
@@ -133,17 +126,17 @@ onMounted(() => {
         <!-- 有子菜单：渲染为 sub-menu -->
         <el-sub-menu v-if="item.children && item.children.length" :index="item.path || item.name">
           <template #title>
-            <el-icon v-if="item.icon && iconMap[item.icon]"><component :is="iconMap[item.icon]" /></el-icon>
+            <el-icon v-if="item.icon"><component :is="item.icon" /></el-icon>
             <span>{{ item.name }}</span>
           </template>
           <el-menu-item v-for="child in item.children" :key="child.id || child.path" :index="child.path">
-            <el-icon v-if="child.icon && iconMap[child.icon]"><component :is="iconMap[child.icon]" /></el-icon>
+            <el-icon v-if="child.icon"><component :is="child.icon" /></el-icon>
             <template #title>{{ child.name }}</template>
           </el-menu-item>
         </el-sub-menu>
         <!-- 无子菜单：渲染为独立菜单项 -->
         <el-menu-item v-else :index="item.path">
-          <el-icon v-if="item.icon && iconMap[item.icon]"><component :is="iconMap[item.icon]" /></el-icon>
+          <el-icon v-if="item.icon"><component :is="item.icon" /></el-icon>
           <template #title>{{ item.name }}</template>
         </el-menu-item>
       </template>

@@ -8,6 +8,7 @@ import (
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/engine"
 	"go-admin/common/auth/service"
+	"go-admin/common/auth/strategy"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -74,6 +75,12 @@ func DynamicPermissionMiddleware(db *gorm.DB, cfg *config.Config, configSvc ...*
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code": 40101, "data": nil, "message": "未认证",
 			})
+			return
+		}
+
+		// C端用户（pool=user）跳过 RBAC 权限检查
+		if authCtx.UserPool == strategy.UserPoolUser {
+			c.Next()
 			return
 		}
 

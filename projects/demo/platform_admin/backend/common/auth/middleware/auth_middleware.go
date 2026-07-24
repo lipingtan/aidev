@@ -3,19 +3,76 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"go-admin/common/auth/service"
+	"go-admin/common/auth/strategy"
 
 	"github.com/gin-gonic/gin"
 )
 
 const authContextKey = "auth_context"
 
+// BizUserChecker C端用户状态检查接口（由 app/user_auth 注入实现，避免 common → app 反向依赖）
+type BizUserChecker interface {
+	// CheckBizUser 查询C端用户的状态和 token 版本号
+	// 返回 status（1=正常）、tokenVersion、error
+	CheckBizUser(userID int64) (status int, tokenVersion int, err error)
+}
+
+// bizUserCacheEntry 缓存条目
+type bizUserCacheEntry struct {
+	Status       int
+	TokenVersion int
+	CachedAt     time.Time
+}
+
+// bizUserCache C端用户信息缓存（TTL 5 分钟）
+var (
+	bizUserCacheMap sync.Map
+	bizUserCacheTTL = 5 * time.Minute
+)
+
+// InvalidateBizUserCache 失效指定用户的缓存（供 BizUserService.ForceLogout 调用）
+func InvalidateBizUserCache(userID int64) {
+	bizUserCacheMap.Delete(userID)
+}
+
+// getBizUserCached 带缓存查询C端用户信息
+func getBizUserCached(checker BizUserChecker, userID int64) (status int, tokenVersion int, err error) {
+	// 尝试从缓存获取
+	if val, ok := bizUserCacheMap.Load(userID); ok {
+		entry := val.(*bizUserCacheEntry)
+		if time.Since(entry.CachedAt) < bizUserCacheTTL {
+			return entry.Status, entry.TokenVersion, nil
+		}
+		// 过期，删除缓存
+		bizUserCacheMap.Delete(userID)
+	}
+
+	// 缓存 miss，查库
+	status, tokenVersion, err = checker.CheckBizUser(userID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// 写入缓存
+	bizUserCacheMap.Store(userID, &bizUserCacheEntry{
+		Status:       status,
+		TokenVersion: tokenVersion,
+		CachedAt:     time.Now(),
+	})
+	return status, tokenVersion, nil
+}
+
 // AuthContext 认证上下文，注入到 gin.Context
 type AuthContext struct {
-	UserID   int64
-	TenantID int64
-	Roles    []int64
+	UserID       int64
+	TenantID     int64
+	Roles        []int64
+	UserPool     string // "admin" | "user"，旧 token 无此字段时为 "admin"
+	TokenVersion int    // token 版本号，旧 token 无此字段时为 0
 }
 
 // SetAuthContext 设置认证上下文到 gin.Context
@@ -38,7 +95,12 @@ func GetAuthContext(c *gin.Context) *AuthContext {
 
 // AuthMiddleware 认证中间件
 // 解析 access_token、检查黑名单、注入 AuthContext
-func AuthMiddleware(authSvc *service.AuthService) gin.HandlerFunc {
+// bizUserChecker 可选，传 nil 则跳过C端用户额外校验（兼容未启用C端认证的部署）
+func AuthMiddleware(authSvc *service.AuthService, bizUserChecker ...BizUserChecker) gin.HandlerFunc {
+	var checker BizUserChecker
+	if len(bizUserChecker) > 0 && bizUserChecker[0] != nil {
+		checker = bizUserChecker[0]
+	}
 	return func(c *gin.Context) {
 		// 从 Authorization header 获取 Bearer token
 		authHeader := c.GetHeader("Authorization")
@@ -63,8 +125,8 @@ func AuthMiddleware(authSvc *service.AuthService) gin.HandlerFunc {
 
 		tokenStr := parts[1]
 
-		// 解析 access_token
-		claims, err := authSvc.ParseAccessToken(tokenStr)
+		// 解析 access_token（使用 strategy 包的公共函数）
+		claims, err := strategy.ParseAccessToken(authSvc.GetConfig(), tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code":    40102,
@@ -126,13 +188,51 @@ func AuthMiddleware(authSvc *service.AuthService) gin.HandlerFunc {
 			return
 		}
 
+		// 兼容处理：UserPool="" 视为 "admin"（旧 token 无此字段）
+		userPool := claims.UserPool
+		if userPool == "" {
+			userPool = strategy.UserPoolAdmin
+		}
+
 		// 注入 AuthContext
 		authCtx := &AuthContext{
-			UserID:   claims.UserID,
-			TenantID: claims.TenantID,
-			Roles:    claims.Roles,
+			UserID:       claims.UserID,
+			TenantID:     claims.TenantID,
+			Roles:        claims.Roles,
+			UserPool:     userPool,
+			TokenVersion: claims.TokenVersion,
 		}
 		SetAuthContext(c, authCtx)
+
+		// C端用户额外校验：token_version + status
+		if userPool == strategy.UserPoolUser && checker != nil {
+			status, dbTokenVersion, err := getBizUserCached(checker, claims.UserID)
+			if err != nil {
+				// DB 查询失败 → fail-closed（拒绝）
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"code":    40101,
+					"data":    nil,
+					"message": "用户信息查询失败",
+				})
+				return
+			}
+			if status != 1 {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"code":    40104,
+					"data":    nil,
+					"message": "账号已禁用",
+				})
+				return
+			}
+			if dbTokenVersion != claims.TokenVersion {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"code":    40103,
+					"data":    nil,
+					"message": "token 已失效",
+				})
+				return
+			}
+		}
 
 		c.Next()
 	}

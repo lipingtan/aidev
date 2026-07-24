@@ -413,6 +413,8 @@ ALTER TABLE game ADD COLUMN xxx ...;
 | 13 | **关联查询返回业务字段** | 查询关联数据时（如用户已关联租户、角色已绑定应用），后端不应返回裸关联表记录（仅含 ID），应 JOIN 返回名称等业务字段供前端展示 | 中 |
 | 14 | **批量操作兼容性** | 前端穿梭框/批量操作发送 ID 数组时，后端必须支持批量（如 `tenant_ids: [...]`）；前端发字符串数组、后端需解析为 int64（使用 StringInt64Slice 等自定义类型） | 中 |
 | 15 | **乐观锁 version 传递** | 编辑操作必须携带当前数据的 version 字段；前端列表/详情接口返回中必须包含 version；编辑表单 submit 时必须传递 version | 高 |
+| 16 | **表单组件类型与设计一致** | 设计文档中标注"下拉选择器"的字段，前端必须使用 el-select/el-tree-select 加载后端列表数据，禁止使用 el-input 让用户手填 ID；review 时必须打开实际 Vue 文件核对组件类型 | 高 |
+| 17 | **菜单图标全局注册覆盖** | 后端 seed 中使用的 icon 名称必须在前端全局注册范围内（如 Element Plus Icons 全量注册）；侧边栏渲染不得依赖有限的硬编码 iconMap；新增菜单时同步确认图标名在 `@element-plus/icons-vue` 中存在 | 中 |
 
 **执行方式：**
 - AI 在产品验收阶段，逐个打开前端 API 模块（`src/api/*.ts`）和对应 Vue 组件，对照后端 handler/model 的 JSON tag 做交叉检查

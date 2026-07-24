@@ -17,8 +17,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     actionTimeout: 10000,
-    // UI 测试默认有头模式
     headless: false,
+    // slowMo: 每个底层操作（click/fill/keypress）之间插入 100ms 延迟
+    // 模拟真实手速，让操作可见但不至于太慢
+    slowMo: 100,
   },
   projects: [
     // 全局 setup：登录并保存状态
