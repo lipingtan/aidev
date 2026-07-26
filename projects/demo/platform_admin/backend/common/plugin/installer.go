@@ -130,15 +130,16 @@ func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Rea
 		binaryPath = destDir
 	}
 
-	// 处理前端 bundle
+	// 部署前端 bundle（V2 多端支持）
 	var frontendPath string
-	frontendSrc := filepath.Join(destDir, "frontend", "dist")
-	if info, statErr := os.Stat(frontendSrc); statErr == nil && info.IsDir() {
-		frontendDest := filepath.Join(ins.staticDir, name)
-		if cpErr := copyDir(frontendSrc, frontendDest); cpErr != nil {
-			return fmt.Errorf("复制前端 bundle 失败: %w", cpErr)
+	if len(manifest.Frontends) > 0 {
+		if err := ins.deployFrontendBundles(name, destDir, manifest.Frontends); err != nil {
+			// 清理已解压文件
+			_ = os.RemoveAll(destDir)
+			return fmt.Errorf("部署前端 bundle 失败: %w", err)
 		}
-		frontendPath = frontendDest
+		// frontendPath 设为插件静态根目录（兼容性）
+		frontendPath = filepath.Join(ins.staticDir, "plugins", name)
 	}
 
 	// 写入 sys_plugin 数据库记录
@@ -392,6 +393,45 @@ func (ins *Installer) InstallFromURL(ctx context.Context, name string, url strin
 	return ins.InstallFromFile(ctx, name, resp.Body, filename)
 }
 
+// deployFrontendBundles 部署插件前端 bundle 到静态目录（V2 多端支持）
+// pluginName: 插件名称
+// pluginDir: 插件解压目录
+// frontends: frontends 配置数组
+func (ins *Installer) deployFrontendBundles(pluginName string, pluginDir string, frontends []FrontendConfig) error {
+	for _, fe := range frontends {
+		// 源文件路径：{pluginDir}/frontend/{entry}
+		src := filepath.Join(pluginDir, "frontend", fe.Entry)
+		
+		// 检查源文件是否存在
+		if _, err := os.Stat(src); os.IsNotExist(err) {
+			return fmt.Errorf("bundle 源文件不存在: %s (platform=%s, device=%s)", src, fe.Platform, fe.Device)
+		}
+		
+		// 目标路径：{staticDir}/plugins/{name}/{platform}-{device}/bundle.js
+		platform := strings.ToLower(fe.Platform)
+		device := strings.ToLower(fe.Device)
+		destDir := filepath.Join(ins.staticDir, "plugins", pluginName, platform+"-"+device)
+		destFile := filepath.Join(destDir, "bundle.js")
+		
+		// 创建目标目录
+		if err := os.MkdirAll(destDir, 0755); err != nil {
+			return fmt.Errorf("创建 bundle 目录失败 %s: %w", destDir, err)
+		}
+		
+		// 复制 bundle 文件
+		if err := copyFile(src, destFile); err != nil {
+			return fmt.Errorf("复制 bundle 失败 %s → %s: %w", src, destFile, err)
+		}
+	}
+	return nil
+}
+
+// removeFrontendBundles 删除插件的所有前端 bundle
+func (ins *Installer) removeFrontendBundles(pluginName string) error {
+	pluginStaticDir := filepath.Join(ins.staticDir, "plugins", pluginName)
+	return os.RemoveAll(pluginStaticDir)
+}
+
 // Uninstall 卸载插件
 // cleanData: 是否清除插件相关数据表（{name}_* 表）
 func (ins *Installer) Uninstall(ctx context.Context, name string, cleanData bool) error {
@@ -416,8 +456,8 @@ func (ins *Installer) Uninstall(ctx context.Context, name string, cleanData bool
 		return fmt.Errorf("删除插件目录失败: %w", err)
 	}
 
-	// 删除前端静态文件目录
-	staticPluginDir := filepath.Join(ins.staticDir, name)
+	// 删除前端静态文件目录（V2 结构：{staticDir}/plugins/{name}/）
+	staticPluginDir := filepath.Join(ins.staticDir, "plugins", name)
 	_ = os.RemoveAll(staticPluginDir)
 
 	// 可选：清除插件数据表

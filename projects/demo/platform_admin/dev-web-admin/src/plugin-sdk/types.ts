@@ -1,3 +1,9 @@
+// 新增：取消注册函数
+export type UnregisterFn = () => void
+
+// 新增：teardown 清理函数
+export type TeardownFn = () => void | Promise<void>
+
 // 插件 Manifest 类型
 export interface PluginManifest {
   name: string
@@ -6,7 +12,13 @@ export interface PluginManifest {
   description: string
   platforms: ('admin' | 'user' | 'both')[]
   dependencies?: Record<string, string>
-  frontendEntry?: string
+  frontendEntry?: string  // V1 兼容保留
+  // V2 新增：多端 bundle 配置
+  frontends?: Array<{
+    platform: 'admin' | 'user'
+    device: 'pc' | 'h5'
+    entry: string
+  }>
 }
 
 // 插件路由
@@ -40,6 +52,8 @@ export interface PluginConfig {
   permissions?: string[]
   extensions?: Record<string, any>
   setup?: (ctx: PluginContext) => void | Promise<void>
+  // teardown 字段保留用于兼容旧写法，推荐用 ctx.onTeardown()
+  teardown?: (ctx: PluginContext) => void | Promise<void>
 }
 
 // 用户信息（只读）
@@ -69,5 +83,15 @@ export interface PluginContext {
   currentTenant: Readonly<TenantInfo>
   permissions: Readonly<string[]>
   eventBus: EventBus
-  registerExtension: (point: string, component: any, sort?: number) => void
+  // V1 已有，返回值改为 UnregisterFn
+  registerExtension: (point: string, component: any, sort?: number) => UnregisterFn
+  // V2 新增
+  platform: 'admin' | 'user'
+  device: 'pc' | 'h5'
+  getPlatform: () => 'admin' | 'user'
+  getDevice: () => 'pc' | 'h5'
+  onTeardown: (fn: TeardownFn) => void
+  i18n: {
+    mergeLocale: (locale: string, messages: Record<string, any>) => void
+  }
 }

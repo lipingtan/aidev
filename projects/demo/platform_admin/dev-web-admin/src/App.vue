@@ -1,18 +1,34 @@
 <script setup lang="ts">
-// 根组件 — 路由出口
+/**
+ * 根组件 - 纯路由出口
+ * 布局层（PcLayout / H5Layout）在路由配置中根据构建模式动态加载
+ */
 import { useAppStore } from '@/store/modules/app'
 
 const appStore = useAppStore()
+
+// PC 模式下需要背景装饰，H5 模式不需要
+// @ts-ignore - __IS_H5__ 由 vite.config.ts define 注入
+const isH5 = __IS_H5__
 </script>
 
 <template>
-  <div class="pc-shell">
-    <div class="pc-bg">
+  <div :class="isH5 ? 'h5-shell' : 'pc-shell'">
+    <!-- PC 背景装饰（仅 PC 模式） -->
+    <div v-if="!isH5" class="pc-bg">
       <span class="pc-orb pc-orb-a"></span>
       <span class="pc-orb pc-orb-b"></span>
       <span class="pc-orb pc-orb-c"></span>
     </div>
-    <div class="theme-switch-overlay" :class="{ active: appStore.themeTransitionActive }"></div>
+    
+    <!-- 主题切换过渡层（仅 PC 模式） -->
+    <div 
+      v-if="!isH5"
+      class="theme-switch-overlay" 
+      :class="{ active: appStore.themeTransitionActive }"
+    ></div>
+    
+    <!-- 路由出口 -->
     <router-view />
   </div>
 </template>
@@ -22,6 +38,7 @@ const appStore = useAppStore()
   height: 100%;
 }
 
+/* PC 模式样式 */
 .pc-shell {
   position: relative;
   min-height: 100%;
@@ -95,5 +112,11 @@ const appStore = useAppStore()
 @keyframes pcFloatC {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   50% { transform: translate3d(14px, -20px, 0) scale(1.1); }
+}
+
+/* H5 模式样式 */
+.h5-shell {
+  height: 100%;
+  width: 100%;
 }
 </style>

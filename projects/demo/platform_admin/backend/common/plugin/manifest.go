@@ -7,23 +7,30 @@ import (
 	"path/filepath"
 )
 
+// FrontendConfig 插件前端 bundle 配置（V2 多端支持）
+type FrontendConfig struct {
+	Platform string `json:"platform"` // "admin" 或 "user"
+	Device   string `json:"device"`   // "pc" 或 "h5"
+	Entry    string `json:"entry"`    // 相对路径，如 "admin-pc/bundle.js"
+}
+
 // ManifestV2 plugin.json 完整结构（V2 Manifest）
 type ManifestV2 struct {
-	Name             string                       `json:"name"`
-	Version          string                       `json:"version"`
-	DisplayName      string                       `json:"displayName"`
-	Description      string                       `json:"description"`
-	RoutePrefix      string                       `json:"routePrefix"`
-	Platforms        []string                     `json:"platforms"`
-	Modules          []ManifestModule             `json:"modules"`
-	Frontends        map[string]map[string]string `json:"frontends"`
-	Menus            []ManifestMenu               `json:"menus"`
-	ApiPermissions   []ManifestApiPermission      `json:"apiPermissions"`
-	ExposedActions   []ManifestAction             `json:"exposedActions"`
-	SubscribedEvents []string                     `json:"subscribedEvents"`
-	BreakingUpgrade  bool                         `json:"breakingUpgrade"`
-	MinUpgradeFrom   string                       `json:"minUpgradeFrom"`
-	MigrationNotes   string                       `json:"migrationNotes"`
+	Name             string                  `json:"name"`
+	Version          string                  `json:"version"`
+	DisplayName      string                  `json:"displayName"`
+	Description      string                  `json:"description"`
+	RoutePrefix      string                  `json:"routePrefix"`
+	Platforms        []string                `json:"platforms"`
+	Modules          []ManifestModule        `json:"modules"`
+	Frontends        []FrontendConfig        `json:"frontends"`
+	Menus            []ManifestMenu          `json:"menus"`
+	ApiPermissions   []ManifestApiPermission `json:"apiPermissions"`
+	ExposedActions   []ManifestAction        `json:"exposedActions"`
+	SubscribedEvents []string                `json:"subscribedEvents"`
+	BreakingUpgrade  bool                    `json:"breakingUpgrade"`
+	MinUpgradeFrom   string                  `json:"minUpgradeFrom"`
+	MigrationNotes   string                  `json:"migrationNotes"`
 }
 
 // ManifestModule 功能模块声明

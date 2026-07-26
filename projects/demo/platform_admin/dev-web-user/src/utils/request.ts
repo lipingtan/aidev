@@ -31,8 +31,8 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const res = response.data
-    // 后端统一成功码为 0
-    if (res.code !== 0) {
+    // 后端成功码：0 或 200 均视为成功
+    if (res.code !== 0 && res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
       return Promise.reject(new Error(res.message || '请求失败'))
     }

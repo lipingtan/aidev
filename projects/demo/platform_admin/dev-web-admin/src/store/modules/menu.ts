@@ -63,6 +63,7 @@ export const useMenuStore = defineStore('menu', () => {
 
   return {
     menuTree,
+    menus: menuTree, // 导出别名供组件使用
     loaded,
     loading,
     flatMenus,

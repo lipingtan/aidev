@@ -1,7 +1,8 @@
 /**
  * 路由配置
  * - /login → 登录页（无需认证）
- * - / → 基础布局（需要 token，无 token 重定向 /login）
+ * - / → 首页（需要 token，无 token 重定向 /login）
+ * Layout 布局由 App.vue 根据构建模式注入
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
@@ -16,18 +17,13 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    name: 'Layout',
-    component: () => import('@/views/layout/index.vue'),
-    meta: { requiresAuth: true },
-    redirect: '/home',
-    children: [
-      {
-        path: 'home',
-        name: 'Home',
-        component: () => import('@/views/home/index.vue'),
-        meta: { title: '首页' }
-      }
-    ]
+    redirect: '/home'
+  },
+  {
+    path: '/home',
+    name: 'Home',
+    component: () => import('@/views/home/index.vue'),
+    meta: { title: '首页', requiresAuth: true }
   }
 ]
 

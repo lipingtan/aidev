@@ -3,7 +3,7 @@ import type { PluginConfig } from '@/plugin-sdk'
 
 /**
  * 将已加载插件的路由动态注册到 Vue Router
- * 所有插件路由添加到 AppLayout 子路由下
+ * 所有插件路由添加到对应布局的子路由下
  */
 export function mergePluginRoutes(router: Router, plugins: PluginConfig[]) {
   for (const plugin of plugins) {
@@ -14,7 +14,13 @@ export function mergePluginRoutes(router: Router, plugins: PluginConfig[]) {
       // 添加到根 layout 路由的 children 中
       router.addRoute({
         path: '/',
-        component: () => import('@/layout/AppLayout.vue'),
+        component: () => {
+          // 根据构建模式动态导入对应布局
+          // @ts-ignore - __IS_H5__ 由 vite.config.ts define 注入
+          return __IS_H5__ 
+            ? import('@/layout/h5/H5Layout.vue')
+            : import('@/layout/pc/PcLayout.vue')
+        },
         children: [{
           path: route.path,
           name: route.name,

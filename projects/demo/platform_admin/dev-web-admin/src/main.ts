@@ -17,9 +17,15 @@ import pinia from './store'
 import router from './router'
 import { setupRouterGuard } from './router/guard'
 import { useAppStore } from './store/modules/app'
+import { initRouteManager } from './plugin-loader/route-manager'
 
 // 国际化
 import i18n from './locales'
+
+// 暴露宿主库（供 UMD 格式插件共享依赖，PC 端和 H5 端均需要）
+import * as Vue from 'vue'
+import * as VueRouter from 'vue-router'
+;(window as any).__PLATFORM_ADMIN_LIBS__ = { Vue, ElementPlus, VueRouter }
 
 const app = createApp(App)
 
@@ -40,4 +46,15 @@ appStore.initTheme()
 // 注册路由守卫
 setupRouterGuard(router)
 
+// 初始化插件路由管理器
+initRouteManager(router)
+
 app.mount('#app')
+
+// DEV 模式：暴露 plugin-loader 到 window，供 E2E 测试调用
+if (import.meta.env.DEV) {
+  import('./plugin-loader').then(({ loadPlugin, unloadPlugin }) => {
+    ;(window as any).loadPlugin = loadPlugin
+    ;(window as any).unloadPlugin = unloadPlugin
+  })
+}

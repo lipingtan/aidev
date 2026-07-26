@@ -473,8 +473,8 @@ func TestUninstall_Success(t *testing.T) {
 		t.Fatalf("安装失败: %v", err)
 	}
 
-	// 创建模拟前端目录
-	staticPluginDir := filepath.Join(staticDir, "uninstall-test")
+	// 创建模拟前端目录（V2 结构：{staticDir}/plugins/{name}/）
+	staticPluginDir := filepath.Join(staticDir, "plugins", "uninstall-test")
 	os.MkdirAll(staticPluginDir, 0755)
 
 	// 卸载
@@ -514,4 +514,287 @@ func containsSubstr(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// TestDeployFrontendBundles_SingleFrontend 测试部署单个 frontend bundle
+func TestDeployFrontendBundles_SingleFrontend(t *testing.T) {
+	db := setupTestDB(t)
+	ins, pluginsDir, staticDir := newTestInstaller(t, db)
+
+	// 创建插件目录和前端 bundle 文件
+	pluginName := "test-plugin"
+	pluginDir := filepath.Join(pluginsDir, pluginName)
+	os.MkdirAll(filepath.Join(pluginDir, "frontend", "admin-pc"), 0755)
+	bundleSrc := filepath.Join(pluginDir, "frontend", "admin-pc", "bundle.js")
+	testContent := []byte("console.log('admin-pc bundle');")
+	if err := os.WriteFile(bundleSrc, testContent, 0644); err != nil {
+		t.Fatalf("写入测试 bundle 失败: %v", err)
+	}
+
+	// 部署
+	frontends := []FrontendConfig{
+		{Platform: "admin", Device: "pc", Entry: "admin-pc/bundle.js"},
+	}
+	err := ins.deployFrontendBundles(pluginName, pluginDir, frontends)
+	if err != nil {
+		t.Fatalf("部署应成功: %v", err)
+	}
+
+	// 验证目标文件存在且内容一致
+	destFile := filepath.Join(staticDir, "plugins", pluginName, "admin-pc", "bundle.js")
+	if _, err := os.Stat(destFile); os.IsNotExist(err) {
+		t.Fatal("目标 bundle 文件应存在")
+	}
+	destContent, err := os.ReadFile(destFile)
+	if err != nil {
+		t.Fatalf("读取目标文件失败: %v", err)
+	}
+	if string(destContent) != string(testContent) {
+		t.Errorf("目标文件内容不一致，期望: %s, 实际: %s", string(testContent), string(destContent))
+	}
+}
+
+// TestDeployFrontendBundles_MultipleFrontends 测试部署多个 frontend bundles
+func TestDeployFrontendBundles_MultipleFrontends(t *testing.T) {
+	db := setupTestDB(t)
+	ins, pluginsDir, staticDir := newTestInstaller(t, db)
+
+	pluginName := "multi-plugin"
+	pluginDir := filepath.Join(pluginsDir, pluginName)
+
+	// 创建多个前端 bundle
+	bundles := []struct {
+		platform string
+		device   string
+		entry    string
+		content  string
+	}{
+		{"admin", "pc", "admin-pc/bundle.js", "admin-pc-content"},
+		{"admin", "h5", "admin-h5/bundle.js", "admin-h5-content"},
+		{"user", "pc", "user-pc/bundle.js", "user-pc-content"},
+	}
+
+	var frontends []FrontendConfig
+	for _, b := range bundles {
+		srcPath := filepath.Join(pluginDir, "frontend", b.entry)
+		os.MkdirAll(filepath.Dir(srcPath), 0755)
+		os.WriteFile(srcPath, []byte(b.content), 0644)
+		frontends = append(frontends, FrontendConfig{
+			Platform: b.platform,
+			Device:   b.device,
+			Entry:    b.entry,
+		})
+	}
+
+	// 部署
+	err := ins.deployFrontendBundles(pluginName, pluginDir, frontends)
+	if err != nil {
+		t.Fatalf("部署应成功: %v", err)
+	}
+
+	// 验证所有目标文件存在且内容正确
+	for _, b := range bundles {
+		destFile := filepath.Join(staticDir, "plugins", pluginName, b.platform+"-"+b.device, "bundle.js")
+		if _, err := os.Stat(destFile); os.IsNotExist(err) {
+			t.Errorf("目标文件应存在: %s", destFile)
+			continue
+		}
+		content, err := os.ReadFile(destFile)
+		if err != nil {
+			t.Errorf("读取目标文件失败 %s: %v", destFile, err)
+			continue
+		}
+		if string(content) != b.content {
+			t.Errorf("文件 %s 内容不一致，期望: %s, 实际: %s", destFile, b.content, string(content))
+		}
+	}
+}
+
+// TestDeployFrontendBundles_SourceNotExist 测试源文件不存在时返回错误
+func TestDeployFrontendBundles_SourceNotExist(t *testing.T) {
+	db := setupTestDB(t)
+	ins, pluginsDir, _ := newTestInstaller(t, db)
+
+	pluginName := "missing-bundle-plugin"
+	pluginDir := filepath.Join(pluginsDir, pluginName)
+	os.MkdirAll(pluginDir, 0755)
+
+	// entry 指向不存在的文件
+	frontends := []FrontendConfig{
+		{Platform: "admin", Device: "pc", Entry: "admin-pc/bundle.js"},
+	}
+
+	err := ins.deployFrontendBundles(pluginName, pluginDir, frontends)
+	if err == nil {
+		t.Fatal("源文件不存在时应返回错误")
+	}
+	if !contains(err.Error(), "不存在") {
+		t.Errorf("错误信息应包含'不存在'，实际: %s", err.Error())
+	}
+}
+
+// TestRemoveFrontendBundles 测试删除整个插件静态目录
+func TestRemoveFrontendBundles(t *testing.T) {
+	db := setupTestDB(t)
+	ins, _, staticDir := newTestInstaller(t, db)
+
+	pluginName := "remove-test"
+	pluginStaticDir := filepath.Join(staticDir, "plugins", pluginName)
+
+	// 创建多级目录和文件
+	os.MkdirAll(filepath.Join(pluginStaticDir, "admin-pc"), 0755)
+	os.MkdirAll(filepath.Join(pluginStaticDir, "admin-h5"), 0755)
+	os.WriteFile(filepath.Join(pluginStaticDir, "admin-pc", "bundle.js"), []byte("pc"), 0644)
+	os.WriteFile(filepath.Join(pluginStaticDir, "admin-h5", "bundle.js"), []byte("h5"), 0644)
+
+	err := ins.removeFrontendBundles(pluginName)
+	if err != nil {
+		t.Fatalf("删除应成功: %v", err)
+	}
+
+	// 验证整个插件静态目录不存在
+	if _, err := os.Stat(pluginStaticDir); !os.IsNotExist(err) {
+		t.Error("插件静态目录应被完全删除")
+	}
+}
+
+// TestInstallFromFile_WithFrontends 测试安装含 frontends 配置的插件
+func TestInstallFromFile_WithFrontends(t *testing.T) {
+	db := setupTestDB(t)
+	ins, pluginsDir, staticDir := newTestInstaller(t, db)
+
+	manifest := ManifestV2{
+		Name:        "frontend-plugin",
+		Version:     "1.0.0",
+		DisplayName: "前端插件",
+		Frontends: []FrontendConfig{
+			{Platform: "admin", Device: "pc", Entry: "admin-pc/bundle.js"},
+			{Platform: "admin", Device: "h5", Entry: "admin-h5/bundle.js"},
+		},
+		Platforms: []string{"admin:pc", "admin:h5"},
+	}
+
+	// 创建 zip 包（需要包含 frontend 文件）
+	buf := new(bytes.Buffer)
+	w := zip.NewWriter(buf)
+
+	// plugin.json
+	pjData, _ := json.Marshal(manifest)
+	f, _ := w.Create("plugin.json")
+	f.Write(pjData)
+
+	// 二进制文件
+	bf, _ := w.Create("frontend-plugin")
+	bf.Write([]byte("fake-binary"))
+
+	// frontend bundles
+	pcBundle, _ := w.Create("frontend/admin-pc/bundle.js")
+	pcBundle.Write([]byte("console.log('admin-pc');"))
+	h5Bundle, _ := w.Create("frontend/admin-h5/bundle.js")
+	h5Bundle.Write([]byte("console.log('admin-h5');"))
+
+	w.Close()
+
+	// 安装
+	err := ins.InstallFromFile(context.Background(), "", buf, "frontend-plugin.zip")
+	if err != nil {
+		t.Fatalf("安装应成功: %v", err)
+	}
+
+	// 验证插件目录存在
+	pluginDir := filepath.Join(pluginsDir, "frontend-plugin")
+	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
+		t.Error("插件目录应存在")
+	}
+
+	// 验证 bundle 文件已部署到正确位置
+	pcDest := filepath.Join(staticDir, "plugins", "frontend-plugin", "admin-pc", "bundle.js")
+	h5Dest := filepath.Join(staticDir, "plugins", "frontend-plugin", "admin-h5", "bundle.js")
+
+	if _, err := os.Stat(pcDest); os.IsNotExist(err) {
+		t.Error("admin-pc bundle 应存在")
+	}
+	if _, err := os.Stat(h5Dest); os.IsNotExist(err) {
+		t.Error("admin-h5 bundle 应存在")
+	}
+
+	// 验证数据库记录的 frontend_path
+	var record models.SysPlugin
+	db.Where("name = ?", "frontend-plugin").First(&record)
+	expectedPath := filepath.Join(staticDir, "plugins", "frontend-plugin")
+	if record.FrontendPath != expectedPath {
+		t.Errorf("frontend_path 应为 %s，实际: %s", expectedPath, record.FrontendPath)
+	}
+}
+
+// TestInstallFromFile_EmptyFrontends 测试 frontends 为空的插件安装
+func TestInstallFromFile_EmptyFrontends(t *testing.T) {
+	db := setupTestDB(t)
+	ins, _, _ := newTestInstaller(t, db)
+
+	manifest := ManifestV2{
+		Name:        "no-frontend-plugin",
+		Version:     "1.0.0",
+		DisplayName: "无前端插件",
+		Frontends:   []FrontendConfig{}, // 空数组
+		Platforms:   []string{"admin:pc"},
+	}
+
+	zipBuf := createTestZip(t, manifest)
+
+	err := ins.InstallFromFile(context.Background(), "", zipBuf, "no-frontend-plugin.zip")
+	if err != nil {
+		t.Fatalf("frontends 为空时安装应成功: %v", err)
+	}
+
+	// 验证插件记录存在
+	var record models.SysPlugin
+	if err := db.Where("name = ?", "no-frontend-plugin").First(&record).Error; err != nil {
+		t.Fatalf("应存在 sys_plugin 记录: %v", err)
+	}
+	// frontend_path 应为空
+	if record.FrontendPath != "" {
+		t.Errorf("无 frontend 配置时 frontend_path 应为空，实际: %s", record.FrontendPath)
+	}
+}
+
+// TestInstallFromFile_FrontendBundleMissing 测试 bundle 源文件不存在时安装失败
+func TestInstallFromFile_FrontendBundleMissing(t *testing.T) {
+	db := setupTestDB(t)
+	ins, _, _ := newTestInstaller(t, db)
+
+	manifest := ManifestV2{
+		Name:        "missing-bundle",
+		Version:     "1.0.0",
+		DisplayName: "缺失 Bundle",
+		Frontends: []FrontendConfig{
+			{Platform: "admin", Device: "pc", Entry: "admin-pc/bundle.js"},
+		},
+		Platforms: []string{"admin:pc"},
+	}
+
+	// 创建 zip 但不包含 frontend 文件
+	buf := new(bytes.Buffer)
+	w := zip.NewWriter(buf)
+	pjData, _ := json.Marshal(manifest)
+	f, _ := w.Create("plugin.json")
+	f.Write(pjData)
+	bf, _ := w.Create("missing-bundle")
+	bf.Write([]byte("fake-binary"))
+	w.Close()
+
+	err := ins.InstallFromFile(context.Background(), "", buf, "missing-bundle.zip")
+	if err == nil {
+		t.Fatal("bundle 源文件不存在时应返回错误")
+	}
+	if !contains(err.Error(), "不存在") && !contains(err.Error(), "部署") {
+		t.Errorf("错误信息应包含'不存在'或'部署'，实际: %s", err.Error())
+	}
+
+	// 验证插件未安装（数据库和目录都应清理）
+	var count int64
+	db.Model(&models.SysPlugin{}).Where("name = ?", "missing-bundle").Count(&count)
+	if count != 0 {
+		t.Error("安装失败时 sys_plugin 记录应不存在（已回滚）")
+	}
 }

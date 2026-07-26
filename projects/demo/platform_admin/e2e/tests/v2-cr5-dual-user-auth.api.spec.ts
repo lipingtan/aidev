@@ -277,6 +277,35 @@ test.describe('管理端 biz_user 管理接口', () => {
     expect(body.code).toBe(0);
   });
 
+  // TC-A16: biz_user 详情
+  test('TC-A16 biz_user 详情', async () => {
+    // 先创建一个用户用于查询
+    const phone = testPhone('140');
+    createdPhones.push(phone);
+    const createResp = await api.post(`${API_BASE}/api/v1/admin/biz-users`, {
+      ...auth(token),
+      data: { phone, nickname: '详情测试' },
+    });
+    const userId = extractID(await createResp.json());
+
+    // 查询详情
+    const resp = await api.get(`${API_BASE}/api/v1/admin/biz-users/${userId}`, auth(token));
+    expect(resp.status()).toBe(200);
+    const body = await resp.json();
+    expect(body.code).toBe(0);
+    expect(body.data?.phone).toBe(phone);
+    expect(body.data?.nickname).toBe('详情测试');
+  });
+
+  // TC-A17: 不存在的 ID 返回 404 或 400
+  test('TC-A17 不存在的 biz_user ID 返回 404', async () => {
+    // 使用一个不存在的雪花 ID（不会与真实数据冲突）
+    const nonExistentId = '9999999999999999999';
+    const resp = await api.get(`${API_BASE}/api/v1/admin/biz-users/${nonExistentId}`, auth(token));
+    // 后端对不存在的资源返回 404 Not Found 或 400 Bad Request
+    expect([400, 404]).toContain(resp.status());
+  });
+
   // TC-A18: 创建 biz_user
   test('TC-A18 创建 biz_user', async () => {
     const phone = testPhone('139');
