@@ -28,7 +28,9 @@
                 <span class="app-name">{{ app.name }}</span>
                 <!-- 状态标签 -->
                 <div class="app-card__tags">
-                  <el-tag v-if="app.subscribed" type="success" size="small">已开通</el-tag>
+                  <el-tag v-if="app.subscribed && app.subscription_status === 'active'" type="success" size="small">已开通</el-tag>
+                  <el-tag v-if="app.subscription_status === 'pending_approval'" type="warning" size="small">审批中</el-tag>
+                  <el-tag v-if="app.subscription_status === 'rejected'" type="danger" size="small">已驳回</el-tag>
                   <el-tag
                     v-if="app.app_type === 'PLUGIN' && app.plugin_status === 'STOPPED'"
                     type="warning"
@@ -52,7 +54,15 @@
 
             <!-- 操作按钮 -->
             <div class="app-card__actions">
-              <template v-if="app.subscribed">
+              <template v-if="app.subscription_status === 'pending_approval'">
+                <el-button size="small" type="warning" disabled>审批中</el-button>
+              </template>
+              <template v-else-if="app.subscription_status === 'rejected'">
+                <el-button size="small" type="primary" @click="handleSubscribe(app)">
+                  重新申请
+                </el-button>
+              </template>
+              <template v-else-if="app.subscribed">
                 <el-button size="small" type="primary" @click="openModuleDrawer(app)">
                   模块配置
                 </el-button>
@@ -144,9 +154,16 @@ async function loadCatalog() {
 /** 申请开通 */
 async function handleSubscribe(app: AppCatalogItem) {
   try {
-    await subscribeApp(app.app_code)
-    ElMessage.success(`已开通「${app.name}」`)
-    app.subscribed = true
+    const res: any = await subscribeApp(app.app_code)
+    // approval_required 模式：提交后立即展示"审批中"，不等待审批结果
+    if (app.subscription_mode === 'approval_required' || res?.subscription_status === 'pending_approval') {
+      app.subscription_status = 'pending_approval'
+      ElMessage.success(`「${app.name}」申请已提交，等待审批`)
+    } else {
+      app.subscribed = true
+      app.subscription_status = 'active'
+      ElMessage.success(`已开通「${app.name}」`)
+    }
   } catch (e: any) {
     // 配额超限提示
     const msg = e?.response?.data?.message || e?.message || ''

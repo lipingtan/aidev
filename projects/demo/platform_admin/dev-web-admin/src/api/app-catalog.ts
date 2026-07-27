@@ -11,6 +11,8 @@ export interface AppCatalogItem {
   modules: Array<{ code: string; name: string }>
   subscribed: boolean
   plugin_status?: 'RUNNING' | 'STOPPED' | 'ERROR' | 'NOT_INSTALLED'
+  subscription_mode?: 'direct' | 'approval_required'
+  subscription_status?: 'active' | 'pending_approval' | 'rejected'
 }
 
 export interface SubscriptionItem {

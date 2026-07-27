@@ -15,7 +15,11 @@
 
 ## 核心规则（强制）
 
-1. **E2E 工程唯一性**：每个软件项目只创建一个 e2e 工程，路径为 `projects/{解决方案名}/{项目名}/e2e-tests/`。多个 CR 的测试脚本在同一工程中累积，不重复建工程。
+1. **E2E 工程路径约定**：每个软件项目只创建一个 e2e 工程。路径约定：
+   - 标准路径：`projects/{解决方案名}/{项目名}/e2e/`（已有工程优先复用，不重建）
+   - 备选路径：`projects/{解决方案名}/{项目名}/e2e-tests/`（历史工程已存在时沿用）
+   - **执行前必须先检查两个路径是否已存在**，存在哪个用哪个，不新建重复工程。
+   - 多个 CR 的测试脚本在同一工程中累积。
 2. **双脚本产出（强制）**：每个 CR 生成两份 spec 文件：
    - `{cr-name}.api.spec.ts` — **接口测试脚本**：使用 Playwright `request` API 直接发 HTTP 请求，验证状态码/响应体/错误码。覆盖 test_cases.md 中的"接口测试"和"正向/反向/边界"中可通过 API 验证的用例。
    - `{cr-name}.ui.spec.ts` — **端面测试脚本**：使用 Playwright `page` 操作浏览器，模拟真实用户操作流程（导航/点击/填写/断言页面元素）。覆盖 test_cases.md 中的"前端功能验证"和可通过 UI 操作验证的正向/反向场景。
@@ -24,6 +28,189 @@
 5. **回归模式**：回归时不重新生成 test_cases.md，不重写 spec 文件（除非修复 Bug 标注）。在 `e2e_test_report.md` 末尾追加新轮次记录，同步更新"历史执行汇总"表。
 6. **后端端口**：执行前先读 `config/settings.yml` 确认后端实际监听端口，不硬编码 8080。
 7. **前端地址**：UI 测试需确认前端 dev server 地址（默认 `http://localhost:5173`），从 `vite.config.ts` 或用户确认获取。
+
+---
+
+## 测试失败处理原则（强制）
+
+### 第一步：区分"脚本错误"还是"程序错误"
+
+断言失败后，**不得直接修复代码，也不得直接调整断言**，必须先完成以下归因判定：
+
+```
+归因判定优先级（从高到低）：
+
+1. 需求文档（requirements.md）
+   └─ FR-N 的验收标准是否明确定义了此处预期行为？
+   └─ 如果 FR 有明确规定 → 以 FR 为准，程序实现不符则是程序错误
+
+2. 设计文档（design.md）
+   └─ API 设计表中接口的响应格式/错误码是否有明确定义？
+   └─ 状态转换图中该场景的转换结果是否有定义？
+   └─ 如果 design 有明确定义 → 以 design 为准
+
+3. 任务拆解（tasks.md）
+   └─ Acceptance 标准中是否对该行为有约束？
+   └─ 如果 tasks Acceptance 有描述 → 以 tasks 为准
+
+4. 行业最佳实践（判据不足时的兜底）
+   └─ 仅当以上三个文档均未明确定义时才使用
+   └─ 使用行业标准（REST 规范/HTTP 语义/业务惯例）补充判定
+   └─ 必须在测试报告中说明所采用的行业实践依据
+```
+
+### 归因结果与处置
+
+| 归因结论 | 含义 | 处置方式 |
+|---------|------|---------|
+| **程序错误** | 实现与需求/设计不符 | 修复程序代码，保持断言不变 |
+| **脚本错误** | 断言编写有误，与需求/设计不符 | 修正脚本断言，在报告中记录调整理由 |
+| **需求/设计不明确** | 文档未覆盖此场景 | 以行业最佳实践补充判定，报告中注明依据 |
+| **需求/设计有冲突** | 各文档定义不一致 | 停止自行判定，向用户提出澄清，不得假设 |
+
+### 脚本调整记录规范
+
+当归因结论为"脚本错误"或"需求/设计不明确（用行业实践补充）"时，**必须在测试报告中记录**：
+
+```markdown
+### 断言调整说明
+
+| 用例 | 原断言 | 调整后断言 | 判定依据 | 依据来源 |
+|------|--------|-----------|---------|---------|
+| TC-N04 | `toMatch(/APPROVED\|无法撤销\|状态/)` | `toMatch(/APPROVED\|无法撤销\|状态\|原因/)` | 需求文档未定义具体错误信息格式，按行业实践 REST 错误信息应包含拒绝原因 | 行业最佳实践（REST 错误响应规范） |
+```
+
+**禁止无记录地修改断言。** 即使是"明显的脚本笔误"，也必须在报告中简短说明。
+
+### 根因定位，不得绕过
+
+确认是程序错误后，**必须从源头修复，严禁以下绕过行为**：
+
+| 禁止行为 | 说明 |
+|---------|------|
+| 修改测试断言来适配错误的返回值 | 断言是需求规约的体现，不能降低验收标准 |
+| 将失败用例标记为 `test.skip()` 掩盖问题 | skip 只用于"环境未就绪"或"功能计划外" |
+| 改写测试逻辑绕过验证步骤 | 绕过等于放弃测试价值 |
+| 接受"当前行为"为正确而不查根因 | 必须找出实现与需求不符的原因 |
+
+### 程序错误根因分析流程
+
+```
+Step 1: 确认失败现象
+  └─ 读取完整错误信息（状态码、响应体、错误堆栈）
+  └─ 区分：环境问题 / 表不存在 / 接口未注册 / 响应格式不符
+
+Step 2: 追踪调用链
+  └─ 接口未找到(404) → 检查路由注册
+  └─ 未认证(401)     → 检查中间件配置 / token 获取逻辑
+  └─ 服务错误(500)   → 读取后端日志，找具体 error 消息
+  └─ 响应格式不符    → 对比后端实际响应与测试预期，找代码差异
+
+Step 3: 定位代码根因
+  └─ 路由问题   → 检查 router.go / server.go 的路由注册
+  └─ DB 问题    → 检查 AutoMigrate / 表是否存在 / 字段定义
+  └─ 格式问题   → 对比响应格式，找 handler 的输出函数（e.OK vs c.JSON）
+
+Step 4: 修复根因
+  └─ 修改代码（路由/模型/handler）
+  └─ 重新编译并验证编译通过
+  └─ 重启服务，验证服务日志无异常
+  └─ 重新执行测试
+```
+
+### 深度链路调试（一次分析未定位到根因时强制执行）
+
+**触发条件**：按 Step 1-4 分析后，修复了一个假设的根因，重新编译部署测试后问题仍然复现，或者根本无法确定根因在哪个层次。
+
+**原则：必须在代码里加链路日志，不得凭猜测反复修改代码**。
+
+#### 链路日志添加规范
+
+```
+目标：在中间件链每个关键节点加 log.Printf，覆盖"请求从哪进来、在哪消失、带了什么状态出去"
+```
+
+**中间件链日志模板（Go）**：
+
+```go
+// 在每个中间件的关键分支点加日志
+log.Printf("[DEBUG-MW-xxx] enter path=%s method=%s", c.Request.URL.Path, c.Request.Method)
+log.Printf("[DEBUG-MW-xxx] aborted=%v status=%d body_len=%d", c.IsAborted(), c.Writer.Status(), bodyLen)
+log.Printf("[DEBUG-MW-xxx] ABORT reason=%s", reason)
+log.Printf("[DEBUG-MW-xxx] PASS calling c.Next()")
+log.Printf("[DEBUG-MW-xxx] c.Next() returned aborted=%v status=%d", c.IsAborted(), c.Writer.Status())
+```
+
+**Handler 入口日志**（放在函数第一行）：
+```go
+log.Printf("[DEBUG-HANDLER-xxx] ENTER path=%s", c.FullPath())
+// 每个关键步骤后也加日志
+log.Printf("[DEBUG-HANDLER-xxx] step=db_query count=%d err=%v", count, err)
+log.Printf("[DEBUG-HANDLER-xxx] step=response_written")
+```
+
+#### 链路日志分析要点
+
+加完日志编译重启后，分析输出时注意：
+
+| 现象 | 含义 | 下一步 |
+|------|------|--------|
+| 中间件日志有，handler 日志无 | handler 未被调用，某个中间件 Abort 了 | 找最后一条中间件日志，查该中间件的 ABORT 分支 |
+| `c.Next() returned` 没有出现 | 该中间件的 `c.Next()` 没有返回 | 查 `c.Next()` 内部是否 panic（看 Recovery 日志） |
+| gin 请求日志在中间件 `c.Next()` 日志之后打印 | 这是正常的，gin 请求日志在整个链完成后才写出 | 不要用 gin 日志的打印顺序判断执行顺序，改用 `log.Printf` |
+| HTTP 200 空 body | Recovery 捕获了 panic，但 header 已提前被发出 | 查 handler 里是否有 nil pointer 访问（如 `nil DB`，`nil Orm`） |
+| HTTP 200 空 body 且无 Recovery 日志 | 中间件链的 ResponseWriter 被拦截器（如 FieldFilterMiddleware）包装，`Abort` 的 body 被写入 buffer 但 buffer 写出时 header 已是 200 | 绕过中间件直接调用接口看原始状态码 |
+
+#### 链路调试的典型陷阱（来自实战）
+
+1. **`2>&1` 重定向下 PowerShell 缓冲区截断**：`get_process_output` 每次只返回有限行，后面的日志可能被截断。解决方式：增大 `lines` 参数，或在请求后 `Sleep` 一段时间再取日志。
+
+2. **gin 请求日志时序误导**：gin 框架的请求日志（`info GET /api/... 200`）是在整个中间件链执行完后才写出，不代表 handler 执行完了。必须用业务代码里的 `log.Printf` 判断实际执行顺序。
+
+3. **`go-admin SDK MakeOrm()` nil 陷阱**：`MakeOrm()` 用 `c.Request.Host` 作 key 查 DB，如果 key 不匹配会返回 nil DB。后续 `s.Orm.Model()` 触发 nil pointer panic，被 gin Recovery 捕获，导致 HTTP 200 空 body（header 已由框架设为 200）。修复方式：不用 `MakeOrm()`，改为直接从 `sdk.Runtime.GetDb()` 遍历取第一个可用 DB。
+
+4. **FieldFilterMiddleware 包装 ResponseWriter 的副作用**：如果上游中间件 `AbortWithStatusJSON(403)` 的响应被 `FieldFilterMiddleware` 的 buffer 拦截，而 buffer 最终写出时 gin 状态码已被某处覆盖为 200，客户端会看到 200 空 body。这类问题需通过直接 HTTP 调用（不经过测试脚本）验证真实状态码来排查。
+
+5. **新注册的路由未加入权限白名单**：通过 `RegisterExtraAdminRoutes()` 等扩展机制注册的路由，不会自动加入 `DynamicPermissionMiddleware` 的 `skipPaths` 或 `admin_api_permission` 表。必须显式加白名单，否则即使是 SUPER_ADMIN 也可能因为 `admin_role` 表里没有对应的 `SUPER_ADMIN` role_code 而被拒绝。
+
+#### 链路日志清理（强制）
+
+定位到根因并修复后，**必须清理所有临时调试日志**，不得提交：
+- 删除所有 `[DEBUG-MW-xxx]` / `[DEBUG-HANDLER-xxx]` 格式的 `log.Printf`
+- 删除调试用的临时 `log.Printf` import（如果原文件没有）
+- 重新编译确认 0 错误后再跑最终 E2E
+
+### 常见根因与正确修复方式
+
+| 失败现象 | 归因判定 | 正确处置 |
+|---------|---------|---------|
+| 接口返回 404 | 程序错误（路由未注册） | 检查并修复路由注册，断言不变 |
+| 接口返回 `code:200` 但测试期望 `code:0` | 程序错误（响应格式不符合 design.md 定义） | 修复 handler 响应格式，断言不变 |
+| DB 表不存在导致 500 | 程序错误（AutoMigrate 未执行） | 修复服务启动时的表迁移逻辑 |
+| GORM AutoMigrate 失败（invalid default value） | 程序错误（模型字段定义有误） | 检查并修复 GORM tag 中的冲突 |
+| 错误信息文本与断言正则不匹配 | **先查 FR/design/tasks**：若文档未定义具体文本 → 脚本错误，按行业实践调整断言并记录；若文档有定义 → 程序错误，修改返回信息 |
+| auth-setup 失败导致 chromium project 全不跑 | 脚本错误（测试依赖配置有误） | 为纯 API 测试新增不依赖 auth-setup 的 project |
+| 使用旧进程缓存输出判断结果 | 环境问题 | 停止旧进程重新启动，等待完整输出 |
+
+### 二进制/进程状态确认（部署后必须验证）
+
+修改代码后执行测试前，**必须按以下顺序确认**，否则测试结果无效：
+
+```
+1. 调用 list_processes 确认旧后端进程的 terminalId
+2. 调用 control_pwsh_process stop {terminalId} 停止旧进程
+3. 等待 stop 返回成功（Success）后才能继续——必须确认旧进程已关闭
+4. go build 编译（编译成功才继续，编译失败先修复）
+5. 启动新编译的二进制（control_pwsh_process start）
+6. 等待服务启动完成（get_process_output 确认日志无 Fatal 错误）
+7. 停止旧的 E2E 进程（isReused=true 的进程输出可能是缓存）
+8. 重新启动新的 E2E 进程
+9. 等待完整输出后再读取结果
+```
+
+**严禁跳过步骤 2-3**：在 Windows 上，如果旧进程未关闭就重新编译，`go build` 会因为 `.exe` 文件被占用而失败；即使编译成功（输出到不同文件名），旧进程仍在监听原端口，新进程无法启动，测试打的是旧服务。
+
+**判断进程是否为缓存**：`control_pwsh_process` 返回 `isReused: true` 时，该进程输出可能是上一次的缓存，必须先 stop 再重新 start。
 
 ---
 
@@ -112,9 +299,12 @@ expect(await page.locator('.el-menu-item').count()).toBeGreaterThan(0);
 
 #### 2.1 判断 e2e 工程是否已存在
 
-检查 `projects/{解决方案名}/{项目名}/e2e-tests/package.json`：
-- 存在 → 跳过 2.2，直接到 2.3
-- 不存在 → 执行 2.2
+按以下顺序检查：
+1. `projects/{解决方案名}/{项目名}/e2e/package.json` → 存在则使用此路径
+2. `projects/{解决方案名}/{项目名}/e2e-tests/package.json` → 存在则使用此路径
+3. 两者都不存在 → 执行 2.2，在 `e2e/` 下新建
+
+存在时跳过 2.2，直接到 2.3。
 
 #### 2.2 创建 e2e-tests 工程骨架
 
@@ -132,20 +322,26 @@ e2e-tests/
 - `reporter: [['html', { open: 'never' }], ['list']]`
 - 使用 `projects` 区分 API 和 UI 测试：
   ```typescript
-  projects: [
-    {
-      name: 'api',
-      testMatch: '**/*.api.spec.ts',
-      use: { /* 无浏览器，仅 request */ },
-      fullyParallel: true,  // API 测试可并行
-    },
-    {
-      name: 'ui',
-      testMatch: '**/*.ui.spec.ts',
-      use: { browserName: 'chromium', headless: true },
-      workers: 1,  // UI 测试串行（避免浏览器状态冲突）
-    },
-  ]
+  export default defineConfig({
+    timeout: 60000,
+    fullyParallel: false,   // 顶层控制，API project 内部可覆盖
+    workers: 1,
+    reporter: [['html', { open: 'never' }], ['list']],
+    projects: [
+      {
+        name: 'api',
+        testMatch: '**/*.api.spec.ts',
+        use: {},            // 纯 API 测试，无需浏览器配置
+        // fullyParallel 在 defineConfig 顶层控制，不在 project 内设置
+      },
+      {
+        name: 'ui',
+        testMatch: '**/*.ui.spec.ts',
+        use: { browserName: 'chromium', headless: true },
+        // UI 测试串行（workers:1 在顶层已设置）
+      },
+    ],
+  });
   ```
 - 后端 `API_BASE` 在各 spec 文件中单独定义，不在 config 中统一
 
@@ -317,23 +513,35 @@ await navigateTo(page, '/system/org');  // 替代点击菜单层级
 
 ---
 
-**测试数据隔离规范：**
+**测试数据隔离规范（强制）：**
 
-| 策略 | 做法 |
+| 规则 | 要求 |
 |------|------|
-| 唯一标识命名 | 创建的测试数据名称含时间戳或随机后缀：`test_org_${Date.now()}` |
-| beforeAll 清理 | UI spec 的 `test.beforeAll` 通过 API 删除上次残留的测试数据 |
-| afterAll 清理 | 测试完成后删除本轮创建的数据（可选，CI 环境建议保留便于排查） |
+| **幂等性** | 测试必须可重复执行，每次结果一致。用时间戳/随机后缀命名创建的数据，避免名称冲突 |
+| **跑前清理** | `beforeAll` 里先删本次将要创建的同名残留数据，再创建新数据 |
+| **describe 独立** | 每个 `describe` 只使用自己 `beforeAll` 创建的数据，不依赖其他 describe 的副作用 |
+| **失败后留存** | 测试失败时不清理数据（便于排查），但要在测试名称中包含时间戳使下次跑不冲突 |
+| **不共享可变状态** | token 可跨 describe 共享，但创建的实体 ID、业务数据不得跨 describe 共享 |
 
 ```typescript
-test.beforeAll(async ({ request }) => {
-  const api = await request.newContext();
-  const token = await loginAdmin(api);
-  // 清理可能残留的测试组织节点
-  const tree = await api.get(`${API_BASE}/api/v1/admin/org-units/tree`, auth(token));
-  const nodes = await tree.json();
-  // 删除名称含 'test_' 前缀的节点...
-});
+test.beforeAll(async () => {
+  api = await request.newContext()
+  ;({ token, userId } = await loginAdmin(api))
+
+  // 幂等性：先清理可能残留的同名数据
+  const listResp = await api.get(
+    `${API_BASE}/api/v1/admin/approval-flows?flow_code=${encodeURIComponent(flowCode)}`,
+    authHeader(token)
+  )
+  const body = await listResp.json()
+  const existing = body.data?.list ?? []
+  for (const item of existing) {
+    await api.delete(`${API_BASE}/api/v1/admin/approval-flows/${item.id}`, authHeader(token))
+  }
+
+  // 再创建本次测试需要的数据
+  await createApprovalFlow(api, token, flowCode, userId)
+})
 ```
 
 **spec 文件必须包含的元素：**
@@ -471,15 +679,71 @@ test.describe('C端用户管理页面', () => {
 
 ---
 
-#### 3.1 确认后端已启动
+### Step 3: 执行测试
+
+#### 3.0 执行优先级策略（强制）
+
+**不得一次性跑完所有用例再统一排查**。采用分层递进策略，先确保核心链路通过，再扩展覆盖。
+
+```
+阶段1 — 核心链路验证（P0，必须 100% 通过才能继续）
+  └─ 只跑 P0 用例：认证登录 + 核心正向流程 + 关键状态转换
+  └─ 有任何失败 → 立即停止，定位根因并修复，不得继续跑后续用例
+  └─ 全部通过 → 进入阶段2
+
+阶段2 — 完整 API 测试（P0 + P1）
+  └─ 跑全部接口测试（api spec）
+  └─ 有 P0 失败 → 停止修复，优先级高于 P1
+  └─ 仅 P1 失败 → 记录 Bug，可继续跑阶段3
+  └─ 全部通过 → 进入阶段3
+
+阶段3 — 端面/回归测试（P1 + P2）
+  └─ 跑 UI spec 和回归用例
+  └─ 记录所有失败，按优先级排队修复
+```
+
+**核心链路定义**（以下用例类型视为 P0 核心链路）：
+- 认证：登录成功、token 认证通过
+- 主实体 CRUD：创建正向、查询列表、删除正向
+- 核心状态转换：业务实体的主路径状态流转（如审批的 PENDING→APPROVED）
+- 回归：所有 RG-N 回归用例（防止已有功能被破坏）
+
+**修复顺序原则**：
+1. P0 失败 → 当前批次内必须修复，不得推迟
+2. P1 失败且影响后续用例的前置条件 → 必须先修复（如 beforeAll 里的数据创建失败）
+3. P1/P2 独立失败 → 记录为 Bug，标注 `test.fail()`，继续执行其他用例
 
 ```powershell
-netstat -ano | findstr ":{端口}"
+# PowerShell 原生写法（推荐，跨版本稳定）
+netstat -ano | Select-String "LISTENING" | Select-String ":8000"
+
+# CMD 备选写法
+netstat -ano | findstr "LISTENING" | findstr ":8000"
 ```
 
 **后端未启动时**：提示用户先启动后端服务，不自动启动（后端是长进程）。说明启动命令后等待用户确认。
 
 #### 3.2 执行测试命令
+
+> **超时与重试配置**：
+> - 本地开发环境：`retries: 0`（失败立即停，便于调试）
+> - CI 环境：`retries: 1`（偶发网络抖动自动重试一次，两次都失败才算真实 Bug）
+> - 涉及异步任务/EventBus 的用例，在用例内用 `test.setTimeout(30000)` 单独延长
+> - 不得用 `waitForTimeout` 做固定等待，应用 `waitForResponse` 或轮询断言
+
+```typescript
+// CI 环境 playwright.config.ts 建议配置
+export default defineConfig({
+  retries: process.env.CI ? 1 : 0,
+  // ...
+})
+
+// 单个用例延长超时（涉及异步处理时）
+test('TC-011 EventBus 异步联动', async () => {
+  test.setTimeout(30000)
+  // ...
+})
+```
 
 ```powershell
 # 执行单个 CR 的接口测试
@@ -555,6 +819,9 @@ npx playwright test tests/{cr-name}.*.spec.ts --reporter=html
 | 测试账号 | admin / admin123 |
 | 测试框架 | Playwright {版本} |
 | 浏览器 | Chromium |
+| Git Commit | {执行 `git rev-parse --short HEAD` 获取，如 `a3f9c12`} |
+| 后端版本 | {执行 `.\backend_test.exe version` 或记录构建时间} |
+| Node 版本 | {执行 `node --version` 获取} |
 
 ### 执行统计
 
@@ -653,13 +920,19 @@ AIDOC/project_doc/{项目}/
 
 ## 错误排查速查
 
-| 现象 | 原因 | 处理 |
-|------|------|------|
-| `ECONNREFUSED` | 后端未启动 | 提示用户启动后端 |
-| `Cannot find module` | node_modules 未安装 | 执行 `npm install` |
-| 全部 401 | token 未正确获取 | 检查 `loginAdmin()` + tenant select 逻辑 |
-| 全部 400 | 请求 body 格式错误 | 检查字段名/类型，int64 字段需传字符串 |
-| `binding required` 400 | 后端 binding 标签过严 | 标注为 BUG，用 `test.fail()` |
-| DELETE/UPDATE 500 | gorm.ErrRecordNotFound 未映射 | 标注为 BUG |
-| 权限 403 | 中间件未放行新路由 | 检查 api_permissions 表或 AutoDiscover |
-| `Expected to fail, but passed` | `test.fail()` 的 Bug 已被修复 | 移除 `test.fail()`，更新报告 |
+> 排查前先完成归因判定（见"测试失败处理原则"），确认是程序错误还是脚本错误，再按下表定位根因。
+
+| 现象 | 归因方向 | 正确处置 |
+|------|---------|---------|
+| `ECONNREFUSED` | 环境问题 | 提示用户启动后端，不自动处理 |
+| `Cannot find module` | 环境问题 | 执行 `npm install` |
+| 全部 401 | 程序/脚本错误 | 先查 FR/design：若规定需认证 → 检查 `loginAdmin()` + tenant select 逻辑；若脚本漏传 header → 修正脚本 |
+| 全部 400 | 程序/脚本错误 | 检查请求 body 字段名/类型，int64 字段需传字符串；若 binding 标签过严 → 程序错误，修复 binding |
+| 接口 404 | 程序错误（路由未注册） | 检查并修复路由注册，断言不变 |
+| `code:200` 但期望 `code:0` | 程序错误（响应格式不符） | 修复 handler 响应函数，断言不变 |
+| DB 表不存在导致 500 | 程序错误（AutoMigrate 未执行） | 修复服务启动时的表迁移逻辑 |
+| GORM AutoMigrate 失败 | 程序错误（模型字段定义有误） | 检查并修复 GORM tag 冲突 |
+| 错误信息文本与断言正则不匹配 | **先查文档**：FR/design 有定义 → 程序错误修代码；文档未定义 → 脚本错误按行业实践调整并记录 | 无论哪种，必须在报告中记录断言调整说明 |
+| auth-setup 失败导致 project 全不跑 | 脚本/配置错误 | 为纯 API 测试新增不依赖 auth-setup 的 project |
+| isReused: true 进程输出无变化 | 环境问题（缓存输出） | stop 旧进程，重新 start，等完整输出后再读取 |
+| `Expected to fail, but passed` | Bug 已修复 | 移除 `test.fail()`，更新报告 Bug 状态为"已修复" |

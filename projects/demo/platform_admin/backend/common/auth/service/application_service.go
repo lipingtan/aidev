@@ -1,12 +1,70 @@
 package service
 
 import (
+	"log"
+
 	"go-admin/common/auth/errors"
 	"go-admin/common/auth/model"
 	"go-admin/common/auth/repository"
+	"go-admin/common/event"
 
 	"gorm.io/gorm"
 )
+
+// RegisterApprovalListeners 注册审批结果事件监听，更新 admin_tenant_app.subscription_status。
+// 由外部（cmd/api/server.go）在应用启动时调用，不在 init() 中调用，避免循环依赖。
+func RegisterApprovalListeners(bus event.Bus, db *gorm.DB) {
+	// 审批通过 → subscription_status = 'active'
+	bus.Subscribe("approval.completed", func(payload interface{}) {
+		e, ok := payload.(event.ApprovalCompletedEvent)
+		if !ok {
+			log.Printf("[RegisterApprovalListeners] approval.completed: 非预期 payload 类型 %T", payload)
+			return
+		}
+		if e.BizType != "tenant_app_subscription" {
+			return
+		}
+		if err := db.Model(&model.TenantApp{}).
+			Where("app_code = ? AND tenant_id = ?", e.BizID, e.TenantID).
+			Update("subscription_status", "active").Error; err != nil {
+			log.Printf("[RegisterApprovalListeners] approval.completed 更新 subscription_status 失败: %v", err)
+		}
+	})
+
+	// 审批驳回 → subscription_status = 'rejected'
+	bus.Subscribe("approval.rejected", func(payload interface{}) {
+		e, ok := payload.(event.ApprovalRejectedEvent)
+		if !ok {
+			log.Printf("[RegisterApprovalListeners] approval.rejected: 非预期 payload 类型 %T", payload)
+			return
+		}
+		if e.BizType != "tenant_app_subscription" {
+			return
+		}
+		if err := db.Model(&model.TenantApp{}).
+			Where("app_code = ? AND tenant_id = ?", e.BizID, e.TenantID).
+			Update("subscription_status", "rejected").Error; err != nil {
+			log.Printf("[RegisterApprovalListeners] approval.rejected 更新 subscription_status 失败: %v", err)
+		}
+	})
+
+	// 审批撤销 → subscription_status = 'rejected'（撤销视为未通过）
+	bus.Subscribe("approval.cancelled", func(payload interface{}) {
+		e, ok := payload.(event.ApprovalCancelledEvent)
+		if !ok {
+			log.Printf("[RegisterApprovalListeners] approval.cancelled: 非预期 payload 类型 %T", payload)
+			return
+		}
+		if e.BizType != "tenant_app_subscription" {
+			return
+		}
+		if err := db.Model(&model.TenantApp{}).
+			Where("app_code = ? AND tenant_id = ?", e.BizID, e.TenantID).
+			Update("subscription_status", "rejected").Error; err != nil {
+			log.Printf("[RegisterApprovalListeners] approval.cancelled 更新 subscription_status 失败: %v", err)
+		}
+	})
+}
 
 // ApplicationService 应用管理业务逻辑层
 type ApplicationService struct {

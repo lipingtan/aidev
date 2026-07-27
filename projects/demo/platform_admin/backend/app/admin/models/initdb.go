@@ -9,6 +9,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// MigrateApprovalTables 注册审批流相关表到 AutoMigrate
+func MigrateApprovalTables(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&AdminApprovalFlow{},
+		&AdminApproval{},
+		&AdminApprovalNode{},
+		&AdminApprovalVote{},
+	)
+}
+
 //go:embed sql/db.sql
 var dbSQL string
 

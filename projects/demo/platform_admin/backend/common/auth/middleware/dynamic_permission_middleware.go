@@ -32,6 +32,14 @@ var skipPaths = map[string]bool{
 	"/api/v1/admin/sys-apis":                   true,
 	"/api/v1/admin/app-catalog":                true,
 	"/api/v1/admin/app-subscriptions":          true,
+	// 审批流接口（通过 RegisterExtraAdminRoutes 注册，未在 admin_api_permission 自动发现）
+	"/api/v1/admin/approval-flows":             true,
+	"/api/v1/admin/approval-flows/:id":         true,
+	"/api/v1/admin/approvals":                  true,
+	"/api/v1/admin/approvals/:id":              true,
+	"/api/v1/admin/approvals/:id/approve":      true,
+	"/api/v1/admin/approvals/:id/reject":       true,
+	"/api/v1/admin/approvals/:id/cancel":       true,
 }
 
 // DynamicPermissionMiddleware 动态权限检查中间件

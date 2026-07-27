@@ -109,6 +109,9 @@ func FieldFilterMiddleware(registry *FieldObjectRegistry, permRepo repository.Fi
 		// 执行后续 Handler
 		c.Next()
 
+		log.Printf("[field-filter-debug] after Next: path=%s method=%s body_len=%d status=%d aborted=%v",
+			c.FullPath(), c.Request.Method, blw.body.Len(), blw.ResponseWriter.Status(), c.IsAborted())
+
 		// 检查是否被手动标记为跳过
 		if c.GetBool("skip_field_filter") {
 			// 跳过过滤，直接写入原始响应

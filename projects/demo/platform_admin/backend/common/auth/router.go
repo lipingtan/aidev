@@ -78,7 +78,14 @@ type Dependencies struct {
 	FieldPermissionRepo  repository.FieldPermissionRepository
 }
 
-// RegisterRoutes 注册 auth 模块所有路由到指定路由组
+// ExtraAdminRoutesFn 允许外部模块（如 app/admin/apis）注册额外的 /api/v1/admin/ 路由
+// 在 auth.Init() 调用前通过 RegisterExtraAdminRoutes() 注册，在 RegisterRoutes 中执行
+var extraAdminRoutesFns []func(admin *gin.RouterGroup)
+
+// RegisterExtraAdminRoutes 注册额外的 admin 路由函数（必须在 auth.Init 之前调用）
+func RegisterExtraAdminRoutes(fn func(admin *gin.RouterGroup)) {
+	extraAdminRoutesFns = append(extraAdminRoutesFns, fn)
+}
 // 路由组结构: /auth（公开）+ /api/v1/public（公开业务）+ /api/v1/common（仅认证）+ /api/v1/admin（完整中间件链）
 func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 	// 认证路由（公开，不走任何中间件）
@@ -174,6 +181,11 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		// 域名-租户映射管理路由
 		if deps.TenantDomainHandler != nil {
 			deps.TenantDomainHandler.RegisterRoutes(admin)
+		}
+
+		// 外部模块扩展路由（如审批流）
+		for _, fn := range extraAdminRoutesFns {
+			fn(admin)
 		}
 
 		// Stub 路由

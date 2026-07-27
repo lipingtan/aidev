@@ -23,7 +23,7 @@ export default defineConfig({
     slowMo: 100,
   },
   projects: [
-    // 全局 setup：登录并保存状态
+    // 全局 setup：登录并保存状态（依赖前端 localhost:3000）
     {
       name: 'auth-setup',
       testMatch: /global-setup\.ts/,
@@ -36,6 +36,14 @@ export default defineConfig({
         storageState: './test-results/.auth/state.json',
       },
       dependencies: ['auth-setup'],
+    },
+    // 纯 API 测试（不依赖前端，不需要 auth-setup）
+    {
+      name: 'api',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+      // 无 dependencies，可在没有前端的情况下运行
     },
   ],
   // webServer 已移除：前端/后端需手动启动

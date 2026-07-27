@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 	"gopkg.in/yaml.v3"
 
+	adminModels "go-admin/app/admin/models"
 	pluginModels "go-admin/app/plugin/models"
 	authPkg "go-admin/common/auth"
 )
@@ -280,6 +281,11 @@ func runMigrations(db *gorm.DB) error {
 	// 保留插件管理表
 	if err := db.AutoMigrate(&pluginModels.SysPlugin{}); err != nil {
 		return fmt.Errorf("插件管理表迁移失败: %w", err)
+	}
+
+	// CR-7: 审批流相关表
+	if err := adminModels.MigrateApprovalTables(db); err != nil {
+		return fmt.Errorf("审批流表迁移失败: %w", err)
 	}
 
 	return nil

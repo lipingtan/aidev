@@ -223,6 +223,26 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '域名管理', icon: 'Link', permission: 'system:tenant-domain:list' }
       },
 
+      // 审批管理
+      {
+        path: 'approval',
+        name: 'approval',
+        component: () => import('@/views/approval/index.vue'),
+        meta: { title: '审批管理', icon: 'Stamp' }
+      },
+      {
+        path: 'approval/detail/:id',
+        name: 'approval-detail',
+        component: () => import('@/views/approval/detail.vue'),
+        meta: { title: '审批详情', icon: 'Stamp', hidden: true }
+      },
+      {
+        path: 'approval/flow-config',
+        name: 'approval-flow-config',
+        component: () => import('@/views/approval/flow-config.vue'),
+        meta: { title: '审批流配置', icon: 'SetUp', permission: 'approval:flow:list' }
+      },
+
     ]
   }
 ]

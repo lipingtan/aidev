@@ -18,16 +18,20 @@ import (
 	"github.com/go-admin-team/go-admin-core/sdk/config"
 	"github.com/go-admin-team/go-admin-core/sdk/pkg"
 	"github.com/pkg/errors"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 	"gorm.io/gorm"
 
 	"go-admin/app/admin/models"
+	adminApis "go-admin/app/admin/apis"
 	"go-admin/app/admin/router"
 	"go-admin/app/jobs"
 	"go-admin/app/setup"
 	authPkg "go-admin/common/auth"
 	authConfig "go-admin/common/auth/config"
+	authService "go-admin/common/auth/service"
 	"go-admin/common/database"
+	"go-admin/common/event"
 	"go-admin/common/global"
 	common "go-admin/common/middleware"
 	"go-admin/common/middleware/handler"
@@ -59,6 +63,33 @@ func init() {
 	StartCmd.PersistentFlags().StringVarP(&configYml, "config", "c", "config/settings.yml", "Start server with provided configuration file")
 	StartCmd.PersistentFlags().BoolVarP(&apiCheck, "api", "a", false, "Start server with check api data")
 	AppRouters = append(AppRouters, router.InitRouter)
+
+	// 注册审批流路由到 auth-rbac 的 /api/v1/admin/ group
+	authPkg.RegisterExtraAdminRoutes(func(admin *gin.RouterGroup) {
+		approvalFlowAPI := adminApis.ApprovalFlow{}
+		approvalAPI := adminApis.Approval{}
+
+		// 审批流定义 CRUD
+		flows := admin.Group("/approval-flows")
+		{
+			flows.GET("", approvalFlowAPI.GetPage)
+			flows.GET("/:id", approvalFlowAPI.Get)
+			flows.POST("", approvalFlowAPI.Insert)
+			flows.PUT("/:id", approvalFlowAPI.Update)
+			flows.DELETE("/:id", approvalFlowAPI.Delete)
+		}
+
+		// 审批实例操作
+		approvals := admin.Group("/approvals")
+		{
+			approvals.GET("", approvalAPI.GetPage)
+			approvals.GET("/:id", approvalAPI.Get)
+			approvals.POST("", approvalAPI.Insert)
+			approvals.POST("/:id/approve", approvalAPI.Approve)
+			approvals.POST("/:id/reject", approvalAPI.Reject)
+			approvals.POST("/:id/cancel", approvalAPI.Cancel)
+		}
+	})
 }
 
 func preRun() {
@@ -116,6 +147,12 @@ func run() error {
 				}
 				if err := authPkg.Init(authCfg, db, r); err != nil {
 					log.Fatalf("auth-rbac 初始化失败: %v", err)
+				}
+				// 审批流表迁移（幂等，表已存在不报错）
+				if err := models.MigrateApprovalTables(db); err != nil {
+					log.Warnf("审批流表迁移失败（非致命）: %v", err)
+				} else {
+					log.Info("审批流表迁移完成")
 				}
 			}
 		}
@@ -192,6 +229,27 @@ func run() error {
 			jobs.InitJob()
 			jobs.Setup(sdk.Runtime.GetDb())
 		}()
+
+		// 注册审批超时扫描（每 5 分钟，独立 cron，不走 DB jobs 框架）
+		var primaryDB *gorm.DB
+		for _, d := range sdk.Runtime.GetDb() {
+			if d != nil {
+				primaryDB = d
+				break
+			}
+		}
+		if primaryDB != nil {
+			approvalCron := cron.New(cron.WithSeconds())
+			approvalCron.AddFunc("0 */5 * * * *", func() {
+				jobs.RunApprovalTimeoutScan(primaryDB)
+			})
+			approvalCron.Start()
+			log.Info("审批超时扫描 Cron 已启动（每5分钟）")
+
+			// 注册审批结果 EventBus 监听（subscription_status 联动）
+			authService.RegisterApprovalListeners(event.DefaultBus, primaryDB)
+			log.Info("审批结果 EventBus 监听已注册")
+		}
 	}
 
 	if apiCheck && setup.IsInstalled() {
