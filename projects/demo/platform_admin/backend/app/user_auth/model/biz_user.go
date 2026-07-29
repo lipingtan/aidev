@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
 	authModel "go-admin/common/auth/model"
@@ -26,6 +27,7 @@ type BizUser struct {
 	CreateBy     int64      `json:"create_by,string" gorm:"default:0"`
 	UpdateBy     int64      `json:"update_by,string" gorm:"default:0"`
 	Version      int        `json:"version" gorm:"not null;default:1"`
+	ExtFields    datatypes.JSON `json:"ext_fields" gorm:"type:json"` // 扩展字段（JSON）
 }
 
 // TableName 指定表名

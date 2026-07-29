@@ -49,7 +49,26 @@ func (b *bus) Publish(event string, payload interface{}) {
 // DefaultBus 全局默认事件总线单例，供其他包无需依赖注入直接引用。
 var DefaultBus = NewBus()
 
+// ---- 事件名常量 ----
+
+const (
+	// EventPermissionChanged 权限变更事件（缓存失效触发）
+	EventPermissionChanged = "permission.changed"
+)
+
 // ---- 事件 payload 类型定义 ----
+
+// PermissionChangedEvent 权限变更事件 payload
+type PermissionChangedEvent struct {
+	AffectedUsers []AffectedUser // 受影响的用户列表
+	Source        string         // 变更来源标识（"assign_resources"/"assign_apis"/"replace_roles" 等）
+}
+
+// AffectedUser 受影响的用户
+type AffectedUser struct {
+	UserID   int64
+	TenantID int64
+}
 
 // ApprovalCompletedEvent 审批通过事件。
 type ApprovalCompletedEvent struct {

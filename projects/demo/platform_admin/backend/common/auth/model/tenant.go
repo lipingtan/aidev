@@ -18,6 +18,7 @@ type Tenant struct {
 	Locale     string         `gorm:"type:varchar(16);not null;default:zh-CN" json:"locale" fieldperm:"语言"`           // 默认语言
 	Currency   string         `gorm:"type:varchar(8);not null;default:CNY" json:"currency" fieldperm:"币种"`            // 默认币种
 	ExpiredAt  *time.Time     `json:"expired_at" fieldperm:"到期时间"`                                               // 试用/订阅到期时间
+	ExtFields  datatypes.JSON `gorm:"type:json" json:"ext_fields"`                                               // 扩展字段（JSON）
 	Version    int            `gorm:"default:1" json:"version"`                                                  // 乐观锁版本号
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 	CreatedAt  *time.Time     `gorm:"autoCreateTime" json:"created_at"`

@@ -24,6 +24,9 @@ func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
 	}
 	// 注册密码策略
 	h.router.Register(strategy.NewPasswordStrategy(authSvc.Login))
+	// 注册 OAuth2/LDAP 骨架策略（CR-8）
+	h.router.Register(&strategy.OAuth2Strategy{})
+	h.router.Register(&strategy.LDAPStrategy{})
 	return h
 }
 

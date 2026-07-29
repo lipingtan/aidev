@@ -8,6 +8,7 @@ import (
 	"go-admin/common/auth/errors"
 	"go-admin/common/auth/model"
 	"go-admin/common/auth/repository"
+	"go-admin/common/event"
 
 	"gorm.io/gorm"
 )
@@ -333,10 +334,11 @@ func (s *RoleService) AssignResources(roleID int64, req *AssignResourcesRequest)
 		s.invalidatePermCacheByRoles(affectedRoleIDs)
 	}
 
+	// CR-8: 事件驱动缓存失效（事务已提交，发布 PermissionChanged 事件）
+	s.publishPermChangedForRole(roleID, affected)
+
 	return &AssignResult{AffectedChildren: affected}, nil
 }
-
-// cascadeTrimChildren 级联裁剪子角色权限（递归）
 // 对每个子角色，计算其 resourceIDs 与新父角色 resourceIDs 的交集
 // 如果交集小于原来的绑定数，用交集替换子角色绑定
 func (s *RoleService) cascadeTrimChildren(tx *gorm.DB, parentRoleID int64, parentResourceIDs []int64) ([]AffectedChild, error) {
@@ -599,6 +601,9 @@ func (s *RoleService) AssignApis(roleID int64, req *AssignApisRequest) (*AssignR
 		}
 		s.invalidatePermCacheByRoles(affectedRoleIDs)
 	}
+
+	// CR-8: 事件驱动缓存失效（事务已提交，发布 PermissionChanged 事件）
+	s.publishPermChangedForRole(roleID, affected)
 
 	return &AssignResult{AffectedChildren: affected}, nil
 }
@@ -919,4 +924,43 @@ func (s *RoleService) checkCyclicAndDepth(roleID int64, newParentID int64) error
 	}
 
 	return nil
+}
+
+// publishPermChangedForRole 发布权限变更事件（角色权限分配后调用）
+// 收集当前角色 + 被裁剪子角色关联的所有用户，发布聚合事件
+func (s *RoleService) publishPermChangedForRole(roleID int64, affected []AffectedChild) {
+	// 收集所有受影响的角色 ID（当前角色 + 被裁剪子角色）
+	allRoleIDs := []int64{roleID}
+	for _, child := range affected {
+		allRoleIDs = append(allRoleIDs, child.RoleID)
+	}
+
+	// 查询这些角色关联的用户
+	type userTenant struct {
+		UserID   int64
+		TenantID int64
+	}
+	var results []userTenant
+	s.db.Table("admin_user_role").
+		Select("DISTINCT user_id, tenant_id").
+		Where("role_id IN ?", allRoleIDs).
+		Find(&results)
+
+	if len(results) == 0 {
+		return
+	}
+
+	// 构造事件 payload
+	affectedUsers := make([]event.AffectedUser, 0, len(results))
+	for _, r := range results {
+		affectedUsers = append(affectedUsers, event.AffectedUser{
+			UserID:   r.UserID,
+			TenantID: r.TenantID,
+		})
+	}
+
+	event.DefaultBus.Publish(event.EventPermissionChanged, &event.PermissionChangedEvent{
+		AffectedUsers: affectedUsers,
+		Source:        "role_permission_change",
+	})
 }

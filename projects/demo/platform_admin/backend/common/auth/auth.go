@@ -2,6 +2,7 @@ package auth
 
 import (
 	"log"
+	"time"
 
 	userAuth "go-admin/app/user_auth"
 	userAuthHandler "go-admin/app/user_auth/handler"
@@ -11,7 +12,7 @@ import (
 	userAuthSpi "go-admin/app/user_auth/spi"
 	userStrategy "go-admin/app/user_auth/strategy"
 	pluginRouter "go-admin/app/plugin/router"
-	"go-admin/common/auth/cache"
+	authCache "go-admin/common/auth/cache"
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/discovery"
 	"go-admin/common/auth/handler"
@@ -20,8 +21,10 @@ import (
 	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
 	"go-admin/common/auth/spi"
+	"go-admin/common/event"
 	"go-admin/common/plugin"
 
+	"github.com/go-admin-team/go-admin-core/sdk"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -112,6 +115,27 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	deps.FieldObjectRegistry.RegisterRoute("GET", "/api/v1/admin/tenants", "tenant")
 	deps.FieldObjectRegistry.RegisterRoute("GET", "/api/v1/admin/tenants/:id", "tenant")
 
+	// CR-8: 初始化 PermCodeCache 并注册事件订阅
+	var permCodeCache *authCache.PermCodeCache
+	cacheAdapter := sdk.Runtime.GetCacheAdapter()
+	if cacheAdapter != nil {
+		permCodeCache = authCache.NewPermCodeCache(cacheAdapter, 10*time.Minute)
+	}
+	// 注册权限变更事件订阅（缓存失效）
+	if permCodeCache != nil {
+		event.DefaultBus.Subscribe(event.EventPermissionChanged, func(payload interface{}) {
+			ev, ok := payload.(*event.PermissionChangedEvent)
+			if !ok {
+				return
+			}
+			for _, u := range ev.AffectedUsers {
+				permCodeCache.Invalidate(u.TenantID, u.UserID)
+			}
+		})
+	}
+	// 将 permCodeCache 保存供中间件使用
+	deps.PermCodeCache = permCodeCache
+
 	log.Printf("[auth-rbac] 模块初始化完成 auth-type=%s cache-type=%s", cfg.AuthType, cfg.CacheType)
 	return nil
 }
@@ -152,6 +176,8 @@ func autoMigrate(db *gorm.DB) error {
 		&userAuthModel.BizUser{},
 		// CR6: 域名-租户映射表
 		&model.TenantDomain{},
+		// CR8: 自定义字段表（仅 DDL）
+		&model.CustomField{},
 	)
 }
 
@@ -227,7 +253,7 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 
 	// 域名-租户映射
 	domainRepo := repository.NewTenantDomainRepository()
-	tenantDomainCache := cache.NewLocalCache()
+	tenantDomainCache := authCache.NewLocalCache()
 	tenantDomainSvc := service.NewTenantDomainService(db, domainRepo, tenantRepo, tenantDomainCache)
 	tenantDomainHandler := handler.NewTenantDomainHandler(tenantDomainSvc)
 

@@ -44,8 +44,29 @@ func (l *AsyncOperationLogger) Stop() {
 	l.wg.Wait()
 }
 
+// highRiskActions 高风险操作 action 白名单
+var highRiskActions = map[string]bool{
+	"delete_tenant":          true,
+	"delete_role":            true,
+	"delete_user":            true,
+	"force_offline":          true,
+	"assign_resources":       true,
+	"assign_apis":            true,
+	"cascade_trim_resources": true,
+	"cascade_trim_apis":      true,
+}
+
 // Log 非阻塞写入日志，channel 满时降级打印标准日志
 func (l *AsyncOperationLogger) Log(entry *model.OperationLog) {
+	// CR-8: 自动填充 risk_level（如果未设置）
+	if entry.RiskLevel == "" {
+		if highRiskActions[entry.Action] {
+			entry.RiskLevel = "HIGH"
+		} else {
+			entry.RiskLevel = "LOW"
+		}
+	}
+
 	select {
 	case l.ch <- entry:
 	default:

@@ -79,6 +79,8 @@ func mapHTTPStatus(code int) int {
 		return http.StatusForbidden
 	case code >= 40000 && code < 40100:
 		return http.StatusBadRequest
+	case code >= 50100 && code < 50200:
+		return http.StatusNotImplemented // 501 Not Implemented
 	default:
 		return http.StatusInternalServerError
 	}

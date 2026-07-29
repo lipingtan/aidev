@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"go-admin/common/auth/cache"
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/engine"
 	"go-admin/common/auth/service"
@@ -46,6 +47,12 @@ var skipPaths = map[string]bool{
 // 按 FullPath + Method 从数据库查 permission_code，再校验用户是否拥有该权限
 // 无 permission_code 的接口默认拒绝（除非在白名单中）
 func DynamicPermissionMiddleware(db *gorm.DB, cfg *config.Config, configSvc ...*service.AdminConfigService) gin.HandlerFunc {
+	return DynamicPermissionMiddlewareWithCache(db, cfg, nil, configSvc...)
+}
+
+// DynamicPermissionMiddlewareWithCache 带缓存的动态权限检查中间件
+// permCodeCache 为 nil 时行为与 DynamicPermissionMiddleware 完全一致（直接查 DB）
+func DynamicPermissionMiddlewareWithCache(db *gorm.DB, cfg *config.Config, permCodeCache *cache.PermCodeCache, configSvc ...*service.AdminConfigService) gin.HandlerFunc {
 	// 启动时预加载 permission_code 映射（method:path → code）
 	codeMap := loadPermissionCodeMap(db)
 	var mu sync.RWMutex
@@ -94,6 +101,7 @@ func DynamicPermissionMiddleware(db *gorm.DB, cfg *config.Config, configSvc ...*
 
 		// SUPER_ADMIN 直接放行
 		if isSuperAdminByDB(db, cfg, authCtx.Roles) {
+			SetSuperAdminFlag(c, true)
 			c.Next()
 			return
 		}
@@ -153,8 +161,18 @@ func DynamicPermissionMiddleware(db *gorm.DB, cfg *config.Config, configSvc ...*
 			return
 		}
 
-		// 获取用户在当前租户下的所有 permission_code
-		permCodes := getUserPermCodes(db, authCtx.UserID, authCtx.TenantID)
+		// 获取用户在当前租户下的所有 permission_code（优先从缓存读取）
+		var permCodes []string
+		if permCodeCache != nil {
+			if cached, ok := permCodeCache.Get(authCtx.TenantID, authCtx.UserID); ok {
+				permCodes = cached
+			} else {
+				permCodes = getUserPermCodes(db, authCtx.UserID, authCtx.TenantID)
+				permCodeCache.Set(authCtx.TenantID, authCtx.UserID, permCodes)
+			}
+		} else {
+			permCodes = getUserPermCodes(db, authCtx.UserID, authCtx.TenantID)
+		}
 		pe := engine.NewPermissionEngine(permCodes)
 		if pe.HasPermission(code) {
 			c.Next()

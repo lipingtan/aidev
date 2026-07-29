@@ -35,6 +35,11 @@ const (
 	ErrQuotaExceeded            = 40011
 )
 
+// 未实现错误码 (501xx)
+const (
+	ErrNotImplemented = 50101
+)
+
 // AuthError 统一权限错误类型
 type AuthError struct {
 	Code    int    `json:"code"`

@@ -15,6 +15,8 @@ type OperationLogListParams struct {
 	Module     string
 	Action     string
 	UserID     *int64
+	TenantID   *int64  // CR-8: 多租户隔离
+	RiskLevel  string  // CR-8: 风险等级过滤（LOW/MEDIUM/HIGH）
 	TargetType string
 	StartTime  *time.Time
 	EndTime    *time.Time
@@ -54,6 +56,12 @@ func (r *operationLogRepo) List(db *gorm.DB, params OperationLogListParams) ([]m
 	}
 	if params.UserID != nil {
 		query = query.Where("user_id = ?", *params.UserID)
+	}
+	if params.TenantID != nil {
+		query = query.Where("tenant_id = ?", *params.TenantID)
+	}
+	if params.RiskLevel != "" {
+		query = query.Where("risk_level = ?", params.RiskLevel)
 	}
 	if params.TargetType != "" {
 		query = query.Where("target_type = ?", params.TargetType)

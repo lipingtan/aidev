@@ -6,6 +6,7 @@ import (
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/errors"
 	"go-admin/common/auth/model"
+	"go-admin/common/event"
 
 	"gorm.io/gorm"
 )
@@ -73,6 +74,13 @@ func (s *UserRoleService) AssignRoles(userID int64, req *AssignRolesRequest) err
 	}
 
 	s.logger.Log(0, "assign_roles", "user_role", userID, "为用户分配角色")
+
+	// CR-8: 发布权限变更事件（所有 Create 成功即为提交完成）
+	event.DefaultBus.Publish(event.EventPermissionChanged, &event.PermissionChangedEvent{
+		AffectedUsers: []event.AffectedUser{{UserID: userID, TenantID: req.TenantID}},
+		Source:        "assign_roles",
+	})
+
 	return nil
 }
 
@@ -107,7 +115,7 @@ func (s *UserRoleService) ReplaceRoles(userID int64, req *AssignRolesRequest) er
 		}
 	}
 
-	return s.db.Transaction(func(tx *gorm.DB) error {
+	err := s.db.Transaction(func(tx *gorm.DB) error {
 		// 删除当前租户下所有旧角色
 		if err := tx.Where("user_id = ? AND tenant_id = ?", userID, req.TenantID).
 			Delete(&model.UserRole{}).Error; err != nil {
@@ -131,6 +139,17 @@ func (s *UserRoleService) ReplaceRoles(userID int64, req *AssignRolesRequest) er
 		s.logger.Log(0, "replace_roles", "user_role", userID, "全量替换用户角色")
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// CR-8: 事务 Commit 成功后发布权限变更事件
+	event.DefaultBus.Publish(event.EventPermissionChanged, &event.PermissionChangedEvent{
+		AffectedUsers: []event.AffectedUser{{UserID: userID, TenantID: req.TenantID}},
+		Source:        "replace_roles",
+	})
+
+	return nil
 }
 
 // validateUserInTenant 校验用户已关联当前租户

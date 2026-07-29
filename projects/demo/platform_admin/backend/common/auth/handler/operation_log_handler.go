@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"go-admin/common/auth/middleware"
 	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
 
@@ -26,7 +27,7 @@ func (h *OperationLogHandler) RegisterRoutes(rg *gin.RouterGroup) {
 }
 
 // List 分页查询操作日志
-// GET /api/v1/operation-logs?page=1&page_size=20&module=tenant&action=create&user_id=1&target_type=tenant&start_time=2024-01-01T00:00:00Z&end_time=2024-12-31T23:59:59Z
+// CR-8: 新增 risk_level 过滤 + 多租户隔离（SUPER_ADMIN 全量 / TENANT_ADMIN 本租户 / 普通用户仅本人）
 func (h *OperationLogHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
@@ -37,6 +38,7 @@ func (h *OperationLogHandler) List(c *gin.Context) {
 		Module:     c.Query("module"),
 		Action:     c.Query("action"),
 		TargetType: c.Query("target_type"),
+		RiskLevel:  c.Query("risk_level"),
 	}
 
 	if uid := c.Query("user_id"); uid != "" {
@@ -52,6 +54,27 @@ func (h *OperationLogHandler) List(c *gin.Context) {
 	if et := c.Query("end_time"); et != "" {
 		if t, err := time.Parse(time.RFC3339, et); err == nil {
 			params.EndTime = &t
+		}
+	}
+
+	// CR-8: 多租户隔离（按角色分级查询范围）
+	authCtx := middleware.GetAuthContext(c)
+	if authCtx != nil {
+		if !middleware.IsSuperAdmin(c) {
+			// 非 SUPER_ADMIN：强制按租户隔离
+			params.TenantID = &authCtx.TenantID
+			// 如果不是 TENANT_ADMIN（即普通用户），进一步限制为仅查本人日志
+			if !middleware.IsTenantAdmin(c) {
+				params.UserID = &authCtx.UserID
+			}
+		}
+		// SUPER_ADMIN：不加 tenant_id 过滤，支持按 query 参数选择性过滤
+		if middleware.IsSuperAdmin(c) {
+			if tid := c.Query("tenant_id"); tid != "" {
+				if v, err := strconv.ParseInt(tid, 10, 64); err == nil {
+					params.TenantID = &v
+				}
+			}
 		}
 	}
 

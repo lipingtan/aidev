@@ -17,6 +17,7 @@ type OperationLog struct {
 	TargetType string         `gorm:"type:varchar(64)" json:"target_type"`               // 操作对象类型
 	TargetID   string         `gorm:"type:varchar(64)" json:"target_id"`                 // 操作对象 ID
 	Summary    string         `gorm:"type:varchar(512)" json:"summary"`                  // 操作摘要
+	RiskLevel  string         `gorm:"type:varchar(16);default:LOW;index:idx_log_risk" json:"risk_level"` // 风险等级: LOW/MEDIUM/HIGH
 	OldValue   datatypes.JSON `gorm:"type:json" json:"old_value"`                        // 变更前值
 	NewValue   datatypes.JSON `gorm:"type:json" json:"new_value"`                        // 变更后值
 	ClientIP   string         `gorm:"type:varchar(64)" json:"client_ip"`                 // 客户端 IP

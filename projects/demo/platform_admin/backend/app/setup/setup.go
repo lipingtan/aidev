@@ -92,6 +92,11 @@ type SetupRequest struct {
 	// 服务配置
 	AppName string `json:"appName"`
 	AppPort int    `json:"appPort"`
+
+	// Redis 缓存配置（可选，不填则降级为内存缓存）
+	RedisAddr     string `json:"redisAddr"`     // Redis 地址，如 127.0.0.1:6379
+	RedisPassword string `json:"redisPassword"` // Redis 密码
+	RedisDB       int    `json:"redisDB"`       // Redis DB 编号
 }
 
 // TestDBRequest 测试数据库连接请求
@@ -322,6 +327,17 @@ func writeConfig(req SetupRequest, _ string) error {
 				"register": []string{"default"},
 			},
 		},
+	}
+
+	// CR-8: Redis 配置（可选，仅当 RedisAddr 非空时写入）
+	if req.RedisAddr != "" {
+		settings := cfg["settings"].(map[string]interface{})
+		settings["cache"] = map[string]interface{}{
+			"driver":   "redis",
+			"addr":     req.RedisAddr,
+			"password": req.RedisPassword,
+			"db":       req.RedisDB,
+		}
 	}
 
 	data, err := yaml.Marshal(cfg)

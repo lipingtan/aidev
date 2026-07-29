@@ -1,6 +1,7 @@
 package auth
 
 import (
+	authCache "go-admin/common/auth/cache"
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/handler"
 	"go-admin/common/auth/middleware"
@@ -76,6 +77,9 @@ type Dependencies struct {
 	ModuleCodeCache      *middleware.ModuleCodeCache
 	FieldObjectRegistry  *middleware.FieldObjectRegistry
 	FieldPermissionRepo  repository.FieldPermissionRepository
+
+	// CR-8: 权限码 Redis 缓存
+	PermCodeCache *authCache.PermCodeCache
 }
 
 // ExtraAdminRoutesFn 允许外部模块（如 app/admin/apis）注册额外的 /api/v1/admin/ 路由
