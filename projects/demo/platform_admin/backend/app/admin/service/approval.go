@@ -170,14 +170,16 @@ func (e *ApprovalService) resolveAssigneeUserIDs(
 			return nil, "", errors.New("ROLE 类型审批人配置中角色 ID 为空")
 		}
 
-		var users []models.SysUser
-		if err = tx.Select("user_id").
-			Where("role_id IN ? AND tenant_id = ?", roleIntIDs, int(tenantID)).
+		var users []authModel.User
+		if err = tx.Select("id").
+			Table("admin_user_role ur").
+			Joins("JOIN admin_user u ON u.id = ur.user_id").
+			Where("ur.role_id IN ? AND ur.tenant_id = ?", roleIntIDs, tenantID).
 			Find(&users).Error; err != nil {
 			return nil, "", fmt.Errorf("查询角色用户失败: %w", err)
 		}
 		for _, u := range users {
-			userIDs = append(userIDs, fmt.Sprintf("%d", u.UserId))
+			userIDs = append(userIDs, fmt.Sprintf("%d", u.ID))
 		}
 		if len(userIDs) == 0 {
 			// 降级 SUPER_ADMIN
@@ -186,56 +188,9 @@ func (e *ApprovalService) resolveAssigneeUserIDs(
 		}
 
 	case "DEPT_HEAD":
-		// 1. 查申请人的部门
-		// assignee_ids 此时为空或包含申请人标记，实际通过 tenantID 上下文解析
-		// 这里 assignee_ids 中存的是申请人 user_id（在 DEPT_HEAD 场景下由调用方填入）
-		if len(cfg.AssigneeIDs) == 0 {
-			return nil, "", errors.New("DEPT_HEAD 类型 assignee_ids 需要包含申请人 user_id")
-		}
-
-		var applicantIDInt int
-		if _, scanErr := fmt.Sscanf(cfg.AssigneeIDs[0], "%d", &applicantIDInt); scanErr != nil {
-			return nil, "", fmt.Errorf("DEPT_HEAD 类型申请人 ID 解析失败: %w", scanErr)
-		}
-
-		// 2. 查申请人的 dept_id
-		var applicant models.SysUser
-		if err = tx.Select("user_id, dept_id").
-			Where("user_id = ?", applicantIDInt).
-			First(&applicant).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				userIDs = []string{"1"}
-				note = fmt.Sprintf("申请人 %d 不存在，降级为 SUPER_ADMIN", applicantIDInt)
-				return userIDs, note, nil
-			}
-			return nil, "", fmt.Errorf("查询申请人失败: %w", err)
-		}
-
-		// 3. 查部门负责人姓名
-		var dept models.SysDept
-		if err = tx.Select("dept_id, leader").
-			Where("dept_id = ?", applicant.DeptId).
-			First(&dept).Error; err != nil || dept.Leader == "" {
-			// 部门不存在或 leader 为空，降级 SUPER_ADMIN
-			userIDs = []string{"1"}
-			note = fmt.Sprintf("部门 %d 负责人为空或部门不存在，降级为 SUPER_ADMIN", applicant.DeptId)
-			return userIDs, note, nil
-		}
-
-		// 4. 通过 leader 姓名查找用户 ID
-		var leaderUser models.SysUser
-		if err = tx.Select("user_id").
-			Where("nick_name = ?", dept.Leader).
-			First(&leaderUser).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				userIDs = []string{"1"}
-				note = fmt.Sprintf("部门 %d 负责人「%s」在 sys_user 中未找到，降级为 SUPER_ADMIN", applicant.DeptId, dept.Leader)
-				return userIDs, note, nil
-			}
-			return nil, "", fmt.Errorf("查询部门负责人用户失败: %w", err)
-		}
-
-		userIDs = []string{fmt.Sprintf("%d", leaderUser.UserId)}
+		// V2 已移除 sys_dept/sys_user 体系，DEPT_HEAD 类型降级为 SUPER_ADMIN
+		userIDs = []string{"1"}
+		note = "DEPT_HEAD 类型审批人在 V2 中暂不支持（sys_dept 已移除），降级为 SUPER_ADMIN"
 
 	default:
 		return nil, "", fmt.Errorf("不支持的 assignee_type: %s", cfg.AssigneeType)

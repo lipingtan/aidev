@@ -1,4 +1,4 @@
-﻿package plugin
+package plugin
 
 import (
 	"archive/tar"
@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"go-admin/app/plugin/models"
-	"go-admin/common/auth/model"
+	authModel "go-admin/common/auth/model"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -101,7 +101,7 @@ func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Rea
 
 	// admin_application 冲突检查
 	var appConflict int64
-	ins.db.Model(&model.Application{}).Where("app_code = ? AND deleted_at IS NULL", name).Count(&appConflict)
+	ins.db.Model(&authModel.Application{}).Where("app_code = ? AND deleted_at IS NULL", name).Count(&appConflict)
 	if appConflict > 0 {
 		return fmt.Errorf("插件名称 %s 与已有应用冲突，无法安装", name)
 	}
@@ -164,7 +164,7 @@ func (ins *Installer) InstallFromFile(ctx context.Context, _ string, file io.Rea
 	}
 
 	// 创建 admin_application 记录
-	app := &model.Application{
+	app := &authModel.Application{
 		AppCode:     name,
 		Name:        manifest.DisplayName,
 		Description: manifest.Description,
@@ -302,7 +302,7 @@ func (ins *Installer) Upgrade(ctx context.Context, name string, file io.Reader, 
 	// 10. 更新 admin_application
 	platformsJSON, _ := json.Marshal(manifest.Platforms)
 	modulesJSON, _ := json.Marshal(manifest.Modules)
-	ins.db.Model(&model.Application{}).Where("app_code = ?", name).Updates(map[string]interface{}{
+	ins.db.Model(&authModel.Application{}).Where("app_code = ?", name).Updates(map[string]interface{}{
 		"name":         manifest.DisplayName,
 		"description":  manifest.Description,
 		"route_prefix": manifest.RoutePrefix,
@@ -514,29 +514,41 @@ func (ins *Installer) RegisterMenus(pluginName string, menus []interface{}) erro
 	return nil
 }
 
-// ensureExtensionMenu 确保"扩展功能"顶级目录存在，返回其 menu_id
-func (ins *Installer) ensureExtensionMenu() int {
-	const menuName = "PluginExtensions"
-	var menuId int
-	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", menuName).Select("menu_id").Scan(&menuId)
-	if menuId > 0 {
-		return menuId
+// ensureExtensionMenu 确保"插件扩展"顶级资源节点存在，返回其 resource_id
+// 已迁移到 admin_resource 表（V2 菜单体系）
+func (ins *Installer) ensureExtensionMenu() int64 {
+	const resourceName = "插件扩展"
+	const appCode = "platform_admin"
+	var resourceID int64
+	ins.db.Table("admin_resource").
+		Where("name = ? AND app_code = ? AND deleted_at IS NULL", resourceName, appCode).
+		Select("id").Scan(&resourceID)
+	if resourceID > 0 {
+		return resourceID
 	}
 
-	// 创建"扩展功能"顶级目录
-	ins.db.Exec(`INSERT INTO sys_menu (menu_name, title, icon, path, paths, menu_type, action, permission, parent_id, no_cache, breadcrumb, component, sort, visible, is_frame, create_by, update_by, created_at, updated_at) VALUES (?, '扩展功能', 'ep:grid', '/extensions', '/0/', 'M', '无', '', 0, false, '', 'Layout', 100, '0', '0', 1, 1, NOW(), NOW())`,
-		menuName,
+	// 创建"插件扩展"顶级菜单节点（admin_resource）
+	ins.db.Exec(`INSERT INTO admin_resource (id, name, app_code, resource_type, path, icon, sort_order, is_hidden, created_at, updated_at)
+		VALUES (?, ?, ?, 'MENU', '/plugin-extensions', 'Grid', 999, 0, NOW(), NOW())`,
+		nextResourceID(), resourceName, appCode,
 	)
 
-	ins.db.Table("sys_menu").Where("menu_name = ? AND deleted_at IS NULL", menuName).Select("menu_id").Scan(&menuId)
-	return menuId
+	ins.db.Table("admin_resource").
+		Where("name = ? AND app_code = ? AND deleted_at IS NULL", resourceName, appCode).
+		Select("id").Scan(&resourceID)
+	return resourceID
 }
 
-// Deprecated: 使用 PluginResourceSyncer.SyncOnStart 替代。保留代码以兼容旧版，不再被主流程调用。
-// UnregisterMenus 从 sys_menu 表中删除插件菜单（软删除）
+// nextResourceID 生成雪花 ID（复用已有 model.NextID）
+func nextResourceID() int64 {
+	return authModel.NextID()
+}
+
+// Deprecated: 保留接口兼容，不再写入 sys_menu
+// UnregisterMenus 从 admin_resource 中软删除插件菜单
 func (ins *Installer) UnregisterMenus(pluginName string) error {
 	prefix := "plugin_" + pluginName + "%"
-	return ins.db.Exec("UPDATE sys_menu SET deleted_at = NOW() WHERE menu_name LIKE ? AND deleted_at IS NULL", prefix).Error
+	return ins.db.Exec("UPDATE admin_resource SET deleted_at = NOW() WHERE name LIKE ? AND deleted_at IS NULL", prefix).Error
 }
 
 // dropPluginTables 删除以 {name}_ 为前缀的所有数据表

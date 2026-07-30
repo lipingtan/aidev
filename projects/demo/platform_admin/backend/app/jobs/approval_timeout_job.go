@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"go-admin/app/admin/models"
+	authModel "go-admin/common/auth/model"
 	"go-admin/common/event"
 )
 
@@ -236,9 +237,9 @@ func resolveEscalateTo(db *gorm.DB, escalateTo string, tenantID int64) ([]string
 	// 优先尝试按用户 ID 查询
 	var userID int
 	if _, err := fmt.Sscanf(escalateTo, "%d", &userID); err == nil && userID > 0 {
-		var user models.SysUser
-		if err := db.Select("user_id").Where("user_id = ? AND status = '0'", userID).First(&user).Error; err == nil {
-			return []string{fmt.Sprintf("%d", user.UserId)}, true
+		var user authModel.User
+		if err := db.Select("id").Where("id = ? AND status = 1", userID).First(&user).Error; err == nil {
+			return []string{fmt.Sprintf("%d", user.ID)}, true
 		}
 		// 用户不存在或已禁用
 		return nil, false
@@ -247,15 +248,16 @@ func resolveEscalateTo(db *gorm.DB, escalateTo string, tenantID int64) ([]string
 	// 尝试按角色解析（格式 "ROLE:角色ID"）
 	var roleID int
 	if n, _ := fmt.Sscanf(escalateTo, "ROLE:%d", &roleID); n == 1 && roleID > 0 {
-		var users []models.SysUser
-		if err := db.Select("user_id").
-			Where("role_id = ? AND tenant_id = ? AND status = '0'", roleID, int(tenantID)).
+		var users []authModel.User
+		if err := db.Select("admin_user.id").
+			Joins("JOIN admin_user_role ur ON ur.user_id = admin_user.id").
+			Where("ur.role_id = ? AND ur.tenant_id = ? AND admin_user.status = 1", roleID, int(tenantID)).
 			Find(&users).Error; err != nil || len(users) == 0 {
 			return nil, false
 		}
 		ids := make([]string, 0, len(users))
 		for _, u := range users {
-			ids = append(ids, fmt.Sprintf("%d", u.UserId))
+			ids = append(ids, fmt.Sprintf("%d", u.ID))
 		}
 		return ids, true
 	}

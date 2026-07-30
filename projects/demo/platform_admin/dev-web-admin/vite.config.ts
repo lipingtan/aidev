@@ -3,24 +3,19 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
 export default defineConfig(({ mode }) => {
-  const isH5 = mode === 'h5'
   return {
     plugins: [vue()],
     resolve: {
       alias: { '@': resolve(__dirname, 'src') }
     },
     build: {
-      outDir: isH5 ? 'dist-h5' : 'dist-pc',
+      // 统一输出到 dist/，由运行时 isMobile() 决定 PC/H5 布局
+      outDir: 'dist',
       rollupOptions: {
-        input: isH5
-          ? resolve(__dirname, 'index-h5.html')
-          : resolve(__dirname, 'index.html')
+        input: resolve(__dirname, 'index.html')
       }
     },
-    define: {
-      // 编译期常量，供 App.vue tree-shaking 使用
-      __IS_H5__: isH5
-    },
+    // 不再需要 __IS_H5__ 编译期常量，布局切换改为运行时检测
     server: {
       port: 3000,
       proxy: {

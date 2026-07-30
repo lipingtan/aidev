@@ -317,4 +317,15 @@ onMounted(async () => {
 .sub-section {
   padding: 8px 0;
 }
+/* 窄屏：上下堆叠 */
+@media (max-width: 767px) {
+  .app-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  .app-list-card {
+    width: 100%;
+    min-width: 0;
+  }
+}
 </style>

@@ -275,11 +275,21 @@ const roleOptions = ref<any[]>([])
 async function loadOptions() {
   try {
     const [uRes, rRes]: any[] = await Promise.all([
-      request.get('/api/v1/admin/sys-user', { params: { page: 1, page_size: 100 } }),
-      request.get('/api/v1/admin/role', { params: { page: 1, page_size: 100 } })
+      request.get('/api/v1/admin/users', { params: { page: 1, page_size: 100 } }),
+      request.get('/api/v1/admin/roles', { params: {} })
     ])
-    userOptions.value = Array.isArray(uRes) ? uRes : (uRes?.data || uRes?.list || [])
-    roleOptions.value = Array.isArray(rRes) ? rRes : (rRes?.data || rRes?.list || [])
+    userOptions.value = Array.isArray(uRes) ? uRes : (uRes?.data?.list || uRes?.list || uRes?.data || [])
+    const roleData = Array.isArray(rRes) ? rRes : (rRes?.data?.list || rRes?.list || rRes?.data || [])
+    // 展开树形角色为平铺列表
+    function flattenRoles(nodes: any[]): any[] {
+      const result: any[] = []
+      for (const n of nodes) {
+        result.push(n)
+        if (n.children?.length) result.push(...flattenRoles(n.children))
+      }
+      return result
+    }
+    roleOptions.value = flattenRoles(roleData)
   } catch {
     // 选项加载失败不阻断主流程
   }

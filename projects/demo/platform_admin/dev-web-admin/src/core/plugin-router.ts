@@ -1,5 +1,6 @@
 import type { Router } from 'vue-router'
 import type { PluginConfig } from '@/plugin-sdk'
+import { isMobile } from '@/utils/device'
 
 /**
  * 将已加载插件的路由动态注册到 Vue Router
@@ -15,9 +16,8 @@ export function mergePluginRoutes(router: Router, plugins: PluginConfig[]) {
       router.addRoute({
         path: '/',
         component: () => {
-          // 根据构建模式动态导入对应布局
-          // @ts-ignore - __IS_H5__ 由 vite.config.ts define 注入
-          return __IS_H5__ 
+          // 根据运行时设备检测动态导入对应布局
+          return isMobile()
             ? import('@/layout/h5/H5Layout.vue')
             : import('@/layout/pc/PcLayout.vue')
         },

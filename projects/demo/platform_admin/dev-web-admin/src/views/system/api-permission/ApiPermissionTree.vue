@@ -76,7 +76,7 @@
           </el-table-column>
           <el-table-column prop="url_pattern" label="路径" min-width="250" show-overflow-tooltip />
           <el-table-column prop="name" label="名称" min-width="180" show-overflow-tooltip />
-          <el-table-column label="操作" width="120">
+          <el-table-column label="操作" width="120" fixed="right">
             <template #default="{ row }">
               <el-button link size="small" type="primary" @click="handleEdit(row)">编辑</el-button>
               <el-button link size="small" type="danger" @click="handleDeleteUnassigned(row)">删除</el-button>
@@ -458,35 +458,28 @@ onMounted(() => {
   font-size: 12px;
   margin: 0 0 12px;
 }
+/* 树容器横向可滚动 */
+:deep(.el-tree) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+:deep(.el-tree-node__content) {
+  min-width: max-content;
+}
 .tree-node {
   display: flex;
   align-items: center;
   flex: 1;
   font-size: 14px;
   padding-right: 8px;
+  min-width: max-content;
 }
-.node-tag {
-  margin-right: 8px;
-}
-.node-label {
-  margin-right: 8px;
-}
-.node-method {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.node-display-name {
-  font-weight: 500;
-  margin-right: 4px;
-}
-.node-path {
-  color: #909399;
-  font-size: 12px;
-}
-.node-actions {
-  margin-left: auto;
-}
+.node-tag { margin-right: 8px; }
+.node-label { margin-right: 8px; }
+.node-method { display: inline-flex; align-items: center; gap: 4px; }
+.node-display-name { font-weight: 500; margin-right: 4px; }
+.node-path { color: #909399; font-size: 12px; }
+.node-actions { margin-left: auto; padding-left: 12px; }
 .drag-handle { cursor: move; color: #c0c4cc; margin-right: 6px; font-size: 14px; }
 .drag-handle:hover { color: #409eff; }
 .badge-margin { margin-left: 6px; }

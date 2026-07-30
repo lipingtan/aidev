@@ -137,3 +137,58 @@ body {
 [data-theme='luxury-dark'] .diff-html .jsondiffpatch-deleted { background: rgba(255, 107, 128, 0.2); }
 [data-theme='luxury-dark'] .diff-html .jsondiffpatch-modified .jsondiffpatch-left-value { background: rgba(255, 190, 79, 0.2); }
 [data-theme='luxury-dark'] .diff-html .jsondiffpatch-modified .jsondiffpatch-right-value { background: rgba(73, 195, 134, 0.2); }
+
+/* ===== 移动端适配（< 768px）===== */
+@media (max-width: 767px) {
+
+  /* 1. 分页：允许换行，防止超出被裁剪 */
+  .el-pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  /* 分页下拉（每页条数）弹层挂在 body，不受容器裁剪，无需处理；
+     但分页容器本身不能有 overflow:hidden，确保按钮可见 */
+  .el-card .el-pagination {
+    overflow: visible !important;
+  }
+
+  /* 2. Dialog：内部 body 可横向滚动 */
+  .el-dialog {
+    width: 92vw !important;
+    max-width: 92vw !important;
+    margin: 5vh auto !important;
+  }
+  .el-dialog__body {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 3. Drawer：内部 body 可横向滚动 */
+  .el-drawer__body {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Drawer 内 el-tabs__content 不能 overflow:hidden */
+  .el-drawer__body .el-tabs__content {
+    overflow: visible !important;
+  }
+  .el-drawer__body .el-tab-pane {
+    overflow: visible !important;
+  }
+
+  /* 4. Drawer 宽度：右侧滑层在窄屏全宽 */
+  .el-drawer.rtl,
+  .el-drawer.ltr {
+    width: 92vw !important;
+  }
+
+  /* 5. 行内搜索表单：取消固定宽度，自适应 */
+  .el-form--inline .el-select,
+  .el-form--inline .el-input,
+  .el-form--inline .el-date-editor,
+  .el-form--inline .el-cascader {
+    width: 100% !important;
+    max-width: 200px;
+  }
+}

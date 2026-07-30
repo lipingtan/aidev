@@ -1,39 +1,41 @@
 <template>
   <div class="perm-tab">
     <!-- API 权限树 -->
-    <el-tree
-      ref="treeRef"
-      v-loading="loading"
-      :data="apiTree"
-      show-checkbox
-      node-key="id"
-      :default-checked-keys="checkedKeys"
-      :props="{ label: 'name', children: 'children', disabled: disabledFn }"
-      default-expand-all
-      @check="handleCheck"
-    >
-      <template #default="{ data }">
-        <span class="tree-node">
-          <el-tag :type="data.type === 'GROUP' ? 'primary' : 'success'" size="small">
-            {{ data.type === 'GROUP' ? '分组' : 'API' }}
-          </el-tag>
-          <span class="node-label">{{ data.type === 'GROUP' ? (data.display_name || data.name) : '' }}</span>
-          <span v-if="data.type === 'ENDPOINT'" class="node-method">
-            <span v-if="data.display_name" class="node-display-name">{{ data.display_name }}</span>
-            <el-tag size="small" :type="getMethodTagType(data.http_method)">{{ data.http_method }}</el-tag>
-            <span class="node-path">{{ data.url_pattern }}</span>
+    <div class="tree-scroll-wrapper">
+      <el-tree
+        ref="treeRef"
+        v-loading="loading"
+        :data="apiTree"
+        show-checkbox
+        node-key="id"
+        :default-checked-keys="checkedKeys"
+        :props="{ label: 'name', children: 'children', disabled: disabledFn }"
+        default-expand-all
+        @check="handleCheck"
+      >
+        <template #default="{ data }">
+          <span class="tree-node">
+            <el-tag :type="data.type === 'GROUP' ? 'primary' : 'success'" size="small">
+              {{ data.type === 'GROUP' ? '分组' : 'API' }}
+            </el-tag>
+            <span class="node-label">{{ data.type === 'GROUP' ? (data.display_name || data.name) : '' }}</span>
+            <span v-if="data.type === 'ENDPOINT'" class="node-method">
+              <span v-if="data.display_name" class="node-display-name">{{ data.display_name }}</span>
+              <el-tag size="small" :type="getMethodTagType(data.http_method)">{{ data.http_method }}</el-tag>
+              <span class="node-path">{{ data.url_pattern }}</span>
+            </span>
+            <el-switch
+              v-model="data.visible"
+              :active-value="1"
+              :inactive-value="0"
+              size="small"
+              disabled
+              style="margin-left: auto"
+            />
           </span>
-          <el-switch
-            v-model="data.visible"
-            :active-value="1"
-            :inactive-value="0"
-            size="small"
-            disabled
-            style="margin-left: auto"
-          />
-        </span>
-      </template>
-    </el-tree>
+        </template>
+      </el-tree>
+    </div>
     <div class="perm-tab-footer">
       <el-button type="primary" :loading="submitting" @click="handleSave">保存</el-button>
     </div>
@@ -170,7 +172,16 @@ watch(() => props.roleId, () => {
 <style scoped>
 .perm-tab { min-height: 200px; }
 .perm-tab-footer { margin-top: 16px; text-align: right; }
-.tree-node { display: flex; align-items: center; flex: 1; font-size: 13px; gap: 6px; }
+/* wrapper 负责横滑，el-tree 宽度撑开到内容实际宽度 */
+.tree-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tree-scroll-wrapper :deep(.el-tree) {
+  width: max-content;
+  min-width: 100%;
+}
+.tree-node { display: flex; align-items: center; flex: 1; font-size: 13px; gap: 6px; white-space: nowrap; }
 .node-display-name { font-weight: 500; margin-right: 4px; }
 .node-path { color: #909399; font-size: 12px; }
 .node-label { margin-right: 4px; }

@@ -255,11 +255,25 @@ onMounted(() => {
   align-items: center;
   width: 100%;
   padding-right: 8px;
+  min-width: max-content;
 }
 .tree-actions {
   display: none;
+  padding-left: 12px;
 }
 .tree-node:hover .tree-actions {
   display: inline-flex;
+}
+/* 树容器横向可滚动 */
+:deep(.el-tree) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+:deep(.el-tree-node__content) {
+  min-width: max-content;
+}
+/* 移动端树节点操作始终显示 */
+@media (max-width: 767px) {
+  .tree-actions { display: inline-flex; }
 }
 </style>

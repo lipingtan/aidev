@@ -269,11 +269,19 @@ onMounted(async () => {
 .page-container { padding: 16px; }
 .search-card { margin-bottom: 16px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
-.tree-node { display: flex; align-items: center; justify-content: space-between; width: 100%; padding-right: 8px; }
+/* 树容器横向可滚动 */
+:deep(.el-tree) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+:deep(.el-tree-node__content) {
+  min-width: max-content;
+}
+.tree-node { display: flex; align-items: center; justify-content: space-between; width: 100%; padding-right: 8px; min-width: max-content; }
 .tree-node__label { display: flex; align-items: center; gap: 6px; }
 .tree-node__tag { margin-right: 4px; }
 .tree-node__perm { color: #909399; font-size: 12px; margin-left: 4px; }
-.tree-node__actions { flex-shrink: 0; }
+.tree-node__actions { flex-shrink: 0; padding-left: 12px; }
 .drag-handle { cursor: move; color: #c0c4cc; margin-right: 6px; font-size: 14px; }
 .drag-handle:hover { color: #409eff; }
 </style>

@@ -1,15 +1,20 @@
 <script setup lang="ts">
 /**
  * 根组件 - 纯路由出口
- * 布局层（PcLayout / H5Layout）在路由配置中根据构建模式动态加载
+ * 布局层（PcLayout / H5Layout）由 AppLayout.vue 根据屏宽响应式切换
  */
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/store/modules/app'
 
 const appStore = useAppStore()
 
-// PC 模式下需要背景装饰，H5 模式不需要
-// @ts-ignore - __IS_H5__ 由 vite.config.ts define 注入
-const isH5 = __IS_H5__
+const MOBILE_BP = 768
+const isH5 = ref(window.innerWidth < MOBILE_BP)
+
+const mq = window.matchMedia(`(max-width: ${MOBILE_BP - 1}px)`)
+function onMQChange(e: MediaQueryListEvent) { isH5.value = e.matches }
+onMounted(() => mq.addEventListener('change', onMQChange))
+onUnmounted(() => mq.removeEventListener('change', onMQChange))
 </script>
 
 <template>

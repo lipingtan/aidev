@@ -80,9 +80,6 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 		log.Printf("[auth-rbac] Seed CR-6 菜单失败: %v", err)
 	}
 
-	// 清理 sys_menu 中遗留的插件菜单（一次性迁移）
-	cleanLegacyPluginMenus(db)
-
 	// 字段权限自动注册
 	registerFieldPermModels(deps.FieldRegistry)
 
@@ -94,11 +91,6 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	// 加载中间件缓存（AutoDiscover 写入 module_code 后再加载）
 	deps.ModuleCodeCache.Load(db)
 	deps.AppPrefixMap.Load(db)
-
-	// sys_config → admin_config 数据迁移（幂等）
-	if err := deps.AdminConfigService.MigrateFromSysConfig(); err != nil {
-		log.Printf("[auth-rbac] sys_config 迁移失败: %v", err)
-	}
 
 	// 注册租户隔离 GORM Callback（必须在 DataScope 之前注册）
 	middleware.RegisterTenantIsolationCallback(db)
@@ -163,7 +155,6 @@ func autoMigrate(db *gorm.DB) error {
 		&model.OperationLog{},
 		&model.DataScope{},
 		&model.DataScopeConfig{},
-		&model.SysConfig{},
 		&model.LoginLog{},
 		&model.FieldObject{},
 		&model.FieldDefinition{},
@@ -208,7 +199,6 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	appSvc := service.NewApplicationService(db, appRepo)
 	dataScopeSvc := service.NewDataScopeService(db, dataScopeConfigRepo, dataScopeRepo)
 	opLogQuerySvc := service.NewOperationLogQueryService(db, operationLogRepo)
-	configSvc := service.NewConfigService(db)
 	loginLogSvc := service.NewLoginLogService(db)
 	fieldRegistrySvc := service.NewFieldRegistry(db, fieldObjectRepo)
 	fieldPermSvc := service.NewFieldPermissionService(db, fieldObjectRepo, fieldPermRepo)
@@ -228,7 +218,6 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	appHandler := handler.NewApplicationHandler(appSvc, roleRepo, db)
 	dataScopeHandler := handler.NewDataScopeHandler(dataScopeSvc)
 	opLogHandler := handler.NewOperationLogHandler(opLogQuerySvc)
-	configHandler := handler.NewConfigHandler(configSvc)
 	loginLogHandler := handler.NewLoginLogHandler(loginLogSvc)
 	fieldPermHandler := handler.NewFieldPermissionHandler(fieldPermSvc)
 	recordShareHandler := handler.NewRecordShareHandler(recordShareSvc)
@@ -288,9 +277,6 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 		OperationLogQueryService: opLogQuerySvc,
 		OperationLogHandler:      opLogHandler,
 
-		ConfigService:  configSvc,
-		ConfigHandler:  configHandler,
-
 		LoginLogService: loginLogSvc,
 		LoginLogHandler: loginLogHandler,
 
@@ -323,20 +309,6 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 func registerFieldPermModels(registry *service.FieldRegistry) {
 	registry.AutoRegister("user", "用户", model.User{})
 	registry.AutoRegister("tenant", "租户", model.Tenant{})
-}
-
-// cleanLegacyPluginMenus 清理 sys_menu 中遗留的插件菜单
-// 将 menu_name 以 plugin_ 开头的记录执行软删除（设置 deleted_at）
-// 幂等：已软删除的记录不会再次处理
-func cleanLegacyPluginMenus(db *gorm.DB) {
-	result := db.Exec("UPDATE sys_menu SET deleted_at = NOW() WHERE menu_name LIKE 'plugin_%' AND deleted_at IS NULL")
-	if result.Error != nil {
-		log.Printf("[auth-rbac] 清理遗留插件菜单失败: %v", result.Error)
-		return
-	}
-	if result.RowsAffected > 0 {
-		log.Printf("[auth-rbac] 清理了 %d 条遗留插件菜单", result.RowsAffected)
-	}
 }
 
 // initUserAuth 初始化 user_auth 域：实例化依赖、注册路由、注册 SmsStrategy

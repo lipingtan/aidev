@@ -224,4 +224,13 @@ onMounted(() => {
 .editable-text:hover {
   color: #337ecc;
 }
+/* 窄屏：两栏改为上下堆叠 */
+@media (max-width: 767px) {
+  .field-objects-container :deep(.el-col-8),
+  .field-objects-container :deep(.el-col-16) {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+}
 </style>

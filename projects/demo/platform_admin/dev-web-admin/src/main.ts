@@ -7,6 +7,10 @@ import 'element-plus/dist/index.css'
 // Element Plus 图标全局注册（侧边栏动态菜单依赖）
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
+// H5 布局组件依赖 Vant（运行时 isMobile() 检测后自动使用 H5Layout）
+import Vant from 'vant'
+import 'vant/lib/index.css'
+
 // 全局样式
 import './styles/global.css'
 
@@ -33,6 +37,7 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 app.use(ElementPlus)
+app.use(Vant)
 app.use(i18n)
 
 // 全局注册所有 Element Plus 图标（侧边栏动态菜单图标渲染依赖）

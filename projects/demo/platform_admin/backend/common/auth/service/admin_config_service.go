@@ -234,31 +234,3 @@ func (s *AdminConfigService) GetFeatureFlags(tenantID int64) ([]map[string]inter
 	}
 	return result, nil
 }
-
-// MigrateFromSysConfig 将 sys_config 数据迁移到 admin_config（幂等）
-func (s *AdminConfigService) MigrateFromSysConfig() error {
-	var sysConfigs []model.SysConfig
-	s.db.Find(&sysConfigs)
-	for _, sc := range sysConfigs {
-		var count int64
-		s.db.Model(&model.AdminConfig{}).
-			Where("config_key = ? AND scope = 'SYSTEM' AND scope_id = 0 AND tenant_id = 0", sc.ConfigKey).
-			Count(&count)
-		if count > 0 {
-			continue
-		}
-		ac := &model.AdminConfig{
-			ConfigKey:   sc.ConfigKey,
-			ConfigValue: sc.ConfigValue,
-			ConfigType:  "string",
-			Scope:       "SYSTEM",
-			ScopeID:     0,
-			TenantID:    0,
-			DisplayName: sc.ConfigName,
-			Description: sc.Remark,
-			Status:      1,
-		}
-		s.db.Create(ac)
-	}
-	return nil
-}

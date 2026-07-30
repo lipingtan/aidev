@@ -44,9 +44,6 @@ type Dependencies struct {
 	OperationLogQueryService *service.OperationLogQueryService
 	OperationLogHandler      *handler.OperationLogHandler
 
-	ConfigService  *service.ConfigService
-	ConfigHandler  *handler.ConfigHandler
-
 	LoginLogService *service.LoginLogService
 	LoginLogHandler *handler.LoginLogHandler
 

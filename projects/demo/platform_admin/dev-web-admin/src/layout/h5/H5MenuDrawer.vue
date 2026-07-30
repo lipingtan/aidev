@@ -5,6 +5,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/store/modules/user'
+import { useAuthStore } from '@/store/modules/auth'
 import type { MenuItem } from '@/store/modules/menu'
 
 interface Props {
@@ -17,6 +20,8 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const userStore = useUserStore()
+const authStore = useAuthStore()
 const activeKeys = ref<number[]>([])
 
 // 展开的菜单项
@@ -45,6 +50,18 @@ const handleMenuClick = (menu: MenuItem) => {
 // 判断菜单项是否展开
 const isExpanded = (menuId: number) => {
   return activeKeys.value.includes(menuId)
+}
+
+// 切换租户
+const handleSwitchTenant = () => {
+  emit('close')
+  router.push('/tenant-select')
+}
+
+// 退出登录
+const handleLogout = async () => {
+  emit('close')
+  await userStore.logout()
 }
 </script>
 
@@ -91,6 +108,25 @@ const isExpanded = (menuId: number) => {
           </div>
         </div>
       </template>
+    </div>
+
+    <!-- 底部用户操作区 -->
+    <div class="drawer-footer">
+      <!-- 用户信息 -->
+      <div class="user-info">
+        <van-icon name="manager-o" size="20" class="user-avatar-icon" />
+        <span class="user-name">{{ userStore.username || '未登录' }}</span>
+      </div>
+      <!-- 切换租户 -->
+      <div class="footer-action" @click="handleSwitchTenant">
+        <van-icon name="exchange" size="16" />
+        <span>切换租户</span>
+      </div>
+      <!-- 退出登录 -->
+      <div class="footer-action footer-action--danger" @click="handleLogout">
+        <van-icon name="sign" size="16" />
+        <span>退出登录</span>
+      </div>
     </div>
   </div>
 </template>
@@ -175,5 +211,54 @@ const isExpanded = (menuId: number) => {
 .submenu-wrapper {
   border-left: 2px solid #e8e8e8;
   margin-left: 16px;
+}
+
+.drawer-footer {
+  border-top: 1px solid #eee;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.user-avatar-icon {
+  color: #666;
+}
+
+.user-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #555;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.footer-action:active {
+  background-color: #f5f5f5;
+}
+
+.footer-action--danger {
+  color: #f56c6c;
 }
 </style>

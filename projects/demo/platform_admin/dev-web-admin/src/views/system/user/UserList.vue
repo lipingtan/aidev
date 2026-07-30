@@ -28,38 +28,41 @@
         </div>
       </template>
 
-      <el-table v-loading="loading" :data="tableData" row-key="id">
-        <template #empty>
-          <el-empty description="暂无数据" />
-        </template>
-        <el-table-column prop="username" label="用户名" width="140" />
-        <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column prop="phone" label="手机号" width="140" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
+      <!-- 移动端水平滚动容器（仅包裹表格，不包裹分页，避免 popper 被裁剪） -->
+      <div class="table-scroll-wrapper">
+        <el-table v-loading="loading" :data="tableData" row-key="id" style="min-width: 700px;">
+          <template #empty>
+            <el-empty description="暂无数据" />
           </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
-            <el-dropdown trigger="click">
-              <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item @click="handleTenantManage(row)">租户关联</el-dropdown-item>
-                  <el-dropdown-item @click="handleRoleAssign(row)">角色分配</el-dropdown-item>
-                  <el-dropdown-item @click="handleForceOffline(row)">强制下线</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </template>
-        </el-table-column>
-      </el-table>
+          <el-table-column prop="username" label="用户名" width="140" />
+          <el-table-column prop="email" label="邮箱" min-width="180" />
+          <el-table-column prop="phone" label="手机号" width="140" />
+          <el-table-column prop="status" label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ row.status === 1 ? '启用' : '禁用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="created_at" label="创建时间" width="180" />
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+              <el-dropdown trigger="click">
+                <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="handleTenantManage(row)">租户关联</el-dropdown-item>
+                    <el-dropdown-item @click="handleRoleAssign(row)">角色分配</el-dropdown-item>
+                    <el-dropdown-item @click="handleForceOffline(row)">强制下线</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <el-pagination
         class="pagination"
@@ -305,4 +308,10 @@ onMounted(fetchData)
 .search-card { margin-bottom: 16px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
 .pagination { margin-top: 16px; justify-content: flex-end; }
+
+/* 表格横向滚动（仅包裹表格，分页在外部不受裁剪影响） */
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 </style>

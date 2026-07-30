@@ -22,9 +22,8 @@ import (
 	"github.com/spf13/cobra"
 	"gorm.io/gorm"
 
-	"go-admin/app/admin/models"
 	adminApis "go-admin/app/admin/apis"
-	"go-admin/app/admin/router"
+	adminModels "go-admin/app/admin/models"
 	"go-admin/app/jobs"
 	"go-admin/app/setup"
 	authPkg "go-admin/common/auth"
@@ -34,7 +33,6 @@ import (
 	"go-admin/common/event"
 	"go-admin/common/global"
 	common "go-admin/common/middleware"
-	"go-admin/common/middleware/handler"
 	"go-admin/common/storage"
 	ext "go-admin/config"
 	"go-admin/web"
@@ -42,7 +40,6 @@ import (
 
 var (
 	configYml string
-	apiCheck  bool
 	StartCmd  = &cobra.Command{
 		Use:          "server",
 		Short:        "Start API server",
@@ -61,8 +58,6 @@ var AppRouters = make([]func(), 0)
 
 func init() {
 	StartCmd.PersistentFlags().StringVarP(&configYml, "config", "c", "config/settings.yml", "Start server with provided configuration file")
-	StartCmd.PersistentFlags().BoolVarP(&apiCheck, "api", "a", false, "Start server with check api data")
-	AppRouters = append(AppRouters, router.InitRouter)
 
 	// 注册审批流路由到 auth-rbac 的 /api/v1/admin/ group
 	authPkg.RegisterExtraAdminRoutes(func(admin *gin.RouterGroup) {
@@ -105,9 +100,6 @@ func preRun() {
 			storage.Setup,
 		)
 		queue := sdk.Runtime.GetMemoryQueue("")
-		queue.Register(global.LoginLog, models.SaveLoginLog)
-		queue.Register(global.OperateLog, models.SaveOperaLog)
-		queue.Register(global.ApiCheck, models.SaveSysApi)
 		go queue.Run()
 	}
 
@@ -149,7 +141,7 @@ func run() error {
 					log.Fatalf("auth-rbac 初始化失败: %v", err)
 				}
 				// 审批流表迁移（幂等，表已存在不报错）
-				if err := models.MigrateApprovalTables(db); err != nil {
+				if err := adminModels.MigrateApprovalTables(db); err != nil {
 					log.Warnf("审批流表迁移失败（非致命）: %v", err)
 				} else {
 					log.Info("审批流表迁移完成")
@@ -169,9 +161,6 @@ func run() error {
 			storage.Setup,
 		)
 		queue := sdk.Runtime.GetMemoryQueue("")
-		queue.Register(global.LoginLog, models.SaveLoginLog)
-		queue.Register(global.OperateLog, models.SaveOperaLog)
-		queue.Register(global.ApiCheck, models.SaveSysApi)
 		go queue.Run()
 
 		for _, f := range AppRouters {
@@ -198,11 +187,6 @@ func run() error {
 			}
 		}
 
-		go func() {
-			jobs.InitJob()
-			jobs.Setup(sdk.Runtime.GetDb())
-		}()
-
 		log.Info("安装完成，业务路由已动态注册")
 		return nil
 	})
@@ -225,11 +209,6 @@ func run() error {
 	}
 
 	if setup.IsInstalled() {
-		go func() {
-			jobs.InitJob()
-			jobs.Setup(sdk.Runtime.GetDb())
-		}()
-
 		// 注册审批超时扫描（每 5 分钟，独立 cron，不走 DB jobs 框架）
 		var primaryDB *gorm.DB
 		for _, d := range sdk.Runtime.GetDb() {
@@ -249,22 +228,6 @@ func run() error {
 			// 注册审批结果 EventBus 监听（subscription_status 联动）
 			authService.RegisterApprovalListeners(event.DefaultBus, primaryDB)
 			log.Info("审批结果 EventBus 监听已注册")
-		}
-	}
-
-	if apiCheck && setup.IsInstalled() {
-		var routers = sdk.Runtime.GetRouter()
-		q := sdk.Runtime.GetMemoryQueue("")
-		mp := make(map[string]interface{})
-		mp["List"] = routers
-		message, err := sdk.Runtime.GetStreamMessage("", global.ApiCheck, mp)
-		if err != nil {
-			log.Infof("GetStreamMessage error, %s \n", err.Error())
-		} else {
-			err = q.Append(message)
-			if err != nil {
-				log.Infof("Append message error, %s \n", err.Error())
-			}
 		}
 	}
 
@@ -323,9 +286,6 @@ func initRouter() {
 		r = h.(*gin.Engine)
 	default:
 		log.Fatal("not support other engine")
-	}
-	if config.SslConfig != nil && config.SslConfig.Enable {
-		r.Use(handler.TlsHandler())
 	}
 	r.Use(common.Sentinel()).
 		Use(common.RequestId(pkg.TrafficKey)).

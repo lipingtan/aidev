@@ -1,8 +1,3 @@
 ﻿package api
 
-import "go-admin/app/other/router"
-
-func init() {
-	//注册路由 fixme 其他应用的路由，在本目录新建文件放在init方法
-	AppRouters = append(AppRouters, router.InitRouter)
-}
+// app/other/router 路由注册已移除（CR-9：旧 gen 代码生成工具清理）

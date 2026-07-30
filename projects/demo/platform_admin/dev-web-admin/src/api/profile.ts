@@ -35,9 +35,9 @@ export function getProfileDetail() {
   return request.get('/user/profile')
 }
 
-/** 修改个人信息（go-admin 用 SysUser Update 接口） */
-export function updateProfile(data: { realName?: string; phone?: string }): Promise<void> {
-  return request.put('/sys-user', data)
+/** 修改个人信息（V2 用户更新接口） */
+export async function updateProfile(userId: string, data: { nickname?: string; phone?: string; version: number }): Promise<void> {
+  return request.put(`/api/v1/admin/users/${userId}`, data)
 }
 
 /** 更新头像 */

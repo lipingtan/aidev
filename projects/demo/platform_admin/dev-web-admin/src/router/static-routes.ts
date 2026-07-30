@@ -44,13 +44,7 @@ export const constantRoutes: RouteRecordRaw[] = [
 export const asyncRoutes: RouteRecordRaw[] = [
   {
     path: '/',
-    component: () => {
-      // 根据构建模式动态导入对应布局
-      // @ts-ignore - __IS_H5__ 由 vite.config.ts define 注入
-      return __IS_H5__ 
-        ? import('@/layout/h5/H5Layout.vue')
-        : import('@/layout/pc/PcLayout.vue')
-    },
+    component: () => import('@/layout/AppLayout.vue'),
     redirect: '/home',
     children: [
       {

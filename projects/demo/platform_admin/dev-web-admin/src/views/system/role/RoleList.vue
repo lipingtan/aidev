@@ -1,6 +1,5 @@
 <template>
   <div class="role-page">
-    <!-- 左侧：角色树 -->
     <el-card shadow="never" class="role-tree-card">
       <template #header>
         <div class="card-header">
@@ -78,7 +77,7 @@
               <span :class="{ 'count-zero': row.data_scope_count === 0 }">{{ row.data_scope_count }} 维度</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" align="center">
+          <el-table-column label="操作" width="80" align="center" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link @click="openPermDrawer(row)">配置</el-button>
             </template>
@@ -291,6 +290,26 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
 }
+
+/* 窄屏（< 768px）：上下堆叠 */
+@media (max-width: 767px) {
+  .role-page {
+    flex-direction: column;
+    height: auto;
+  }
+  .role-tree-card {
+    width: 100%;
+    overflow-y: visible;
+  }
+  .role-detail-card {
+    overflow-y: visible;
+  }
+  /* 移动端树节点操作按钮始终显示 */
+  .tree-node-actions {
+    opacity: 1 !important;
+  }
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;

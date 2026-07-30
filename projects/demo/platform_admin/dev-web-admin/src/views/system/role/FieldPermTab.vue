@@ -158,4 +158,13 @@ onMounted(() => {
   color: #909399;
   font-size: 12px;
 }
+/* 窄屏：两栏改为上下堆叠 */
+@media (max-width: 767px) {
+  .field-perm-tab :deep(.el-col-6),
+  .field-perm-tab :deep(.el-col-18) {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+}
 </style>

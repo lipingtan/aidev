@@ -10,17 +10,19 @@
       style="margin-bottom: 12px;"
     />
     <!-- 资源树 -->
-    <el-tree
-      ref="treeRef"
-      v-loading="loading"
-      :data="resourceTree"
-      show-checkbox
-      node-key="id"
-      :default-checked-keys="checkedKeys"
-      :props="{ label: 'name', children: 'children', disabled: disabledFn }"
-      default-expand-all
-      @check="() => { isDirty = true }"
-    />
+    <div class="tree-scroll-wrapper">
+      <el-tree
+        ref="treeRef"
+        v-loading="loading"
+        :data="resourceTree"
+        show-checkbox
+        node-key="id"
+        :default-checked-keys="checkedKeys"
+        :props="{ label: 'name', children: 'children', disabled: disabledFn }"
+        default-expand-all
+        @check="() => { isDirty = true }"
+      />
+    </div>
     <div class="perm-tab-footer">
       <el-button type="primary" :loading="submitting" @click="handleSave">保存</el-button>
     </div>
@@ -144,4 +146,13 @@ watch(() => props.roleId, () => {
 <style scoped>
 .perm-tab { min-height: 200px; }
 .perm-tab-footer { margin-top: 16px; text-align: right; }
+/* wrapper 负责横滑，el-tree 宽度撑开到内容实际宽度 */
+.tree-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tree-scroll-wrapper :deep(.el-tree) {
+  width: max-content;
+  min-width: 100%;
+}
 </style>
