@@ -136,11 +136,17 @@ func (s *UserService) UpdateUser(id int64, req *UpdateUserRequest) (*model.User,
 	return user, nil
 }
 
-// DeleteUser 软删除用户（保护最后一个 SUPER_ADMIN）
+// DeleteUser 删除用户（双重保护：不能删最后一个SUPER_ADMIN；不能删系统最后一个用户）
 func (s *UserService) DeleteUser(id int64) error {
-	// 检查是否是最后一个 SUPER_ADMIN
+	// 保护1：不能删最后一个 SUPER_ADMIN
 	if s.isLastSuperAdmin(id) {
 		return errors.NewAuthError(errors.ErrProtectedEntity, "无法删除最后一个超级管理员")
+	}
+	// 保护2：不能删系统最后一个用户（防止系统无法登录）
+	var total int64
+	s.db.Model(&model.User{}).Where("status = 1").Count(&total)
+	if total <= 1 {
+		return errors.NewAuthError(errors.ErrProtectedEntity, "无法删除系统中最后一个用户")
 	}
 	if err := s.userRepo.SoftDelete(s.db, id); err != nil {
 		return err

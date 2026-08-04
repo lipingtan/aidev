@@ -169,15 +169,9 @@ func (s *RoleService) DeleteRole(id int64) error {
 		return err
 	}
 
-	// 保护最后一个 SUPER_ADMIN 角色
-	if role.RoleType == "SUPER_ADMIN" {
-		var superCount int64
-		s.db.Model(&model.Role{}).
-			Where("role_type = 'SUPER_ADMIN' AND tenant_id = ? AND id != ?", role.TenantID, id).
-			Count(&superCount)
-		if superCount == 0 {
-			return errors.NewAuthError(errors.ErrProtectedEntity, "无法删除最后一个超级管理员角色")
-		}
+	// SUPER_ADMIN 角色（role_code='SUPER_ADMIN'）不允许删除（系统保护）
+	if role.RoleCode == "SUPER_ADMIN" {
+		return errors.NewAuthError(errors.ErrProtectedEntity, "超级管理员角色不允许删除")
 	}
 
 	// PERMISSION_SET 类型：允许有用户绑定的情况下删除（先收集关联用户用于缓存失效）

@@ -40,6 +40,11 @@ const (
 	ErrNotImplemented = 50101
 )
 
+// 并发冲突错误码 (409xx)
+const (
+	ErrOptimisticLock = 40901 // 乐观锁冲突
+)
+
 // AuthError 统一权限错误类型
 type AuthError struct {
 	Code    int    `json:"code"`

@@ -117,9 +117,9 @@ func (r *userRepo) ListByTenantID(db *gorm.DB, params UserListParams) ([]model.U
 	return users, total, nil
 }
 
-// SoftDelete 软删除用户
+// SoftDelete 硬删除用户（软删除会导致 unique index 残留，相同 username 无法复用）
 func (r *userRepo) SoftDelete(db *gorm.DB, id int64) error {
-	result := db.Delete(&model.User{}, id)
+	result := db.Unscoped().Delete(&model.User{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

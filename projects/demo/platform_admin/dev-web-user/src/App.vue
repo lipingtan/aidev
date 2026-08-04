@@ -1,21 +1,36 @@
 <script setup lang="ts">
 /**
- * 根组件 — 双模式支持
- * 根据构建模式（__IS_H5__）注入对应布局
+ * 根组件 — 响应式双模式支持
+ * /login 等不需要认证的页面：直接渲染 router-view（无 layout）
+ * 登录后的页面：根据屏幕宽度切换 H5/PC layout
  */
-import { defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import { useRoute } from 'vue-router'
 
-// @ts-ignore - Vite define 注入的全局常量
-const isH5 = typeof __IS_H5__ !== 'undefined' ? __IS_H5__ : false
+const UserH5Layout = defineAsyncComponent(() => import('@/layout/h5/UserH5Layout.vue'))
+const UserPcLayout = defineAsyncComponent(() => import('@/layout/pc/UserPcLayout.vue'))
 
-// 根据构建模式动态导入布局（实现 tree-shaking）
-const Layout = isH5
-  ? defineAsyncComponent(() => import('@/layout/h5/UserH5Layout.vue'))
-  : defineAsyncComponent(() => import('@/layout/pc/UserPcLayout.vue'))
+const MOBILE_BP = 768
+const isNarrow = ref(window.innerWidth < MOBILE_BP)
+const mq = window.matchMedia(`(max-width: ${MOBILE_BP - 1}px)`)
+
+function onMQChange(e: MediaQueryListEvent) {
+  isNarrow.value = e.matches
+}
+
+onMounted(() => mq.addEventListener('change', onMQChange))
+onUnmounted(() => mq.removeEventListener('change', onMQChange))
+
+const route = useRoute()
+// 不需要认证的页面（登录页等）直接用空白路由视图，不套 layout
+const noLayout = computed(() => route.meta.requiresAuth === false)
 </script>
 
 <template>
-  <Layout />
+  <!-- 登录页：无 layout 直接渲染 -->
+  <router-view v-if="noLayout" />
+  <!-- 登录后页面：按屏幕宽度选择布局 -->
+  <component v-else :is="isNarrow ? UserH5Layout : UserPcLayout" />
 </template>
 
 <style>

@@ -266,3 +266,32 @@ func SeedCR6Menus(db *gorm.DB) error {
 	}
 	return db.Create(menu).Error
 }
+
+// SeedCR10Menus 补充 CR-10 ABAC 策略管理菜单（幂等，可多次执行）
+func SeedCR10Menus(db *gorm.DB) error {
+	var count int64
+	db.Model(&model.Resource{}).Where("path = ?", "/system/abac").Count(&count)
+	if count > 0 {
+		return nil
+	}
+	var sysParent model.Resource
+	if err := db.Where("path = ? AND app_code = ?", "/system", "platform_admin").First(&sysParent).Error; err != nil {
+		return nil // 父菜单不存在，跳过
+	}
+	sysID := sysParent.ID
+	menu := &model.Resource{
+		ParentID:       &sysID,
+		Type:           "MENU",
+		Name:           "ABAC 策略",
+		Path:           "/system/abac",
+		Icon:           "Lock",
+		PermissionCode: "system:abac:list",
+		AppCode:        "platform_admin",
+		Platform:       "admin",
+		ModuleCode:     "abac-policy-mgmt",
+		SortOrder:      11,
+		Status:         1,
+		Version:        1,
+	}
+	return db.Create(menu).Error
+}

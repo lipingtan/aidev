@@ -28,7 +28,8 @@
                 <span class="app-name">{{ app.name }}</span>
                 <!-- 状态标签 -->
                 <div class="app-card__tags">
-                  <el-tag v-if="app.subscribed && app.subscription_status === 'active'" type="success" size="small">已开通</el-tag>
+                  <!-- BUILTIN 类型始终视为已开通；普通应用看订阅状态 -->
+                  <el-tag v-if="app.app_type === 'BUILTIN' || (app.subscribed && app.subscription_status === 'active')" type="success" size="small">已开通</el-tag>
                   <el-tag v-if="app.subscription_status === 'pending_approval'" type="warning" size="small">审批中</el-tag>
                   <el-tag v-if="app.subscription_status === 'rejected'" type="danger" size="small">已驳回</el-tag>
                   <el-tag

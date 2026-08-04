@@ -116,9 +116,9 @@ func (r *tenantRepo) List(db *gorm.DB, params TenantListParams) ([]model.Tenant,
 	return tenants, total, nil
 }
 
-// SoftDelete 软删除租户
+// SoftDelete 硬删除租户（软删除会导致 tenant_code/name unique index 残留）
 func (r *tenantRepo) SoftDelete(db *gorm.DB, id int64) error {
-	result := db.Delete(&model.Tenant{}, id)
+	result := db.Unscoped().Delete(&model.Tenant{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

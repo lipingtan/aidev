@@ -52,21 +52,24 @@ async function loginAsAdmin(page: Page) {
   await page.goto(`${BASE_URL}/login`);
   await page.waitForLoadState('networkidle');
 
-  // 填写登录表单 - 使用更精确的选择器
-  const usernameInput = page.locator('.login-container input[type="text"], .login-box input[type="text"], input[placeholder*="用户名"]').first();
-  const passwordInput = page.locator('.login-container input[type="password"], .login-box input[type="password"], input[placeholder*="密码"]').first();
-  
+  // 填写登录表单
+  const usernameInput = page.locator('input[placeholder*="用户名"], input[name="username"]').first();
+  const passwordInput = page.locator('input[type="password"]').first();
+
   await usernameInput.fill(ADMIN_USER);
   await passwordInput.fill(ADMIN_PASS);
 
   // 点击登录按钮
   await page.click('button:has-text("登录")');
 
-  // 等待登录成功提示
-  await page.waitForSelector('.el-message--success', { timeout: 10000 });
+  // 等待跳转到主界面（单租户直接跳 /home，多租户跳 /tenant-select）
+  await page.waitForURL(/\/(home|system|dashboard|tenant)/, { timeout: 15000 });
+
+  // 等待 access_token 写入 localStorage
+  await page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 5000 });
 
   // 等待页面加载完成
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 }
 
 // ================== 一、认证模块（AUTH）==================

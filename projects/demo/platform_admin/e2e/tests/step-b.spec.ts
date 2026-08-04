@@ -90,8 +90,8 @@ test.describe('Step B: AppResolveMiddleware + 租户四态 + SUPER_ADMIN 保护'
   // === Task 9: SUPER_ADMIN 保护规则 ===
 
   test('TC-B901: 删除唯一 SUPER_ADMIN 用户被拒绝', async ({ request }) => {
-    // 获取 admin 用户 ID
-    const usersResp = await request.get(`${API_BASE}/api/v1/admin/users`, { headers })
+    // 获取所有用户（加大 page_size 避免分页问题，admin 按 created_at DESC 在最后页）
+    const usersResp = await request.get(`${API_BASE}/api/v1/admin/users?page=1&page_size=100`, { headers })
     const users = (await usersResp.json()).data.list
     const adminUser = users.find((u: any) => u.username === 'admin')
     expect(adminUser).toBeTruthy()

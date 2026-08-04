@@ -85,6 +85,18 @@ type CreateApplicationRequest struct {
 	AppCode     string `json:"app_code" binding:"required"`
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	AppType     string `json:"app_type"` // BUILTIN/PLUGIN/EXTERNAL，默认 BUILTIN
+	RoutePrefix string `json:"route_prefix"`
+	Icon        string `json:"icon"`
+	SortOrder   int    `json:"sort_order"`
+}
+
+// validAppTypes 合法的应用类型枚举
+var validAppTypes = map[string]bool{
+	"":         true, // 允许空，默认 BUILTIN
+	"BUILTIN":  true,
+	"PLUGIN":   true,
+	"EXTERNAL": true,
 }
 
 // UpdateApplicationRequest 更新应用请求
@@ -107,6 +119,11 @@ type SetRoleAppsRequest struct {
 
 // CreateApplication 创建应用
 func (s *ApplicationService) CreateApplication(req *CreateApplicationRequest) (*model.Application, error) {
+	// 校验 app_type 枚举值
+	if !validAppTypes[req.AppType] {
+		return nil, errors.NewAuthError(errors.ErrInvalidParam, "无效的 app_type，允许值: BUILTIN/PLUGIN/EXTERNAL")
+	}
+
 	// 检查 app_code 唯一性
 	existing, err := s.appRepo.FindByCode(s.db, req.AppCode)
 	if err != nil {
@@ -116,10 +133,19 @@ func (s *ApplicationService) CreateApplication(req *CreateApplicationRequest) (*
 		return nil, errors.NewAuthError(errors.ErrDuplicateEntity, "应用编码已存在")
 	}
 
+	appType := req.AppType
+	if appType == "" {
+		appType = "BUILTIN"
+	}
+
 	app := &model.Application{
 		AppCode:     req.AppCode,
 		Name:        req.Name,
 		Description: req.Description,
+		AppType:     appType,
+		RoutePrefix: req.RoutePrefix,
+		Icon:        req.Icon,
+		SortOrder:   req.SortOrder,
 		Status:      1,
 		Version:     1,
 	}

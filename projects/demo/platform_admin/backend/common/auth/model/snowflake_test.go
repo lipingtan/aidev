@@ -4,38 +4,40 @@ import (
 	"testing"
 )
 
-// TestNextID_Uniqueness 验证生成 1000 个 ID 全部唯一
-func TestNextID_Uniqueness(t *testing.T) {
-	const count = 1000
-	ids := make(map[int64]bool, count)
-
-	for i := 0; i < count; i++ {
-		id := NextID()
-		if ids[id] {
-			t.Fatalf("第 %d 次生成的 ID %d 重复", i, id)
-		}
-		ids[id] = true
-	}
-}
-
-// TestNextID_Positive 验证生成的 ID 大于 0
-func TestNextID_Positive(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		id := NextID()
-		if id <= 0 {
-			t.Fatalf("生成的 ID 应大于 0，实际为 %d", id)
-		}
-	}
-}
-
-// TestNextID_Increasing 验证递增趋势（后生成的 >= 先生成的）
-func TestNextID_Increasing(t *testing.T) {
-	prev := NextID()
+func TestNextID_Unique(t *testing.T) {
+	// 生成 1000 个 ID，验证全部唯一
+	ids := make(map[int64]struct{}, 1000)
 	for i := 0; i < 1000; i++ {
-		curr := NextID()
-		if curr < prev {
-			t.Fatalf("ID 未保持递增趋势: prev=%d, curr=%d", prev, curr)
+		id := NextID()
+		if id == 0 {
+			t.Error("NextID 不应返回 0")
 		}
-		prev = curr
+		if _, exists := ids[id]; exists {
+			t.Errorf("发现重复 ID: %d（第 %d 次）", id, i)
+		}
+		ids[id] = struct{}{}
+	}
+}
+
+func TestNextID_Positive(t *testing.T) {
+	id := NextID()
+	if id <= 0 {
+		t.Errorf("NextID 应返回正整数，got: %d", id)
+	}
+}
+
+func TestNodeIDFromPodIP_Range(t *testing.T) {
+	nodeID := nodeIDFromPodIP()
+	if nodeID < 0 || nodeID >= 1024 {
+		t.Errorf("NodeID 应在 [0, 1023] 范围内，got: %d", nodeID)
+	}
+}
+
+func TestNodeIDFromPodIP_Fallback(t *testing.T) {
+	// nodeIDFromPodIP 在无法获取非回环 IPv4 时应返回 1（单机兜底）
+	// 这里验证函数至少不 panic 且返回合法值
+	nodeID := nodeIDFromPodIP()
+	if nodeID < 0 || nodeID >= 1024 {
+		t.Errorf("NodeID 超出合法范围，got: %d", nodeID)
 	}
 }

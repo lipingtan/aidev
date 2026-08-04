@@ -2,6 +2,8 @@ package auth
 
 import (
 	authCache "go-admin/common/auth/cache"
+	abachandler "go-admin/common/auth/abac/handler"
+	abacservice "go-admin/common/auth/abac/service"
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/handler"
 	"go-admin/common/auth/middleware"
@@ -77,6 +79,10 @@ type Dependencies struct {
 
 	// CR-8: 权限码 Redis 缓存
 	PermCodeCache *authCache.PermCodeCache
+
+	// CR-10: ABAC 策略引擎
+	AbacService *abacservice.AbacService
+	AbacHandler *abachandler.AbacHandler
 }
 
 // ExtraAdminRoutesFn 允许外部模块（如 app/admin/apis）注册额外的 /api/v1/admin/ 路由
@@ -182,6 +188,11 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		// 域名-租户映射管理路由
 		if deps.TenantDomainHandler != nil {
 			deps.TenantDomainHandler.RegisterRoutes(admin)
+		}
+
+		// CR-10: ABAC 策略引擎路由
+		if deps.AbacHandler != nil {
+			deps.AbacHandler.RegisterRoutes(admin)
 		}
 
 		// 外部模块扩展路由（如审批流）

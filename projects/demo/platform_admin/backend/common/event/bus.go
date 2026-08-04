@@ -54,6 +54,9 @@ var DefaultBus = NewBus()
 const (
 	// EventPermissionChanged 权限变更事件（缓存失效触发）
 	EventPermissionChanged = "permission.changed"
+
+	// EventAbacPolicyChanged ABAC 策略变更事件（新增，缓存失效触发）
+	EventAbacPolicyChanged = "abac.policy.changed"
 )
 
 // ---- 事件 payload 类型定义 ----
@@ -92,4 +95,10 @@ type ApprovalCancelledEvent struct {
 	BizType    string
 	BizID      string
 	TenantID   int64
+}
+
+// AbacPolicyChangedEvent ABAC 策略变更事件（缓存失效触发）
+type AbacPolicyChangedEvent struct {
+	TenantID     int64  // 变更的策略所属租户 ID（0=平台级）
+	ResourceType string // 变更的资源类型
 }

@@ -95,9 +95,9 @@ func (r *applicationRepo) List(db *gorm.DB) ([]model.Application, error) {
 	return apps, err
 }
 
-// Delete 软删除应用
+// Delete 硬删除应用（软删除会导致 app_code unique index 残留，相同编码无法复用）
 func (r *applicationRepo) Delete(db *gorm.DB, id int64) error {
-	result := db.Delete(&model.Application{}, id)
+	result := db.Unscoped().Delete(&model.Application{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

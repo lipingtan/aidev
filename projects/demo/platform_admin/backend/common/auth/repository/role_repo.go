@@ -95,9 +95,9 @@ func (r *roleRepo) ListByTenantIDAndType(db *gorm.DB, tenantID int64, roleType s
 	return roles, err
 }
 
-// SoftDelete 软删除角色
+// SoftDelete 硬删除角色（软删除会导致 unique index 残留，相同 role_code 无法复用）
 func (r *roleRepo) SoftDelete(db *gorm.DB, id int64) error {
-	result := db.Delete(&model.Role{}, id)
+	result := db.Unscoped().Delete(&model.Role{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

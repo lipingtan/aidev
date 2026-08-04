@@ -29,7 +29,8 @@ import i18n from './locales'
 // 暴露宿主库（供 UMD 格式插件共享依赖，PC 端和 H5 端均需要）
 import * as Vue from 'vue'
 import * as VueRouter from 'vue-router'
-;(window as any).__PLATFORM_ADMIN_LIBS__ = { Vue, ElementPlus, VueRouter }
+import * as VantLib from 'vant'
+;(window as any).__PLATFORM_ADMIN_LIBS__ = { Vue, ElementPlus, VueRouter, Vant: VantLib }
 
 const app = createApp(App)
 

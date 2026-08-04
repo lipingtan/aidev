@@ -218,14 +218,28 @@ func run() error {
 			}
 		}
 		if primaryDB != nil {
-			approvalCron := cron.New(cron.WithSeconds())
-			approvalCron.AddFunc("0 */5 * * * *", func() {
-				jobs.RunApprovalTimeoutScan(primaryDB)
-			})
-			approvalCron.Start()
-			log.Info("审批超时扫描 Cron 已启动（每5分钟）")
+			// 多 Pod 部署时只在主 Pod（POD_NAME 末尾为 0 或未设置）上启动 Cron，
+			// 避免每个 Pod 都独立触发造成 N 倍 DB 扫描压力。
+			// SELECT FOR UPDATE 已保证同一节点不会被重复处理，此处进一步减少冗余扫描。
+			shouldRunCron := true
+			if podName := os.Getenv("POD_NAME"); podName != "" {
+				// StatefulSet 格式：app-0, app-1... 只有序号为 0 的 Pod 运行 Cron
+				if len(podName) > 0 && podName[len(podName)-1] != '0' {
+					shouldRunCron = false
+					log.Infof("多 Pod 模式：当前 Pod=%s 不是主 Pod，跳过审批超时 Cron 启动", podName)
+				}
+			}
 
-			// 注册审批结果 EventBus 监听（subscription_status 联动）
+			if shouldRunCron {
+				approvalCron := cron.New(cron.WithSeconds())
+				approvalCron.AddFunc("0 */5 * * * *", func() {
+					jobs.RunApprovalTimeoutScan(primaryDB)
+				})
+				approvalCron.Start()
+				log.Info("审批超时扫描 Cron 已启动（每5分钟）")
+			}
+
+			// 注册审批结果 EventBus 监听（subscription_status 联动，所有 Pod 均注册）
 			authService.RegisterApprovalListeners(event.DefaultBus, primaryDB)
 			log.Info("审批结果 EventBus 监听已注册")
 		}

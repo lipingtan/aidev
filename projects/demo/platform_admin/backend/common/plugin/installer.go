@@ -435,6 +435,13 @@ func (ins *Installer) removeFrontendBundles(pluginName string) error {
 // Uninstall 卸载插件
 // cleanData: 是否清除插件相关数据表（{name}_* 表）
 func (ins *Installer) Uninstall(ctx context.Context, name string, cleanData bool) error {
+	// 先检查插件记录是否存在（不存在直接返回 not found，避免无效的进程 kill 操作）
+	var count int64
+	ins.db.WithContext(ctx).Model(&models.SysPlugin{}).Where("name = ?", name).Count(&count)
+	if count == 0 {
+		return fmt.Errorf("插件 %s 不存在", name)
+	}
+
 	// 尝试 kill 可能残留的插件进程（Windows 上 exe 被占用时无法删除）
 	binaryName := name
 	if runtime.GOOS == "windows" {

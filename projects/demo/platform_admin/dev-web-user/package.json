@@ -5,10 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:h5": "vite --mode h5",
-    "build:pc": "vite build --mode pc",
-    "build:h5": "vite build --mode h5",
-    "build": "npm run build:pc && npm run build:h5",
+    "build": "vite build",
+    "build:pc": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {

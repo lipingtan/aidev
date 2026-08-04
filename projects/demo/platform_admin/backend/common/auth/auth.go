@@ -13,6 +13,11 @@ import (
 	userStrategy "go-admin/app/user_auth/strategy"
 	pluginRouter "go-admin/app/plugin/router"
 	authCache "go-admin/common/auth/cache"
+	abacmodel "go-admin/common/auth/abac/model"
+	abachandler "go-admin/common/auth/abac/handler"
+	abacrepo "go-admin/common/auth/abac/repository"
+	abacservice "go-admin/common/auth/abac/service"
+	"go-admin/common/auth/abac"
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/discovery"
 	"go-admin/common/auth/handler"
@@ -46,8 +51,18 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 		return err
 	}
 
-	// 创建依赖
-	deps := buildDependencies(cfg, db)
+	// 创建依赖（传入 Redis blacklist，有 CacheAdapter 则用 Redis，否则降级到内存）
+	var blacklistStore spi.TokenBlacklistStore
+	if cacheAdapterForBL := sdk.Runtime.GetCacheAdapter(); cacheAdapterForBL != nil {
+		blacklistStore = authCache.NewRedisBlacklistStore(cacheAdapterForBL)
+		log.Println("[auth-rbac] Token 黑名单使用 Redis 存储（多 Pod 安全）")
+	} else {
+		log.Println("[auth-rbac] Token 黑名单降级为进程内存储（单实例模式）")
+	}
+	deps := buildDependencies(cfg, db, blacklistStore)
+
+	// CR-10: 初始化 ABAC 依赖（必须在 RegisterRoutes 之前，否则路由注册时 AbacHandler 为 nil）
+	buildAbacDependencies(db, deps)
 
 	// 将 AuthService 注入到插件路由（供 InitPluginRouter 使用）
 	pluginRouter.SetAuthService(deps.AuthService)
@@ -79,6 +94,10 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	if err := SeedCR6Menus(db); err != nil {
 		log.Printf("[auth-rbac] Seed CR-6 菜单失败: %v", err)
 	}
+	// Seed CR-10 ABAC 策略管理菜单（增量，幂等）
+	if err := SeedCR10Menus(db); err != nil {
+		log.Printf("[auth-rbac] Seed CR-10 菜单失败: %v", err)
+	}
 
 	// 字段权限自动注册
 	registerFieldPermModels(deps.FieldRegistry)
@@ -98,6 +117,9 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	// 注册数据权限 GORM Callback（含 OrganizationProvider）
 	orgProvider := &spi.DefaultOrganizationProvider{DB: db}
 	middleware.RegisterDataScopeCallback(db, cfg.DataScope.Enabled, orgProvider)
+
+	// CR-10: 注册 ABAC GORM Callback（在 DataScope 之后，已在前面初始化 deps.AbacService）
+	abac.RegisterAbacCallback(db, deps.AbacService)
 
 	// 加载字段权限路由映射
 	deps.FieldObjectRegistry.LoadRoutes(db)
@@ -169,11 +191,15 @@ func autoMigrate(db *gorm.DB) error {
 		&model.TenantDomain{},
 		// CR8: 自定义字段表（仅 DDL）
 		&model.CustomField{},
+		// CR10: ABAC 策略引擎表
+		&abacmodel.AbacPolicy{},
+		&abacmodel.AbacRowPolicy{},
+		&abacmodel.AbacColPolicy{},
 	)
 }
 
 // buildDependencies 创建所有 service/handler 依赖
-func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
+func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.TokenBlacklistStore) *Dependencies {
 	// Repositories
 	tenantRepo := repository.NewTenantRepository()
 	userRepo := repository.NewUserRepository()
@@ -189,7 +215,7 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	recordShareRepo := repository.NewRecordShareRepository()
 
 	// Services
-	authSvc := service.NewAuthService(db, cfg)
+	authSvc := service.NewAuthService(db, cfg, blacklistStore...)
 	tenantSvc := service.NewTenantService(db, cfg, tenantRepo)
 	userSvc := service.NewUserService(db, cfg, userRepo)
 	roleSvc := service.NewRoleService(db, cfg, roleRepo)
@@ -305,6 +331,17 @@ func buildDependencies(cfg *config.Config, db *gorm.DB) *Dependencies {
 	}
 }
 
+// buildAbacDependencies 初始化 ABAC 模块依赖并注入到 deps
+func buildAbacDependencies(db *gorm.DB, deps *Dependencies) {
+	abacPolicyRepo := abacrepo.NewAbacPolicyRepository()
+	abacRowRepo := abacrepo.NewAbacRowPolicyRepository()
+	abacColRepo := abacrepo.NewAbacColPolicyRepository()
+	cacheAdapter := sdk.Runtime.GetCacheAdapter() // storage.AdapterCache，可为 nil
+	abacSvc := abacservice.NewAbacService(db, abacPolicyRepo, abacRowRepo, abacColRepo, cacheAdapter)
+	deps.AbacService = abacSvc
+	deps.AbacHandler = abachandler.NewAbacHandler(abacSvc)
+}
+
 // registerFieldPermModels 注册所有需要字段权限管控的 model
 func registerFieldPermModels(registry *service.FieldRegistry) {
 	registry.AutoRegister("user", "用户", model.User{})
@@ -317,7 +354,15 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 
 	// 实例化 user_auth 域依赖
 	smsSender := &userAuthSpi.ConsoleMockSender{}
-	codeStore := userAuthService.NewMemoryCodeStore()
+	// 有 Redis 时使用 Redis CodeStore（多 Pod 安全），否则降级到内存
+	var codeStore userAuthService.CodeStore
+	if redisAdapter := sdk.Runtime.GetCacheAdapter(); redisAdapter != nil {
+		codeStore = userAuthService.NewRedisCodeStore(redisAdapter)
+		log.Println("[user_auth] SMS CodeStore 使用 Redis（多 Pod 安全）")
+	} else {
+		codeStore = userAuthService.NewMemoryCodeStore()
+		log.Println("[user_auth] SMS CodeStore 降级为内存（单实例模式）")
+	}
 	smsSvc := userAuthService.NewSmsService(smsSender, codeStore)
 	bizUserRepo := userAuthRepo.NewBizUserRepository()
 	bizUserSvc := userAuthService.NewBizUserService(db, bizUserRepo)

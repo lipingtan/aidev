@@ -1,4 +1,4 @@
-/**
+﻿/**
  * V2-CR5 双用户池 + C端认证 — UI 端面测试
  * 关联用例: test_cases.md
  *
@@ -287,7 +287,7 @@ test.describe('C端登录页 — dev-web-user (5174)', () => {
       await expect(codeInput).toHaveValue('0000');
 
       // 点登录，等待接口响应
-      const loginBtn = page.getByRole('button', { name: /登/ });
+      const loginBtn = page.locator('.login-btn');
       await expect(loginBtn).toBeEnabled();
       
       // 使用 Promise.race 同时等待接口响应和页面变化
@@ -303,7 +303,9 @@ test.describe('C端登录页 — dev-web-user (5174)', () => {
       
       if (!isErrorVisible) {
         // 如果没有 el-message，检查页面是否仍在登录页（说明登录失败）
-        await expect(page.getByText('用户登录')).toBeVisible();
+        // 新设计标题为"欢迎回来"或"用户登录"
+        const stillOnLogin = await page.locator('.login-card').isVisible({ timeout: 3000 }).catch(() => false)
+        expect(isErrorVisible || stillOnLogin).toBeTruthy()
       }
       await pause(page);
     } finally {
@@ -394,14 +396,15 @@ test.describe('C端登录页 — UX 体验审查', () => {
       await expect(loginCard).toBeVisible({ timeout: 10000 });
 
       // 验证卡片大致居中（检查是否在视口中央区域）
+      // 新设计 PC 端为左右分栏，卡片在右半区，允许较大偏差；核心验证：卡片可见即可
       const box = await loginCard.boundingBox();
-      if (box) {
+      if (box && box.width > 0) {
         const viewportSize = page.viewportSize();
         if (viewportSize) {
           const centerX = box.x + box.width / 2;
           const viewportCenterX = viewportSize.width / 2;
-          // 允许 100px 偏差
-          expect(Math.abs(centerX - viewportCenterX)).toBeLessThan(100);
+          // 允许 500px 偏差（兼容左右分栏布局）
+          expect(Math.abs(centerX - viewportCenterX)).toBeLessThan(500);
         }
       }
       await pause(page);
@@ -432,7 +435,7 @@ test.describe('C端登录页 — UX 体验审查', () => {
       await expect(sendBtn).toBeVisible();
 
       // 验证登录按钮文案
-      const loginBtn = page.getByRole('button', { name: /登/ });
+      const loginBtn = page.locator('.login-btn');
       await expect(loginBtn).toBeVisible();
       await pause(page);
     } finally {
@@ -455,7 +458,7 @@ test.describe('C端登录页 — UX 体验审查', () => {
       await pause(page, 300);
 
       // 点击登录
-      await page.getByRole('button', { name: /登/ }).click();
+      await page.locator('.login-btn').click();
       await pause(page, 1500);
 
       // 验证有警告提示（el-message--warning 或表单校验提示）
@@ -476,15 +479,23 @@ test.describe('C端登录页 — UX 体验审查', () => {
       await page.waitForLoadState('networkidle');
       await pause(page);
 
-      // 不填任何内容，直接点发送验证码
       const sendBtn = page.getByRole('button', { name: /验证码/ });
+      await expect(sendBtn).toBeVisible({ timeout: 8000 });
+
+      // 检查：空手机号时按钮应已禁用，无需点击
+      const isBtnDisabled = await sendBtn.isDisabled().catch(() => false);
+      if (isBtnDisabled) {
+        // 按钮禁用即为通过 —— 符合 TC-UX10 错误预防要求
+        expect(isBtnDisabled).toBeTruthy();
+        return;
+      }
+
+      // 如果按钮未禁用，则点击后验证有警告提示
       await sendBtn.click();
       await pause(page, 1500);
 
-      // 验证有警告提示或按钮被禁用
       const warning = page.locator('.el-message--warning, .el-message--error, .el-form-item__error');
       const isWarningVisible = await warning.isVisible().catch(() => false);
-      const isBtnDisabled = await sendBtn.isDisabled().catch(() => false);
 
       // 至少满足其一：有警告提示 或 按钮禁用
       expect(isWarningVisible || isBtnDisabled).toBeTruthy();

@@ -29,8 +29,10 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const API_BASE = 'http://localhost:8000'
-const ADMIN_H5_BASE = 'http://localhost:3002'   // dev:h5 启动的地址（H5 模式）
-const USER_H5_BASE = 'http://localhost:5174'    // user dev:h5 启动的地址
+// admin 统一入口：同一个 3000 服务，根据 viewport < 768 自动切换 H5Layout
+// 不再需要 dev:h5 单独进程，直接模拟移动端 viewport 即可触发 H5 模式
+const ADMIN_H5_BASE = 'http://localhost:3000'
+const USER_H5_BASE = 'http://localhost:5174'    // user 端统一入口，运行时响应式切换 H5/PC
 
 const ADMIN_USER = 'admin'
 const ADMIN_PASS = 'admin123'
@@ -157,165 +159,107 @@ test.describe('describe 2: admin H5 布局 UI 验证', () => {
 
   // TC-F01: H5Layout — NavBar 标题栏渲染（P0）
   test('TC-F01 admin H5 NavBar 存在于 DOM', async ({ page }) => {
-    // 监控所有 HTTP 响应，记录 403
+    // 新架构：admin 统一服务 3000，viewport < 768 自动触发 H5Layout，无需 mock index-h5.html
     const http403s: string[] = []
     page.on('response', (resp) => {
-      if (resp.status() === 403) {
-        http403s.push(`403 ${resp.url()}`)
-      }
-    })
-    const indexH5Content = fs.readFileSync(
-      path.join(ADMIN_WEB_DIR, 'index-h5.html'),
-      'utf-8'
-    )
-    await page.route('**/*', async (route) => {
-      const req = route.request()
-      const url = req.url()
-      // 只拦截 HTML 导航请求（SPA fallback）
-      if (req.resourceType() === 'document' && !url.includes('.js') && !url.includes('.css')) {
-        await route.fulfill({ status: 200, contentType: 'text/html', body: indexH5Content })
-      } else {
-        await route.continue()
-      }
+      if (resp.status() === 403) http403s.push(`403 ${resp.url()}`)
     })
 
-    await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 15000 })
-
-    // 注入 token
+    // 注入登录态
     const api = page.context().request
     const loginResp = await api.post(`${API_BASE}/auth/login`, {
       data: { username: ADMIN_USER, password: ADMIN_PASS },
     })
     const loginBody = await loginResp.json()
     let token = loginBody.data?.access_token ?? loginBody.data?.token
-    if (loginBody.data?.tenants?.length > 0) {
+    if (loginBody.data?.token_type !== 'access' && loginBody.data?.tenants?.length > 0) {
       const tr = await api.post(`${API_BASE}/auth/tenant/select`, {
         data: { tenant_id: String(loginBody.data.tenants[0].id) },
         headers: { Authorization: `Bearer ${loginBody.data.token}` },
       })
-      const tb = await tr.json()
-      token = tb.data?.access_token ?? tb.data?.token
+      token = (await tr.json()).data?.access_token ?? token
     }
 
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15000 })
     await page.evaluate((t) => {
       localStorage.setItem('access_token', t)
       localStorage.setItem('user-info', JSON.stringify({ token: t, access_token: t }))
     }, token)
-
-    // 刷新让路由守卫重新执行
     await page.reload({ waitUntil: 'networkidle', timeout: 15000 })
     await page.waitForTimeout(2000)
 
-    // 诊断：打印当前 URL 和 body 结构
     const currentUrl = page.url()
     const bodyHtml = await page.evaluate(() => document.body.innerHTML.slice(0, 500))
     console.log('[TC-F01 DIAG] URL:', currentUrl)
     console.log('[TC-F01 DIAG] body[:500]:', bodyHtml)
 
-    // 验证 Vant NavBar 存在
+    // viewport=390 触发 H5Layout，验证 Vant NavBar
     const navBar = page.locator('.van-nav-bar')
     await expect(navBar).toBeVisible({ timeout: 10000 })
 
-    // 验证汉堡图标存在（wap-nav 图标）
     const hamburger = page.locator('.van-icon-wap-nav, [class*="wap-nav"]')
     await expect(hamburger).toBeVisible({ timeout: 5000 })
 
-    // 输出 403 报告（帮助排查权限问题，不阻断测试）
     if (http403s.length > 0) {
       const unexpected = http403s.filter(u => !u.includes('/static/') && !u.includes('.ico'))
-      if (unexpected.length > 0) {
-        console.warn('[TC-F01] 发现 403 响应（可能是权限或应用订阅问题）:')
-        unexpected.forEach(u => console.warn(' ', u))
-      }
+      if (unexpected.length > 0) console.warn('[TC-F01] 发现403:', unexpected)
     }
   })
 
   // TC-F02: H5Layout — 汉堡菜单侧滑弹出与关闭（P0）
   test('TC-F02 admin H5 汉堡菜单侧滑弹出并点击菜单项后关闭', async ({ page }) => {
-    // 收集 403/非预期 HTTP 响应
+    // 新架构：直接访问 3000，viewport < 768 触发 H5Layout，无需 mock
     const http403s: string[] = []
     page.on('response', (resp) => {
-      if (resp.status() === 403) {
-        http403s.push(`${resp.status()} ${resp.url()}`)
-      }
+      if (resp.status() === 403) http403s.push(`${resp.status()} ${resp.url()}`)
     })
 
-    // 复用 TC-F01 的 SPA fallback + token 注入方式
-    const indexH5Content = fs.readFileSync(path.join(ADMIN_WEB_DIR, 'index-h5.html'), 'utf-8')
-    await page.route('**/*', async (route) => {
-      const req = route.request()
-      if (req.resourceType() === 'document' && !req.url().includes('.js') && !req.url().includes('.css')) {
-        await route.fulfill({ status: 200, contentType: 'text/html', body: indexH5Content })
-      } else {
-        await route.continue()
-      }
-    })
-
-    await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 15000 })
-
-    // 注入 token
+    // 注入登录态
     const api = page.context().request
     const loginResp = await api.post(`${API_BASE}/auth/login`, {
       data: { username: ADMIN_USER, password: ADMIN_PASS },
     })
     const loginBody = await loginResp.json()
     let token = loginBody.data?.access_token ?? loginBody.data?.token
-    if (loginBody.data?.tenants?.length > 0) {
+    if (loginBody.data?.token_type !== 'access' && loginBody.data?.tenants?.length > 0) {
       const tr = await api.post(`${API_BASE}/auth/tenant/select`, {
         data: { tenant_id: String(loginBody.data.tenants[0].id) },
         headers: { Authorization: `Bearer ${loginBody.data.token}` },
       })
-      const tb = await tr.json()
-      token = tb.data?.access_token ?? tb.data?.token
+      token = (await tr.json()).data?.access_token ?? token
     }
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15000 })
     await page.evaluate((t) => {
       localStorage.setItem('access_token', t)
       localStorage.setItem('user-info', JSON.stringify({ token: t, access_token: t }))
     }, token)
     await page.reload({ waitUntil: 'networkidle', timeout: 15000 })
-    // 等待路由守卫完成，然后主动触发 menuStore.fetchMenus()
-    await page.waitForTimeout(2000)
-
-    // H5Layout.vue onMounted 会自动调用 menuStore.fetchMenus()
-    // 等待菜单加载完毕（最多 5s）
     await page.waitForTimeout(3000)
 
-    // 确认 NavBar 存在
+    const unexpected403s = http403s.filter(u => !u.includes('/static/') && !u.includes('.ico'))
+    if (unexpected403s.length > 0) console.warn('[TC-F02] 发现403:', unexpected403s)
+
     const navBar = page.locator('.van-nav-bar')
     await expect(navBar).toBeVisible({ timeout: 10000 })
 
-    // 记录 403（白名单：静态资源 403 不算问题）
-    const unexpected403s = http403s.filter(u => !u.includes('/static/') && !u.includes('.ico'))
-    if (unexpected403s.length > 0) {
-      console.warn('[TC-F02] 发现 403 响应（非静态资源）:', unexpected403s)
-    }
-
-    // 点击汉堡图标
     const hamburger = page.locator('.van-icon-wap-nav, [class*="wap-nav"]')
     await expect(hamburger).toBeVisible({ timeout: 5000 })
     await hamburger.click()
 
-    // van-popup 从左侧滑出
     const popup = page.locator('.van-popup')
     await expect(popup).toBeVisible({ timeout: 5000 })
 
-    // 等待菜单数据加载（Popup 内容不只有 header "菜单" 文字）
-    // 等到 Popup 里有 .menu-item 或者 .drawer-body 下有任何子元素
     await page.waitForFunction(() => {
       const body = document.querySelector('.van-popup .drawer-body')
       return body && body.children.length > 0
-    }, { timeout: 8000 }).catch(() => {/* 超时后继续，后面的 count 会给出实际值 */})
+    }, { timeout: 8000 }).catch(() => {})
     await page.waitForTimeout(300)
 
-    // 菜单列表中至少有一项可见（H5MenuDrawer 使用自定义 .menu-item div）
     const menuItems = page.locator('.van-popup .menu-item')
     const count = await menuItems.count()
-    expect(count, `菜单项数量应大于0（Popup 内容: ${await popup.innerText().catch(() => '无法获取')}）`).toBeGreaterThan(0)
+    expect(count, `菜单项数量应大于0`).toBeGreaterThan(0)
 
-    // 点击第一个菜单项
     await menuItems.first().click()
-
-    // popup 应关闭
     await expect(popup).not.toBeVisible({ timeout: 5000 })
   })
 
@@ -375,41 +319,35 @@ test.describe('describe 3: user H5 布局 UI 验证', () => {
 
   // TC-F04: UserH5Layout — 底部 Tabbar 渲染（P0）
   test('TC-F04 user H5 底部 Tabbar 存在于 DOM', async ({ page }) => {
-    // 前置：dev-web-user 以 npm run dev:h5 启动（port 5174），访问 index-h5.html
-    await page.goto('/index-h5.html', { waitUntil: 'networkidle', timeout: 15000 })
-
-    // 注入登录态（与 admin 相同后端）
-    if (page.url().includes('login') || !(await page.locator('.van-tabbar').isVisible().catch(() => false))) {
-      const api = page.request
-      const loginResp = await api.post(`${API_BASE}/auth/login`, {
-        data: { username: ADMIN_USER, password: ADMIN_PASS },
+    // 新架构：user 端统一服务 5174，viewport < 768 自动触发 UserH5Layout（Vant Tabbar）
+    const api = page.request
+    const loginResp = await api.post(`${API_BASE}/auth/login`, {
+      data: { username: ADMIN_USER, password: ADMIN_PASS },
+    })
+    const loginBody = await loginResp.json()
+    let token = loginBody.data?.access_token ?? loginBody.data?.token
+    if (loginBody.data?.token_type !== 'access' && loginBody.data?.tenants?.length > 0) {
+      const tr = await api.post(`${API_BASE}/auth/tenant/select`, {
+        data: { tenant_id: String(loginBody.data.tenants[0].id) },
+        headers: { Authorization: `Bearer ${loginBody.data.token}` },
       })
-      const loginBody = await loginResp.json()
-      let token = loginBody.data?.access_token ?? loginBody.data?.token
-      if (loginBody.data?.tenants?.length > 0) {
-        const tr = await api.post(`${API_BASE}/auth/tenant/select`, {
-          data: { tenant_id: String(loginBody.data.tenants[0].id) },
-          headers: { Authorization: `Bearer ${loginBody.data.token}` },
-        })
-        const tb = await tr.json()
-        token = tb.data?.access_token ?? tb.data?.token
-      }
-      await page.evaluate((t) => {
-        localStorage.setItem('access_token', t)
-        localStorage.setItem('user-info', JSON.stringify({ token: t, access_token: t }))
-      }, token)
-      // 重新访问 H5 入口（防止 SPA 路由返回 PC index.html）
-      await page.goto('/index-h5.html', { waitUntil: 'networkidle', timeout: 15000 })
+      token = (await tr.json()).data?.access_token ?? token
     }
 
-    // 验证 Vant Tabbar 固定在底部
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15000 })
+    await page.evaluate((t) => {
+      localStorage.setItem('access_token', t)
+      localStorage.setItem('user-info', JSON.stringify({ token: t, access_token: t }))
+    }, token)
+    await page.goto('/', { waitUntil: 'networkidle', timeout: 15000 })
+
     const tabbar = page.locator('.van-tabbar')
     await expect(tabbar).toBeVisible({ timeout: 10000 })
   })
 
   // TC-F05: UserH5Layout — Tabbar 路由跳转与选中高亮（P0）
   test('TC-F05 user H5 点击 Tabbar 第二项路由跳转并高亮', async ({ page }) => {
-    // 监控 403
+    // 新架构：直接访问 5174，viewport < 768 触发 UserH5Layout，无需 mock
     const http403s: string[] = []
     page.on('response', (resp) => {
       if (resp.status() === 403 && !resp.url().includes('/static/')) {
@@ -417,34 +355,20 @@ test.describe('describe 3: user H5 布局 UI 验证', () => {
       }
     })
 
-    // SPA fallback：所有 HTML 导航请求返回 user index-h5.html
-    const userIndexH5 = fs.readFileSync(path.join(USER_WEB_DIR, 'index-h5.html'), 'utf-8')
-    await page.route('**/*', async (route) => {
-      const req = route.request()
-      if (req.resourceType() === 'document' && !req.url().includes('.js') && !req.url().includes('.css')) {
-        await route.fulfill({ status: 200, contentType: 'text/html', body: userIndexH5 })
-      } else {
-        await route.continue()
-      }
-    })
-
-    await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 15000 })
-
-    // 注入 token
     const api = page.context().request
     const loginResp = await api.post(`${API_BASE}/auth/login`, {
       data: { username: ADMIN_USER, password: ADMIN_PASS },
     })
     const loginBody = await loginResp.json()
     let token = loginBody.data?.access_token ?? loginBody.data?.token
-    if (loginBody.data?.tenants?.length > 0) {
+    if (loginBody.data?.token_type !== 'access' && loginBody.data?.tenants?.length > 0) {
       const tr = await api.post(`${API_BASE}/auth/tenant/select`, {
         data: { tenant_id: String(loginBody.data.tenants[0].id) },
         headers: { Authorization: `Bearer ${loginBody.data.token}` },
       })
-      const tb = await tr.json()
-      token = tb.data?.access_token ?? tb.data?.token
+      token = (await tr.json()).data?.access_token ?? token
     }
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15000 })
     await page.evaluate((t) => {
       localStorage.setItem('access_token', t)
       localStorage.setItem('user-info', JSON.stringify({ token: t, access_token: t }))
@@ -452,13 +376,10 @@ test.describe('describe 3: user H5 布局 UI 验证', () => {
     await page.reload({ waitUntil: 'networkidle', timeout: 15000 })
     await page.waitForTimeout(2000)
 
-    // 确认 Tabbar 存在
     const tabbar = page.locator('.van-tabbar')
     await expect(tabbar).toBeVisible({ timeout: 10000 })
 
-    if (http403s.length > 0) {
-      console.warn('[TC-F05] 发现 403 响应:', http403s)
-    }
+    if (http403s.length > 0) console.warn('[TC-F05] 发现 403:', http403s)
 
     const tabItems = page.locator('.van-tabbar-item')
     const count = await tabItems.count()
@@ -467,20 +388,16 @@ test.describe('describe 3: user H5 布局 UI 验证', () => {
       return
     }
 
-    // 点击第二项
     await tabItems.nth(1).click()
     await page.waitForLoadState('networkidle', { timeout: 8000 })
 
-    // 第二项应处于激活状态
     const activeItem = page.locator('.van-tabbar-item--active')
     await expect(activeItem).toBeVisible({ timeout: 3000 })
-    const activeCount = await activeItem.count()
-    expect(activeCount).toBe(1)
+    expect(await activeItem.count()).toBe(1)
   })
 
   // TC-F06: UserH5Layout — 菜单为空时无 JS 错误（P1）
   test('TC-F06 user H5 菜单为空时不报 JS 错误', async ({ page }) => {
-    // 收集页面 JS 错误
     const jsErrors: string[] = []
     page.on('pageerror', (err) => jsErrors.push(err.message))
 
@@ -493,10 +410,10 @@ test.describe('describe 3: user H5 布局 UI 验证', () => {
       })
     })
 
-    await page.goto('/index-h5.html', { waitUntil: 'networkidle', timeout: 15000 })
+    // 新架构：直接访问根路径，viewport < 768 触发 UserH5Layout
+    await page.goto('/', { waitUntil: 'networkidle', timeout: 15000 })
     await page.waitForTimeout(2000)
 
-    // 不应有 uncaught JS 错误
     const uncaughtErrors = jsErrors.filter(
       (e) => !e.includes('404') && !e.includes('net::ERR'),
     )
@@ -900,7 +817,8 @@ test.describe('describe 6: 回归验证', () => {
 
   // TC-003: admin H5 宿主库 __PLATFORM_ADMIN_LIBS__ 含 Vant（P0）
   test('TC-003 admin H5 模式 window.__PLATFORM_ADMIN_LIBS__ 包含 Vant', async ({ page }) => {
-    await page.goto(ADMIN_H5_BASE + '/index-h5.html', { waitUntil: 'networkidle', timeout: 15000 })
+    // 架构已改为响应式统一入口，直接访问根路径，Playwright 已设置 iPhone viewport 触发 H5 模式
+    await page.goto(ADMIN_H5_BASE + '/', { waitUntil: 'networkidle', timeout: 15000 })
 
     const libs = await page.evaluate(() => {
       const w = window as any

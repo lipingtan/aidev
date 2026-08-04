@@ -7,6 +7,7 @@
  */
 
 import request from '@/utils/request'
+import axios from 'axios'
 import type { MenuItem } from '@/types'
 
 /** 发送验证码 */
@@ -24,9 +25,11 @@ export function logout() {
   return request.post('/auth/logout')
 }
 
-/** 获取当前用户菜单 */
+/** 获取当前用户菜单（接口在 /api/v1/common 路由组，需绕过 baseURL） */
 export function getMenu() {
-  return request.get<any, MenuItem[]>('/api/v1/common/user-menu', {
-    params: { platform: 'user' }
-  })
+  const token = localStorage.getItem('access_token')
+  return axios.get<any, { data: { data: MenuItem[] } }>('/api/v1/common/user-menu', {
+    params: { platform: 'user' },
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  }).then(res => (res.data as any)?.data ?? [])
 }

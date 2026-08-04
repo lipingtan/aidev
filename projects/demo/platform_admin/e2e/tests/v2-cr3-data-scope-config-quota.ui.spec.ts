@@ -5,7 +5,7 @@
  */
 import { test, expect, Page, APIRequestContext, request } from '@playwright/test';
 
-const APP_URL = 'http://localhost:5173';
+const APP_URL = 'http://localhost:3000';
 const API_BASE = 'http://localhost:8000';
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin123';
@@ -70,9 +70,15 @@ test.describe('端面测试 — 组织架构管理', () => {
   // TC-009: 组织架构树形展示
   test('TC-009 组织架构树形展示', async ({ page }) => {
     await navigateTo(page, '/system/org');
-    // 等待页面加载，查找树组件或页面主体内容
-    const content = page.locator('.el-tree, [data-testid="org-tree"], .org-tree, .app-main');
-    await expect(content).toBeVisible({ timeout: 10000 });
+    // 等待页面加载，优先匹配树组件，回退到页面主体
+    const tree = page.locator('.el-tree').first();
+    const main = page.locator('.app-main').first();
+    const visible = await tree.isVisible({ timeout: 10000 }).catch(() => false);
+    if (visible) {
+      await expect(tree).toBeVisible();
+    } else {
+      await expect(main).toBeVisible({ timeout: 10000 });
+    }
   });
 
   // TC-010-UI: 创建组织节点（通过页面操作）
@@ -117,8 +123,8 @@ test.describe('端面测试 — 三级配置管理', () => {
       await page.waitForLoadState('networkidle');
       await expect(tabs.nth(1)).toHaveClass(/is-active|active/);
     } else {
-      // 可能是通过下拉选择 scope
-      const pageContent = page.locator('.app-main, .main-content, #app');
+      // 可能是通过下拉选择 scope，验证主内容区已渲染
+      const pageContent = page.locator('.app-main').first();
       await expect(pageContent).toBeVisible({ timeout: 5000 });
     }
   });

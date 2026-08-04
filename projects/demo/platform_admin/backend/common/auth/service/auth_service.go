@@ -7,6 +7,7 @@ import (
 	"go-admin/common/auth/config"
 	"go-admin/common/auth/errors"
 	"go-admin/common/auth/model"
+	"go-admin/common/auth/spi"
 	"go-admin/common/auth/strategy"
 
 	"golang.org/x/crypto/bcrypt"
@@ -14,10 +15,11 @@ import (
 )
 
 // AuthService 认证服务
+// blacklist 使用 spi.TokenBlacklistStore 接口，支持内存（单实例）或 Redis（多 Pod）实现
 type AuthService struct {
 	db        *gorm.DB
 	cfg       *config.Config
-	blacklist sync.Map // token JTI -> 过期时间
+	blacklist spi.TokenBlacklistStore
 }
 
 // GetConfig 返回配置（供中间件等外部调用方使用）
@@ -49,11 +51,41 @@ func (s *AuthService) CheckUserStatus(userID int64) (int, error) {
 }
 
 // NewAuthService 构造认证服务
-func NewAuthService(db *gorm.DB, cfg *config.Config) *AuthService {
-	return &AuthService{
-		db:  db,
-		cfg: cfg,
+// blacklistStore 传 nil 时降级为本地内存黑名单（仅适用于单实例）
+func NewAuthService(db *gorm.DB, cfg *config.Config, blacklistStore ...spi.TokenBlacklistStore) *AuthService {
+	var bl spi.TokenBlacklistStore
+	if len(blacklistStore) > 0 && blacklistStore[0] != nil {
+		bl = blacklistStore[0]
+	} else {
+		bl = &localBlacklistFallback{}
 	}
+	return &AuthService{
+		db:        db,
+		cfg:       cfg,
+		blacklist: bl,
+	}
+}
+
+// localBlacklistFallback 单实例降级实现（Redis 不可用时使用）
+type localBlacklistFallback struct {
+	m sync.Map
+}
+
+func (l *localBlacklistFallback) Add(jti string, ttl time.Duration) error {
+	l.m.Store(jti, time.Now().Add(ttl))
+	return nil
+}
+
+func (l *localBlacklistFallback) Contains(jti string) bool {
+	val, ok := l.m.Load(jti)
+	if !ok {
+		return false
+	}
+	if time.Now().After(val.(time.Time)) {
+		l.m.Delete(jti)
+		return false
+	}
+	return true
 }
 
 // Login 用户登录
@@ -229,9 +261,8 @@ func (s *AuthService) Refresh(platformTokenStr string, tenantID int64) (*strateg
 	return s.SelectTenant(platformTokenStr, tenantID)
 }
 
-// Logout 将 token 加入黑名单
+// Logout 将 token 的 JTI 加入黑名单
 func (s *AuthService) Logout(tokenStr string) error {
-	// 解析 access_token 获取 JTI 和过期时间
 	claims, err := strategy.ParseAccessToken(s.cfg, tokenStr)
 	if err != nil {
 		// 即使 token 过期也允许 logout
@@ -239,28 +270,21 @@ func (s *AuthService) Logout(tokenStr string) error {
 	}
 
 	if claims.ID != "" {
-		s.blacklist.Store(claims.ID, claims.ExpiresAt.Time)
+		ttl := time.Until(claims.ExpiresAt.Time)
+		if ttl <= 0 {
+			ttl = time.Minute // 已过期 token 保留 1 分钟防重放
+		}
+		_ = s.blacklist.Add(claims.ID, ttl)
 	}
-
 	return nil
 }
 
-// IsBlacklisted 检查 token 是否在黑名单中
+// IsBlacklisted 检查 token JTI 是否在黑名单中
 func (s *AuthService) IsBlacklisted(jti string) bool {
 	if jti == "" {
 		return false
 	}
-	val, ok := s.blacklist.Load(jti)
-	if !ok {
-		return false
-	}
-	// 如果已过期，从黑名单中移除
-	expTime := val.(time.Time)
-	if time.Now().After(expTime) {
-		s.blacklist.Delete(jti)
-		return false
-	}
-	return true
+	return s.blacklist.Contains(jti)
 }
 
 // ParsePlatformToken 解析 platform_token（保留方法签名兼容）

@@ -39,7 +39,8 @@ func (r *orgUnitRepo) Update(db *gorm.DB, unit *model.OrgUnit) error {
 }
 
 func (r *orgUnitRepo) Delete(db *gorm.DB, id int64) error {
-	return db.Delete(&model.OrgUnit{}, id).Error
+	// 硬删除：软删除会导致 unique index 残留（tenant_id+code），相同编码无法复用
+	return db.Unscoped().Delete(&model.OrgUnit{}, id).Error
 }
 
 func (r *orgUnitRepo) FindByID(db *gorm.DB, id int64) (*model.OrgUnit, error) {

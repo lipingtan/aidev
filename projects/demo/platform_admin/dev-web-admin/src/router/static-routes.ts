@@ -91,6 +91,12 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '数据权限配置', icon: 'Key', permission: 'system:data-scope:list' }
       },
       {
+        path: 'system/abac',
+        name: 'system-abac',
+        component: () => import('@/views/system/abac/PolicyList.vue'),
+        meta: { title: 'ABAC 策略', icon: 'Lock', permission: 'system:abac:list' }
+      },
+      {
         path: 'system/org',
         name: 'system-org',
         component: () => import('@/views/system/org/index.vue'),

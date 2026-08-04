@@ -181,8 +181,14 @@ func (s *AdminConfigService) List(scope, key string, isFeatureFlag *int, tenantI
 	return list, total, nil
 }
 
-// Create 创建配置
+// Create 创建配置（先清理同 key 的软删除残留，再插入，避免 unique index 冲突）
 func (s *AdminConfigService) Create(cfg *model.AdminConfig) error {
+	// 清理可能存在的软删除残留（unique key 相同但 deleted_at 非 NULL 的记录）
+	s.db.Unscoped().
+		Where("config_key = ? AND scope = ? AND scope_id = ? AND tenant_id = ? AND deleted_at IS NOT NULL",
+			cfg.ConfigKey, cfg.Scope, cfg.ScopeID, cfg.TenantID).
+		Delete(&model.AdminConfig{})
+
 	if err := s.db.Create(cfg).Error; err != nil {
 		return err
 	}
@@ -204,17 +210,27 @@ func (s *AdminConfigService) Update(id int64, updates map[string]interface{}) er
 	return nil
 }
 
-// Delete 软删除配置
+// Delete 硬删除配置（含清理软删除残留，避免 unique index 冲突）
 func (s *AdminConfigService) Delete(id int64) error {
 	var cfg model.AdminConfig
-	if err := s.db.First(&cfg, id).Error; err != nil {
+	// 使用 Unscoped 查找（包含软删除记录），以便清理残留
+	if err := s.db.Unscoped().First(&cfg, id).Error; err != nil {
 		return err
 	}
-	if err := s.db.Delete(&cfg).Error; err != nil {
+	if err := s.db.Unscoped().Delete(&cfg).Error; err != nil {
 		return err
 	}
 	s.InvalidateCache(cfg.ConfigKey)
 	return nil
+}
+
+// DeleteByScopeKey 按 scope+key 条件硬删除（清理包括软删除的残留记录）
+func (s *AdminConfigService) DeleteByScopeKey(configKey, scope string, scopeID, tenantID int64) error {
+	result := s.db.Unscoped().
+		Where("config_key = ? AND scope = ? AND scope_id = ? AND tenant_id = ?", configKey, scope, scopeID, tenantID).
+		Delete(&model.AdminConfig{})
+	s.InvalidateCache(configKey)
+	return result.Error
 }
 
 // GetFeatureFlags 获取当前租户的功能开关列表

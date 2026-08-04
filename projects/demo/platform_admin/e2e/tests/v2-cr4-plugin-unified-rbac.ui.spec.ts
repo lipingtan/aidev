@@ -51,6 +51,9 @@ test.describe('插件管理页', () => {
 // ============================================================
 
 test.describe('应用目录页', () => {
+  // 需要登录状态，两个 project 均注入 storageState
+  test.use({ storageState: './test-results/.auth/state.json' });
+
   test('TC-013 展示应用卡片', async ({ page }) => {
     await page.goto(`${BASE}/system/app-catalog`);
     await page.waitForLoadState('networkidle');

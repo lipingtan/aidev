@@ -208,7 +208,10 @@ async function handleDelete(row: TenantDomainItem) {
 /** 提交表单 */
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
+  if (!valid) {
+    ElMessage.warning('请检查表单填写是否完整')
+    return
+  }
 
   submitting.value = true
   try {

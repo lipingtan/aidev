@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"go-admin/common/auth/strategy"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-admin-team/go-admin-core/sdk"
 )
 
 const authContextKey = "auth_context"
@@ -28,20 +30,41 @@ type bizUserCacheEntry struct {
 	CachedAt     time.Time
 }
 
-// bizUserCache C端用户信息缓存（TTL 5 分钟）
+// bizUserCache C端用户信息缓存（TTL 5 分钟，进程内）
 var (
 	bizUserCacheMap sync.Map
 	bizUserCacheTTL = 5 * time.Minute
 )
 
-// InvalidateBizUserCache 失效指定用户的缓存（供 BizUserService.ForceLogout 调用）
+// bizUserInvalidateKey 生成 Redis 失效标记 key
+func bizUserInvalidateKey(userID int64) string {
+	return fmt.Sprintf("biz_user:invalidate:%d", userID)
+}
+
+// InvalidateBizUserCache 失效指定用户的本地缓存，同时写 Redis 失效标记（跨 Pod 有效）
+// TTL=5分钟与本地缓存 TTL 一致，确保其他 Pod 在此期间不命中本地缓存
 func InvalidateBizUserCache(userID int64) {
+	// 清本进程内存缓存
 	bizUserCacheMap.Delete(userID)
+	// 写 Redis 失效标记（跨 Pod 通知）
+	if adapter := sdk.Runtime.GetCacheAdapter(); adapter != nil {
+		_ = adapter.Set(bizUserInvalidateKey(userID), "1", int(bizUserCacheTTL.Seconds()))
+	}
 }
 
 // getBizUserCached 带缓存查询C端用户信息
+// 有 Redis 失效标记时强制穿透查库，保证跨 Pod 强制下线的实时性
 func getBizUserCached(checker BizUserChecker, userID int64) (status int, tokenVersion int, err error) {
-	// 尝试从缓存获取
+	// 检查 Redis 失效标记（跨 Pod 强制下线）
+	if adapter := sdk.Runtime.GetCacheAdapter(); adapter != nil {
+		if val, e := adapter.Get(bizUserInvalidateKey(userID)); e == nil && val != "" {
+			// 有失效标记：清本地缓存，穿透查库
+			bizUserCacheMap.Delete(userID)
+			goto queryDB
+		}
+	}
+
+	// 尝试从进程内缓存获取
 	if val, ok := bizUserCacheMap.Load(userID); ok {
 		entry := val.(*bizUserCacheEntry)
 		if time.Since(entry.CachedAt) < bizUserCacheTTL {
@@ -51,13 +74,14 @@ func getBizUserCached(checker BizUserChecker, userID int64) (status int, tokenVe
 		bizUserCacheMap.Delete(userID)
 	}
 
-	// 缓存 miss，查库
+queryDB:
+	// 缓存 miss 或失效，查库
 	status, tokenVersion, err = checker.CheckBizUser(userID)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	// 写入缓存
+	// 写入进程内缓存
 	bizUserCacheMap.Store(userID, &bizUserCacheEntry{
 		Status:       status,
 		TokenVersion: tokenVersion,
