@@ -3,7 +3,7 @@
     <div class="page-header">
       <h3>订单管理</h3>
       <div>
-        <el-button type="success" @click="onExport">导出 CSV</el-button>
+        <el-button type="success" @click="onExport">导出当前页 CSV</el-button>
       </div>
     </div>
     <el-form :inline="true" :model="query" style="margin-bottom: 16px">
@@ -42,7 +42,7 @@
       <el-table-column prop="paidAt" label="支付时间" width="160" />
       <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">
-          <el-popconfirm v-if="row.status === 'paid'" title="确认退款？" @confirm="onRefund(row)">
+          <el-popconfirm v-if="row.status === 'paid'" :title="`确认退款订单「${row.orderNo}」？`" @confirm="onRefund(row)">
             <template #reference><el-button link type="danger">退款</el-button></template>
           </el-popconfirm>
         </template>
@@ -62,6 +62,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { ElMessage } from "element-plus";
+import { request } from "../utils/request";
 
 const API_BASE = "/api/v1/plugin/game/order";
 
@@ -70,7 +71,6 @@ const list = ref<any[]>([]);
 const total = ref(0);
 const query = reactive({ gameId: "", orderNo: "", status: "", pageIndex: 1, pageSize: 10 });
 
-// 状态映射
 const statusTagType = (status: string) => {
   const map: Record<string, string> = { pending: "warning", paid: "success", refunded: "info", failed: "danger" };
   return map[status] || "";
@@ -79,39 +79,6 @@ const statusLabel = (status: string) => {
   const map: Record<string, string> = { pending: "待支付", paid: "已支付", refunded: "已退款", failed: "失败" };
   return map[status] || status;
 };
-
-// 获取 token
-function getToken(): string {
-  try {
-    // 优先从 Cookie 获取
-    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
-    if (cookieMatch) {
-      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      return data?.accessToken || "";
-    }
-    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
-    const stored = localStorage.getItem("responsive-user-info");
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data?.accessToken || "";
-    }
-  } catch {}
-  return "";
-}
-
-// 通用请求
-async function request(method: string, url: string, body?: any) {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${getToken()}`
-  };
-  const opts: RequestInit = { method, headers };
-  if (body) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, opts);
-  return res.json();
-}
 
 async function loadData() {
   loading.value = true;
@@ -124,8 +91,8 @@ async function loadData() {
     if (query.status) params.set("status", query.status);
     const res = await request("GET", `${API_BASE}?${params.toString()}`);
     if (res.code === 200) {
-      list.value = res.data?.list || res.data || [];
-      total.value = res.data?.count || res.count || 0;
+      list.value = res.data?.list || [];
+      total.value = res.data?.total || 0;
     }
   } finally {
     loading.value = false;
@@ -136,7 +103,7 @@ function onSearch() { query.pageIndex = 1; loadData(); }
 function onReset() { Object.assign(query, { gameId: "", orderNo: "", status: "", pageIndex: 1 }); loadData(); }
 
 async function onRefund(row: any) {
-  const res = await request("POST", `${API_BASE}/${row.id}/refund`);
+  const res = await request("POST", `${API_BASE}/${row.id}/refund`, { refundReason: "管理员手动退款" });
   if (res.code === 200) {
     ElMessage.success("退款成功");
     loadData();
@@ -145,8 +112,12 @@ async function onRefund(row: any) {
   }
 }
 
-// 导出 CSV
+// 导出当前页 CSV（明确标注"当前页"避免误导）
 function onExport() {
+  if (list.value.length === 0) {
+    ElMessage.warning("当前页无数据");
+    return;
+  }
   const headers = ["ID", "订单号", "游戏ID", "玩家ID", "商品名称", "金额(元)", "货币", "渠道", "状态", "支付时间"];
   const rows = list.value.map(r => [
     r.id,
@@ -167,33 +138,20 @@ function onExport() {
   const now = new Date();
   const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
   a.href = url;
-  a.download = `orders_${dateStr}.csv`;
+  a.download = `orders_page${query.pageIndex}_${dateStr}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+  ElMessage.info(`已导出第 ${query.pageIndex} 页共 ${list.value.length} 条数据`);
 }
 
 onMounted(loadData);
 </script>
 
 <style scoped>
-.plugin-page {
-  padding: 20px;
-}
+.plugin-page { padding: 20px; }
 .plugin-page .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5;
 }
-.plugin-page .page-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.plugin-page .el-table {
-  border-radius: 8px;
-}
+.plugin-page .page-header h3 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 </style>

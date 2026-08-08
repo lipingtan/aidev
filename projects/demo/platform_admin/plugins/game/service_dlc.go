@@ -169,11 +169,14 @@ func handleDlcUpdate(req *proto.HttpRequest, id int) (*proto.HttpResponse, error
 	if body.Description != "" {
 		existing.Description = body.Description
 	}
-	if body.Price > 0 {
-		existing.Price = body.Price
-	}
+	// isFree 优先：免费时强制 price=0，否则按传入值更新
 	if body.IsFree > 0 {
 		existing.IsFree = body.IsFree
+	}
+	if existing.IsFree == 1 {
+		existing.Price = 0
+	} else if body.Price >= 0 {
+		existing.Price = body.Price
 	}
 	if body.Status > 0 {
 		existing.Status = body.Status

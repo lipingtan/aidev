@@ -87,6 +87,10 @@ func routeGame(method, sub string, req *proto.HttpRequest) (*proto.HttpResponse,
 		return handleGameUpdate(req, toInt(sub))
 	case method == "DELETE" && isNumeric(sub):
 		return handleGameDelete(req, toInt(sub))
+	// 重置密钥：POST /game/:id/regen-secret
+	case method == "POST" && hasNumericPrefix(sub) && strings.HasSuffix(sub, "/regen-secret"):
+		id := toInt(strings.TrimSuffix(sub, "/regen-secret"))
+		return handleGameRegenSecret(req, id)
 	default:
 		return jsonResp(404, "游戏接口不存在: "+method+" /game/"+sub, nil)
 	}
@@ -155,6 +159,9 @@ func routePayment(method, sub string, req *proto.HttpRequest) (*proto.HttpRespon
 		return handlePaymentGetPage(req)
 	case method == "POST" && sub == "":
 		return handlePaymentSave(req)
+	// 编辑已有配置：PUT /payment/:id
+	case method == "PUT" && isNumeric(sub):
+		return handlePaymentUpdate(req, toInt(sub))
 	default:
 		return jsonResp(404, "支付配置接口不存在: "+method+" /payment/"+sub, nil)
 	}
@@ -252,9 +259,14 @@ type PageResponse struct {
 	PageSize int         `json:"pageSize"`
 }
 
-// parsePage 从 query 解析分页参数
+// parsePage 从 query 解析分页参数，兼容 page/pageIndex 两种 key
 func parsePage(params map[string]string) (page, pageSize int) {
-	page, _ = strconv.Atoi(params["page"])
+	// 优先读 pageIndex（前端统一用法），兜底读 page
+	if v := params["pageIndex"]; v != "" {
+		page, _ = strconv.Atoi(v)
+	} else {
+		page, _ = strconv.Atoi(params["page"])
+	}
 	pageSize, _ = strconv.Atoi(params["pageSize"])
 	if page <= 0 {
 		page = 1

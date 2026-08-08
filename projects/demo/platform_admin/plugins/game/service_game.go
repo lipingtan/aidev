@@ -206,3 +206,30 @@ func generateSecret() (string, error) {
 	}
 	return hex.EncodeToString(b), nil
 }
+
+// handleGameRegenSecret 重置游戏 AppSecret
+func handleGameRegenSecret(req *proto.HttpRequest, id int) (*proto.HttpResponse, error) {
+	var existing Game
+	err := db.Where("id = ? AND tenant_id = ? AND deleted_at IS NULL", id, req.TenantId).First(&existing).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return jsonResp(404, "游戏不存在", nil)
+		}
+		return jsonResp(500, "查询失败: "+err.Error(), nil)
+	}
+
+	secret, err := generateSecret()
+	if err != nil {
+		return jsonResp(500, "生成密钥失败: "+err.Error(), nil)
+	}
+
+	existing.AppSecret = secret
+	existing.UpdateBy = int(req.UserId)
+	existing.UpdatedAt = time.Now()
+
+	if err := db.Save(&existing).Error; err != nil {
+		return jsonResp(500, "重置密钥失败: "+err.Error(), nil)
+	}
+	// 返回新密钥（仅此一次明文返回）
+	return jsonResp(200, "ok", map[string]string{"appSecret": secret})
+}

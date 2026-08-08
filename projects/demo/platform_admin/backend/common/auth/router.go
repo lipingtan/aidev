@@ -9,6 +9,7 @@ import (
 	"go-admin/common/auth/middleware"
 	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
+	"go-admin/common/plugin"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -70,6 +71,7 @@ type Dependencies struct {
 
 	// 插件管理（可选，Task 11 负责注入）
 	PluginHandler *handler.PluginHandler
+	PluginManager *plugin.PluginManager
 
 	// 中间件缓存
 	AppPrefixMap         *middleware.AppPrefixMap

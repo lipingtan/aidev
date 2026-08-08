@@ -3,6 +3,7 @@
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"platform-admin/plugin-sdk/proto"
@@ -91,9 +92,10 @@ func handleOrderRefund(req *proto.HttpRequest, id int) (*proto.HttpResponse, err
 	if err := json.Unmarshal(req.Body, &body); err != nil {
 		return jsonResp(400, "请求参数解析失败: "+err.Error(), nil)
 	}
-	if body.RefundReason == "" {
+	if strings.TrimSpace(body.RefundReason) == "" {
 		return jsonResp(400, "退款原因不能为空", nil)
 	}
+	body.RefundReason = strings.TrimSpace(body.RefundReason)
 
 	now := time.Now()
 	order.Status = "refunded"

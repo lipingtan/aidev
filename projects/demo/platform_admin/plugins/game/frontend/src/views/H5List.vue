@@ -30,7 +30,7 @@
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-          <el-popconfirm title="确认删除？" @confirm="onDelete(row)">
+          <el-popconfirm :title="`确认删除H5页面「${row.name}」？`" @confirm="onDelete(row)">
             <template #reference><el-button link type="danger">删除</el-button></template>
           </el-popconfirm>
         </template>
@@ -59,7 +59,7 @@
             <el-option label="公告页" value="公告页" />
           </el-select>
         </el-form-item>
-        <el-form-item label="链接类型" prop="useExternal">
+        <el-form-item label="链接类型">
           <el-radio-group v-model="form.useExternal">
             <el-radio :value="1">外链</el-radio>
             <el-radio :value="2">内嵌</el-radio>
@@ -68,7 +68,7 @@
         <el-form-item v-if="form.useExternal === 1" label="外链地址" prop="externalUrl">
           <el-input v-model="form.externalUrl" placeholder="请输入外链URL" />
         </el-form-item>
-        <el-form-item v-if="form.useExternal === 2" label="页面内容" prop="content">
+        <el-form-item v-if="form.useExternal === 2" label="页面内容">
           <el-input v-model="form.content" type="textarea" :rows="8" placeholder="请输入页面内容" />
         </el-form-item>
         <el-form-item label="状态">
@@ -91,6 +91,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import type { FormInstance } from "element-plus";
+import { request } from "../utils/request";
 
 const API_BASE = "/api/v1/plugin/game/h5";
 
@@ -113,39 +114,6 @@ const rules = {
   pageType: [{ required: true, message: "请选择页面类型", trigger: "change" }]
 };
 
-// 获取 token
-function getToken(): string {
-  try {
-    // 优先从 Cookie 获取
-    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
-    if (cookieMatch) {
-      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      return data?.accessToken || "";
-    }
-    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
-    const stored = localStorage.getItem("responsive-user-info");
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data?.accessToken || "";
-    }
-  } catch {}
-  return "";
-}
-
-// 通用请求
-async function request(method: string, url: string, body?: any) {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${getToken()}`
-  };
-  const opts: RequestInit = { method, headers };
-  if (body) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, opts);
-  return res.json();
-}
-
 async function loadData() {
   loading.value = true;
   try {
@@ -156,8 +124,8 @@ async function loadData() {
     if (query.name) params.set("name", query.name);
     const res = await request("GET", `${API_BASE}?${params.toString()}`);
     if (res.code === 200) {
-      list.value = res.data?.list || res.data || [];
-      total.value = res.data?.count || res.count || 0;
+      list.value = res.data?.list || [];
+      total.value = res.data?.total || 0;
     }
   } finally {
     loading.value = false;
@@ -209,24 +177,10 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.plugin-page {
-  padding: 20px;
-}
+.plugin-page { padding: 20px; }
 .plugin-page .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5;
 }
-.plugin-page .page-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.plugin-page .el-table {
-  border-radius: 8px;
-}
+.plugin-page .page-header h3 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 </style>

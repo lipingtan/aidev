@@ -64,14 +64,14 @@
         <!-- Stripe 字段组 -->
         <template v-if="form.channel === 'stripe'">
           <el-form-item label="Publishable Key"><el-input v-model="form.stripePublishableKey" /></el-form-item>
-          <el-form-item label="Secret Key"><el-input v-model="form.stripeSecretKey" show-password /></el-form-item>
-          <el-form-item label="Webhook Secret"><el-input v-model="form.stripeWebhookSecret" show-password /></el-form-item>
+          <el-form-item label="Secret Key"><el-input v-model="form.stripeSecretKey" show-password :placeholder="form.id ? '不修改请留空' : ''" /></el-form-item>
+          <el-form-item label="Webhook Secret"><el-input v-model="form.stripeWebhookSecret" show-password :placeholder="form.id ? '不修改请留空' : ''" /></el-form-item>
         </template>
 
         <!-- 支付宝字段组 -->
         <template v-if="form.channel === 'alipay'">
           <el-form-item label="App ID"><el-input v-model="form.alipayAppId" /></el-form-item>
-          <el-form-item label="应用私钥"><el-input v-model="form.alipayPrivateKey" type="textarea" :rows="4" /></el-form-item>
+          <el-form-item label="应用私钥"><el-input v-model="form.alipayPrivateKey" type="textarea" :rows="4" :placeholder="form.id ? '不修改请留空' : ''" /></el-form-item>
           <el-form-item label="支付宝公钥"><el-input v-model="form.alipayPublicKey" type="textarea" :rows="4" /></el-form-item>
           <el-form-item label="回调地址"><el-input v-model="form.alipayNotifyUrl" /></el-form-item>
         </template>
@@ -80,7 +80,7 @@
         <template v-if="form.channel === 'wechat'">
           <el-form-item label="App ID"><el-input v-model="form.wechatAppId" /></el-form-item>
           <el-form-item label="商户号"><el-input v-model="form.wechatMchId" /></el-form-item>
-          <el-form-item label="API Key"><el-input v-model="form.wechatApiKey" show-password /></el-form-item>
+          <el-form-item label="API Key"><el-input v-model="form.wechatApiKey" show-password :placeholder="form.id ? '不修改请留空' : ''" /></el-form-item>
           <el-form-item label="回调地址"><el-input v-model="form.wechatNotifyUrl" /></el-form-item>
         </template>
       </el-form>
@@ -96,6 +96,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import type { FormInstance } from "element-plus";
+import { request } from "../utils/request";
 
 const API_BASE = "/api/v1/plugin/game/payment";
 
@@ -123,39 +124,6 @@ const rules = {
   env: [{ required: true, message: "请选择环境", trigger: "change" }]
 };
 
-// 获取 token
-function getToken(): string {
-  try {
-    // 优先从 Cookie 获取
-    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
-    if (cookieMatch) {
-      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      return data?.accessToken || "";
-    }
-    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
-    const stored = localStorage.getItem("responsive-user-info");
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data?.accessToken || "";
-    }
-  } catch {}
-  return "";
-}
-
-// 通用请求
-async function request(method: string, url: string, body?: any) {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${getToken()}`
-  };
-  const opts: RequestInit = { method, headers };
-  if (body) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, opts);
-  return res.json();
-}
-
 async function loadData() {
   loading.value = true;
   try {
@@ -165,8 +133,8 @@ async function loadData() {
     if (query.gameId) params.set("gameId", query.gameId);
     const res = await request("GET", `${API_BASE}?${params.toString()}`);
     if (res.code === 200) {
-      list.value = res.data?.list || res.data || [];
-      total.value = res.data?.count || res.count || 0;
+      list.value = res.data?.list || [];
+      total.value = res.data?.total || 0;
     }
   } finally {
     loading.value = false;
@@ -177,7 +145,6 @@ function onSearch() { query.pageIndex = 1; loadData(); }
 function onReset() { Object.assign(query, { gameId: "", pageIndex: 1 }); loadData(); }
 
 function onChannelChange() {
-  // 切换渠道时清空所有渠道字段
   Object.assign(form, {
     stripePublishableKey: "", stripeSecretKey: "", stripeWebhookSecret: "",
     alipayAppId: "", alipayPrivateKey: "", alipayPublicKey: "", alipayNotifyUrl: "",
@@ -187,7 +154,14 @@ function onChannelChange() {
 
 function openDialog(row?: any) {
   Object.assign(form, defaultForm());
-  if (row) Object.assign(form, row);
+  if (row) {
+    Object.assign(form, row);
+    // 服务端返回的敏感字段是 "***"，编辑时清空让用户按需填写
+    if (form.stripeSecretKey === "***") form.stripeSecretKey = "";
+    if (form.stripeWebhookSecret === "***") form.stripeWebhookSecret = "";
+    if (form.alipayPrivateKey === "***") form.alipayPrivateKey = "";
+    if (form.wechatApiKey === "***") form.wechatApiKey = "";
+  }
   dialogVisible.value = true;
 }
 
@@ -195,6 +169,7 @@ async function onSubmit() {
   await formRef.value?.validate();
   submitting.value = true;
   try {
+    // 编辑用 PUT /payment/:id，新增用 POST /payment
     const res = form.id
       ? await request("PUT", `${API_BASE}/${form.id}`, form)
       : await request("POST", API_BASE, form);
@@ -214,24 +189,10 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.plugin-page {
-  padding: 20px;
-}
+.plugin-page { padding: 20px; }
 .plugin-page .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5;
 }
-.plugin-page .page-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.plugin-page .el-table {
-  border-radius: 8px;
-}
+.plugin-page .page-header h3 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 </style>

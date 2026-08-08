@@ -95,6 +95,11 @@ func (h *PluginHandler) List(c *gin.Context) {
 // Upload 上传安装插件
 // POST /api/v1/admin/plugins/upload (multipart/form-data)
 func (h *PluginHandler) Upload(c *gin.Context) {
+	// 设置最大 128MB，允许上传大型插件包
+	if err := c.Request.ParseMultipartForm(128 << 20); err != nil {
+		Error(c, &errBadRequest{message: "解析 multipart 失败: " + err.Error()})
+		return
+	}
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
 		Error(c, &errBadRequest{message: "文件上传失败: " + err.Error()})

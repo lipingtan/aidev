@@ -66,6 +66,8 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 
 	// 将 AuthService 注入到插件路由（供 InitPluginRouter 使用）
 	pluginRouter.SetAuthService(deps.AuthService)
+	// 注入共享 PluginManager（与 PluginHandler 同实例，确保代理路由看到已启动的插件）
+	pluginRouter.SetPluginManager(deps.PluginManager)
 
 	// 注册路由
 	rg := engine.Group("")
@@ -320,6 +322,7 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 
 		AppCatalogHandler: appCatalogHandler,
 		PluginHandler:     pluginHandler,
+		PluginManager:     pluginMgr,
 
 		TenantDomainService: tenantDomainSvc,
 		TenantDomainHandler: tenantDomainHandler,

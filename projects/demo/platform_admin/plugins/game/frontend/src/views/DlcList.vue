@@ -46,7 +46,7 @@
             <template #default="{ row }">
               <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
               <el-button v-if="row.filePath" link type="success" @click="onDownload(row)">下载</el-button>
-              <el-popconfirm title="确认删除？" @confirm="onDelete(row)">
+              <el-popconfirm :title="`确认删除DLC「${row.name}」？`" @confirm="onDelete(row)">
                 <template #reference><el-button link type="danger">删除</el-button></template>
               </el-popconfirm>
             </template>
@@ -99,7 +99,7 @@
             <el-radio :value="2">付费</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="价格(元)" prop="price">
+        <el-form-item label="价格(元)">
           <el-input-number v-model="form.price" :min="0" :precision="2" :disabled="form.isFree === 1" style="width:100%" />
         </el-form-item>
         <el-form-item label="状态">
@@ -129,6 +129,7 @@
 import { ref, reactive, onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
 import type { FormInstance, UploadFile } from "element-plus";
+import { request, getToken } from "../utils/request";
 
 const API_BASE = "/api/v1/plugin/game/dlc";
 const GAME_API = "/api/v1/plugin/game/game";
@@ -150,51 +151,13 @@ const rules = {
   dlcKey: [{ required: true, message: "请输入DLC Key", trigger: "blur" }],
   name: [{ required: true, message: "请输入DLC名称", trigger: "blur" }],
   version: [{ required: true, message: "请输入版本", trigger: "blur" }],
-  price: [{ required: true, message: "请输入价格", trigger: "blur" }]
 };
 
-// PCK 上传相关
 const pckFile = ref<File | null>(null);
 const pckFileList = ref<UploadFile[]>([]);
 const MAX_PCK_SIZE = 500 * 1024 * 1024;
-
-// 统计数据
 const statsData = reactive<any>({ totalDownloads: 0, totalRevenue: 0, ranking: [] });
 
-// 获取 token
-function getToken(): string {
-  try {
-    // 优先从 Cookie 获取
-    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
-    if (cookieMatch) {
-      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      return data?.accessToken || "";
-    }
-    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
-    const stored = localStorage.getItem("responsive-user-info");
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data?.accessToken || "";
-    }
-  } catch {}
-  return "";
-}
-
-// 通用请求
-async function request(method: string, url: string, body?: any) {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${getToken()}`
-  };
-  const opts: RequestInit = { method, headers };
-  if (body) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, opts);
-  return res.json();
-}
-
-// 文件大小格式化
 function formatSize(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -211,8 +174,8 @@ async function loadData() {
     if (query.name) params.set("name", query.name);
     const res = await request("GET", `${API_BASE}?${params.toString()}`);
     if (res.code === 200) {
-      list.value = res.data?.list || res.data || [];
-      total.value = res.data?.count || res.count || 0;
+      list.value = res.data?.list || [];
+      total.value = res.data?.total || 0;
     }
   } finally {
     loading.value = false;
@@ -223,7 +186,7 @@ async function loadGameList() {
   try {
     const res = await request("GET", `${GAME_API}?pageSize=100`);
     if (res.code === 200) {
-      gameList.value = res.data?.list || res.data || [];
+      gameList.value = res.data?.list || [];
     }
   } catch {
     gameList.value = [];
@@ -240,17 +203,12 @@ async function loadStats() {
       statsData.totalRevenue = d.totalRevenue || 0;
       statsData.ranking = d.ranking || [];
     }
-  } catch {
-    // 静默处理
-  }
+  } catch {}
 }
 
 function onSearch() { query.pageIndex = 1; loadData(); }
 function onReset() { Object.assign(query, { gameId: "", name: "", pageIndex: 1 }); loadData(); }
-
-function onTabChange(tab: string) {
-  if (tab === "stats") loadStats();
-}
+function onTabChange(tab: string) { if (tab === "stats") loadStats(); }
 
 function openDialog(row?: any) {
   Object.assign(form, { id: null, gameId: "", dlcKey: "", name: "", version: "", description: "", price: 0, isFree: 1, status: 1, minGameVersion: "" });
@@ -258,7 +216,7 @@ function openDialog(row?: any) {
   pckFileList.value = [];
   if (row) {
     Object.assign(form, row);
-    form.price = row.price / 100; // 分→元
+    form.price = row.price / 100;
   }
   dialogVisible.value = true;
 }
@@ -267,7 +225,7 @@ async function onSubmit() {
   await formRef.value?.validate();
   submitting.value = true;
   try {
-    const data = { ...form, price: Math.round(form.price * 100) }; // 元→分
+    const data = { ...form, price: Math.round(form.price * 100) };
     const res = form.id
       ? await request("PUT", `${API_BASE}/${form.id}`, data)
       : await request("POST", API_BASE, data);
@@ -295,7 +253,7 @@ async function onDelete(row: any) {
 
 async function onDownload(row: any) {
   try {
-    const res = await request("GET", `${API_BASE}/${row.id}/download-url`);
+    const res = await request("GET", `${API_BASE}/${row.id}/download`);
     if (res.code === 200) {
       const url = res.data?.url || res.url;
       if (url) window.open(url);
@@ -346,36 +304,16 @@ async function onUploadPck() {
   }
 }
 
-// isFree 联动 price
-watch(() => form.isFree, (val) => {
-  if (val === 1) form.price = 0;
-});
+watch(() => form.isFree, (val) => { if (val === 1) form.price = 0; });
 
-onMounted(() => {
-  loadGameList();
-  loadData();
-});
+onMounted(() => { loadGameList(); loadData(); });
 </script>
 
 <style scoped>
-.plugin-page {
-  padding: 20px;
-}
+.plugin-page { padding: 20px; }
 .plugin-page .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5;
 }
-.plugin-page .page-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.plugin-page .el-table {
-  border-radius: 8px;
-}
+.plugin-page .page-header h3 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 </style>

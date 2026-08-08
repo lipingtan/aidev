@@ -399,28 +399,38 @@ func (ins *Installer) InstallFromURL(ctx context.Context, name string, url strin
 // frontends: frontends 配置数组
 func (ins *Installer) deployFrontendBundles(pluginName string, pluginDir string, frontends []FrontendConfig) error {
 	for _, fe := range frontends {
-		// 源文件路径：{pluginDir}/frontend/{entry}
-		src := filepath.Join(pluginDir, "frontend", fe.Entry)
-		
+		// 源文件路径：{pluginDir}/{entry}（entry 直接是相对于插件根的路径）
+		src := filepath.Join(pluginDir, fe.Entry)
+
 		// 检查源文件是否存在
 		if _, err := os.Stat(src); os.IsNotExist(err) {
 			return fmt.Errorf("bundle 源文件不存在: %s (platform=%s, device=%s)", src, fe.Platform, fe.Device)
 		}
-		
-		// 目标路径：{staticDir}/plugins/{name}/{platform}-{device}/bundle.js
+
 		platform := strings.ToLower(fe.Platform)
 		device := strings.ToLower(fe.Device)
+
+		// V2 路径：{staticDir}/plugins/{name}/{platform}-{device}/bundle.js
 		destDir := filepath.Join(ins.staticDir, "plugins", pluginName, platform+"-"+device)
 		destFile := filepath.Join(destDir, "bundle.js")
-		
-		// 创建目标目录
 		if err := os.MkdirAll(destDir, 0755); err != nil {
 			return fmt.Errorf("创建 bundle 目录失败 %s: %w", destDir, err)
 		}
-		
-		// 复制 bundle 文件
 		if err := copyFile(src, destFile); err != nil {
 			return fmt.Errorf("复制 bundle 失败 %s → %s: %w", src, destFile, err)
+		}
+
+		// 兼容路径：admin-pc bundle 同时部署到 {staticDir}/plugins/{name}/index.js
+		// 供前端 plugin-loader.ts 通过 /static/plugins/{name}/index.js 加载
+		if platform == "admin" && device == "pc" {
+			compatDir := filepath.Join(ins.staticDir, "plugins", pluginName)
+			if err := os.MkdirAll(compatDir, 0755); err != nil {
+				return fmt.Errorf("创建兼容路径目录失败: %w", err)
+			}
+			compatFile := filepath.Join(compatDir, "index.js")
+			if err := copyFile(src, compatFile); err != nil {
+				return fmt.Errorf("复制兼容 bundle 失败: %w", err)
+			}
 		}
 	}
 	return nil

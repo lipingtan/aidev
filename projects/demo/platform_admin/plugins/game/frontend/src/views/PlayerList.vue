@@ -38,7 +38,9 @@
         <template #default="{ row }">
           <el-button link type="primary" @click="openDetail(row)">详情</el-button>
           <el-button v-if="row.status === 1" link type="danger" @click="openBanDialog(row)">封禁</el-button>
-          <el-button v-if="row.status === 2" link type="success" @click="onUnban(row)">解封</el-button>
+          <el-popconfirm v-if="row.status === 2" :title="`确认解封玩家「${row.nickname || row.uid}」？`" @confirm="onUnban(row)">
+            <template #reference><el-button link type="success">解封</el-button></template>
+          </el-popconfirm>
         </template>
       </el-table-column>
     </el-table>
@@ -94,6 +96,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import type { FormInstance } from "element-plus";
+import { request } from "../utils/request";
 
 const API_BASE = "/api/v1/plugin/game/player";
 
@@ -111,39 +114,6 @@ const detail = reactive<any>({});
 const banForm = reactive({ banReason: "" });
 const banRules = { banReason: [{ required: true, message: "请输入封禁原因", trigger: "blur" }] };
 
-// 获取 token
-function getToken(): string {
-  try {
-    // 优先从 Cookie 获取
-    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
-    if (cookieMatch) {
-      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      return data?.accessToken || "";
-    }
-    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
-    const stored = localStorage.getItem("responsive-user-info");
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data?.accessToken || "";
-    }
-  } catch {}
-  return "";
-}
-
-// 通用请求
-async function request(method: string, url: string, body?: any) {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${getToken()}`
-  };
-  const opts: RequestInit = { method, headers };
-  if (body) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, opts);
-  return res.json();
-}
-
 async function loadData() {
   loading.value = true;
   try {
@@ -156,8 +126,8 @@ async function loadData() {
     if (query.status) params.set("status", String(query.status));
     const res = await request("GET", `${API_BASE}?${params.toString()}`);
     if (res.code === 200) {
-      list.value = res.data?.list || res.data || [];
-      total.value = res.data?.count || res.count || 0;
+      list.value = res.data?.list || [];
+      total.value = res.data?.total || 0;
     }
   } finally {
     loading.value = false;
@@ -170,11 +140,7 @@ function onReset() { Object.assign(query, { gameId: "", uid: "", nickname: "", s
 async function openDetail(row: any) {
   try {
     const res = await request("GET", `${API_BASE}/${row.id}`);
-    if (res.code === 200) {
-      Object.assign(detail, res.data || row);
-    } else {
-      Object.assign(detail, row);
-    }
+    Object.assign(detail, res.code === 200 ? (res.data || row) : row);
   } catch {
     Object.assign(detail, row);
   }
@@ -218,24 +184,10 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.plugin-page {
-  padding: 20px;
-}
+.plugin-page { padding: 20px; }
 .plugin-page .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5;
 }
-.plugin-page .page-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.plugin-page .el-table {
-  border-radius: 8px;
-}
+.plugin-page .page-header h3 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 </style>

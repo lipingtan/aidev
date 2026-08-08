@@ -25,7 +25,7 @@
         <template #default="{ row }">
           <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
           <el-button link type="warning" @click="onRegenSecret(row)">重置密钥</el-button>
-          <el-popconfirm title="确认删除？" @confirm="onDelete(row)">
+          <el-popconfirm :title="`确认删除游戏「${row.name}」？`" @confirm="onDelete(row)">
             <template #reference><el-button link type="danger">删除</el-button></template>
           </el-popconfirm>
         </template>
@@ -65,6 +65,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import type { FormInstance } from "element-plus";
+import { request } from "../utils/request";
 
 const API_BASE = "/api/v1/plugin/game/game";
 
@@ -81,44 +82,11 @@ const rules = {
   name: [{ required: true, message: "请输入游戏名称", trigger: "blur" }]
 };
 
-// 获取 token
-function getToken(): string {
-  try {
-    // 优先从 Cookie 获取
-    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
-    if (cookieMatch) {
-      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      return data?.accessToken || "";
-    }
-    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
-    const stored = localStorage.getItem("responsive-user-info");
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data?.accessToken || "";
-    }
-  } catch {}
-  return "";
-}
-
-// 通用请求
-async function request(method: string, url: string, body?: any) {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${getToken()}`
-  };
-  const opts: RequestInit = { method, headers };
-  if (body) {
-    headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, opts);
-  return res.json();
-}
-
 async function loadData() {
   loading.value = true;
   try {
     const params = new URLSearchParams();
-    params.set("page", String(query.pageIndex));
+    params.set("pageIndex", String(query.pageIndex));
     params.set("pageSize", String(query.pageSize));
     if (query.name) params.set("name", query.name);
     const res = await request("GET", `${API_BASE}?${params.toString()}`);
@@ -172,7 +140,8 @@ async function onDelete(row: any) {
 async function onRegenSecret(row: any) {
   const res = await request("POST", `${API_BASE}/${row.id}/regen-secret`);
   if (res.code === 200) {
-    ElMessage.success("密钥已重置");
+    const newSecret = res.data?.appSecret;
+    ElMessage.success(newSecret ? `密钥已重置，新密钥：${newSecret}` : "密钥已重置");
     loadData();
   } else {
     ElMessage.error(res.msg || "操作失败");
@@ -183,24 +152,10 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.plugin-page {
-  padding: 20px;
-}
+.plugin-page { padding: 20px; }
 .plugin-page .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5;
 }
-.plugin-page .page-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.plugin-page .el-table {
-  border-radius: 8px;
-}
+.plugin-page .page-header h3 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 </style>
