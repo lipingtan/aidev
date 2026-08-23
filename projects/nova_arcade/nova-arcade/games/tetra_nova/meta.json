@@ -1,0 +1,25 @@
+{
+  "id": "tetra_nova",
+  "title": "TETRA NOVA",
+  "subtitle": "新星方阵 · 变异消除",
+  "category": "puzzle",
+  "tags": ["tetris", "roguelike", "neon", "offline"],
+  "price_model": "trial",
+  "price": 6,
+  "trial": { "plays": 3 },
+  "version": "1.0.0",
+  "size_kb": 0,
+  "icon": "res://games/tetra_nova/icon.png",
+  "screenshots": [],
+  "scene": "res://games/tetra_nova/main.tscn",
+  "dlc_url": "",
+  "aliases": ["俄罗斯方块", "els", "tetris"],
+  "pinyin": ["eluosifangkuai", "elsfk"],
+  "achievements": [
+    { "id": "tn_wave10", "name": "突破十波", "points": 10 },
+    { "id": "tn_boss3", "name": "屠龙者", "points": 20 }
+  ],
+  "desc": "俄罗斯方块 × Roguelike：消除变异方块、突破波次、挑战 Boss。",
+  "runtime": "pck",
+  "core": ""
+}

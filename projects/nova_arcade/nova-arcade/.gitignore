@@ -1,0 +1,8 @@
+# Godot 4
+.godot/
+*.import
+
+# 导出产物
+export/
+*.apk
+*.aab

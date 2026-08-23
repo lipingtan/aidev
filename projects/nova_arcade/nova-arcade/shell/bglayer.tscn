@@ -1,0 +1,74 @@
+; 背景层场景：nebula 色块 + 纹理层（霓虹网格线 / 青瓷点阵）；颜色由 bglayer.gd 按主题设置
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://shell/bglayer.gd" id="1"]
+[ext_resource type="Script" path="res://shell/bg_grid.gd" id="2"]
+
+[node name="BgLayer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.024, 0.059, 1)
+
+[node name="NebulaA" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_left = 0.1
+anchor_top = 0.15
+anchor_right = 0.6
+anchor_bottom = 0.55
+mouse_filter = 2
+color = Color(0.169, 0.91, 1, 0.14)
+
+[node name="NebulaB" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_left = 0.45
+anchor_top = 0.5
+anchor_right = 0.9
+anchor_bottom = 0.85
+mouse_filter = 2
+color = Color(0.784, 0.42, 1, 0.14)
+
+[node name="NebulaC" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_left = 0.25
+anchor_top = 0.65
+anchor_right = 0.65
+anchor_bottom = 0.95
+mouse_filter = 2
+color = Color(0.008, 0.012, 0.031, 0.5)
+
+[node name="GridNeon" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2")
+
+[node name="DotGrid" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2")
+style = "elegant"

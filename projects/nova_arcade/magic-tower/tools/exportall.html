@@ -1,0 +1,66 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body><pre id="out">loading…</pre>
+<script src="../js/sprites.js"></script>
+<script>
+const out=document.getElementById('out');
+function b64(c){ return c.toDataURL('image/png').split(',')[1]; }
+
+// ---- 精灵（原生分辨率，scale=1 → 32×32）----
+const names=['hero','slime','bat','skeleton','goblin','zombie','demon','dragon','wolfman',
+             'potion','bigPotion','sword','shield','coins','chest'];
+const result={};
+for(const n of names){
+  const sp=MT.SPRITES[n]; if(!sp){ out.textContent='MISSING '+n; throw new Error(n); }
+  const c=MT.makeSpriteCanvas(sp,1);
+  result[n]=b64(c);
+}
+// ---- 图标（英雄放大到 128）----
+result.icon=b64(MT.makeSpriteCanvas(MT.SPRITES.hero,4));
+
+// ---- 地图 20×20（32px/格 = 640×640，静态烘焙）----
+const W=20,H=20,T=32;
+let g=[]; for(let y=0;y<H;y++)g.push(new Array(W).fill('.'));
+function set(x,y,c){ if(x>=0&&x<W&&y>=0&&y<H)g[y][x]=c; }
+for(let x=0;x<W;x++){set(x,0,'#');set(x,H-1,'#');}
+for(let y=0;y<H;y++){set(0,y,'#');set(W-1,y,'#');}
+function vwall(y0,y1,x){for(let y=y0;y<=y1;y++)set(x,y,'#');}
+function hwall(x0,x1,y){for(let x=x0;x<=x1;x++)set(x,y,'#');}
+vwall(3,9,6);  vwall(3,9,13);  hwall(7,12,6);
+set(6,5,'R'); set(13,7,'B'); set(9,6,'G'); set(17,2,'S');
+
+const mc=document.createElement('canvas'); mc.width=W*T; mc.height=H*T;
+const mx=mc.getContext('2d');
+function floor(px,py){
+  mx.fillStyle='#2a2630'; mx.fillRect(px,py,T,T);
+  mx.fillStyle='#342f3c'; mx.fillRect(px,py,T,1); mx.fillRect(px,py,1,T); // 上/左亮边
+  mx.fillStyle='#211d27'; mx.fillRect(px,py+T-1,T,1); mx.fillRect(px+T-1,py,1,T); // 下/右暗边
+  mx.fillStyle='#332e3a'; mx.fillRect(px+8,py+10,2,2); mx.fillRect(px+20,py+22,2,2); // 石纹
+}
+function wall(px,py){
+  mx.fillStyle='#4b4458'; mx.fillRect(px,py,T,T);
+  mx.fillStyle='#6f6784'; mx.fillRect(px,py,T,5);              // 顶高光
+  mx.fillStyle='#332d3c'; mx.fillRect(px,py+T-5,T,5);          // 底阴影
+  mx.fillStyle='#5b5468'; mx.fillRect(px,py+5,T,1);           // 顶边线
+}
+function door(px,py,col){
+  floor(px,py);
+  mx.fillStyle='#1c1720'; mx.fillRect(px+6,py+4,20,24);        // 门框
+  mx.fillStyle=col;       mx.fillRect(px+8,py+6,16,20);        // 门板
+  mx.fillStyle='#00000033'; mx.fillRect(px+8,py+16,16,10);     // 门下暗
+  mx.fillStyle='#ffd24a'; mx.fillRect(px+19,py+15,2,2);        // 门把手
+}
+function stairs(px,py){
+  floor(px,py);
+  const cols=['#8a7320','#b8860b','#d9a520','#ffd24a'];
+  for(let i=0;i<4;i++){ mx.fillStyle=cols[i]; mx.fillRect(px+5,py+7+i*5,22,4); }
+}
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const c=g[y][x],px=x*T,py=y*T;
+  if(c==='#')wall(px,py); else if(c==='R')door(px,py,'#e8433a');
+  else if(c==='B')door(px,py,'#4a7cf5'); else if(c==='G')door(px,py,'#ffd24a');
+  else if(c==='S')stairs(px,py); else floor(px,py);
+}
+result.map=b64(mc);
+
+out.textContent='JSONDATA:'+JSON.stringify(result);
+</script></body></html>

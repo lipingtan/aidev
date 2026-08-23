@@ -1,0 +1,6 @@
+ERROR: Failed to read the root certificate store.
+   at: get_system_ca_certificates (platform/windows/os_windows.cpp:2468)
+ERROR: Cannot get keys from nonexistent section "preset.0.options".
+   at: get_section_keys (core/io/config_file.cpp:93)
+ERROR: Cannot get keys from nonexistent section "preset.0.options".
+   at: get_section_keys (core/io/config_file.cpp:93)

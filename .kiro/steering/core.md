@@ -160,6 +160,19 @@ PowerShell 在 Windows 上默认使用 GBK/GB2312 编码，会导致中文内容
 
 ---
 
+### 零、混合项目规范（同时含 Go 后端 + Godot App + 游戏工程的项目）
+
+| 任务类型 | 必读文件 |
+|----------|----------|
+| **混合项目任何 CR**（CR 类型判定 + 激活层路由） | `AIDOC/global-info/knowledge/steering/hybrid-project-workflow.md` |
+| **nova_arcade 项目专属约束**（项目特有 Constraints / 冒烟清单 / 里程碑路由） | `AIDOC/project_doc/nova_arcade/dev-workflow-override.md` |
+
+**使用规则：**
+- 执行 nova_arcade 任何 CR 前：先读 `hybrid-project-workflow.md` 判定 CR 类型，再读 `dev-workflow-override.md` 叠加项目专属约束
+- 新增混合项目时：在 `AIDOC/project_doc/{项目名}/dev-workflow-override.md` 创建项目 override，引用 `hybrid-project-workflow.md` 通用规范
+
+---
+
 ### 一、短剧/视频制作规范（`steering/video/`）
 
 | 任务类型 | 必读文件 |

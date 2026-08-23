@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雷霆突袭 THUNDER STRIKE</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #03050d; overflow: hidden; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas {
+    box-shadow: 0 0 80px rgba(64, 128, 255, 0.28), 0 0 24px rgba(127, 227, 255, 0.2);
+    border-radius: 8px;
+    background: #04060f;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="960" height="640"></canvas></div>
+<noscript><p style="color:#fff;text-align:center">需要启用 JavaScript 才能运行游戏。</p></noscript>
+<script src="js/utils.js"></script>
+<script src="js/stages.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

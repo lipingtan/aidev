@@ -1,0 +1,38 @@
+# 三角色 Review 报告：CR-1 shell-bootstrap
+
+> 对象：design_plan.md / design.md / tasks.md。清单结构按 go-development-workflow §2.3，维度适配 Shell/Godot CR。
+
+## 角色1：业务专家验收
+
+| # | 检查项 | 结果 |
+|---|--------|------|
+| 1 | FR 覆盖（client-design §11 M1 两项 → T1~T9） | ✅ 全覆盖（Q4=A 含 DB/Registry） |
+| 2 | 非功能需求（mobile 渲染器/≤200行/崩溃恢复/主题 400ms） | ✅ 有对应约束与 RG |
+| 3 | 降级/异常场景 | ⚠️ 中：DB JSON 损坏无兜底策略 → 已修（design §3.3 + T3） |
+| 4 | 权限边界（CoreManager Mock 不阻塞） | ✅ RG-6 |
+
+## 角色2：产品经理验收
+
+| # | 检查项 | 结果 |
+|---|--------|------|
+| 1 | 用户故事可达性 | ❌ 高：主题切换无 UI 入口（apply_theme 齐全但四页/TabBar/Main.tscn 均无按钮），RG-4 无法人工验证 → 已修（design §5 + T8 Scope 补 ThemeToggleButton） |
+| 2 | 空态/Toast/Tab 路径 | ✅ |
+| 3 | 范围一致性 | ⚠️ 低：design §7 "详情页骨架能显示"超 CR-1 范围 → 已改为"CR-3 实现" |
+
+## 角色3：架构师验收
+
+| # | 检查项 | 结果 |
+|---|--------|------|
+| 1 | 依赖方向/循环依赖 | ✅ DAG 无环；T4 实际仅依赖 T2，串行保守可接受 |
+| 2 | 引用存在性 | ⚠️ 中：QualitySettings 参考路径规范内两处不一致（`projects/demo_game/` vs `projects/demo/demo_game/`）→ 实查确认后者，T2 已标注 |
+| 3 | 缓存/写时序一致性 | ⚠️ 低：防抖写无退出 flush → 已修（WILL_EXIT flush，RG-5 完整可靠） |
+| 4 | RG 清单完整性 | ⚠️ 低：RG-3 Dialog 分支 CR-1 不可验（OverlayLayer 空容器）→ 标注 CR-3 补验 |
+| 5 | 可测试性 | ⚠️ 低：.tres 样式 headless 无法验证 → T10 明确 GUI 截图 + read_image |
+
+## 结论
+
+- 高优 1 项（主题切换入口）：**已修复**，不阻塞 Task
+- 中优 2 项（DB 损坏兜底 / 参考路径）：**已修复**
+- 低优 4 项：已同步到 design.md / tasks.md 对应位置
+
+**✅ 三角色设计 Review 通过**（高优问题已清零，可进入执行阶段）

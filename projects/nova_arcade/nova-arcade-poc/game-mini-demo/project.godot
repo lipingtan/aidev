@@ -1,0 +1,8 @@
+; mini_demo — a DLC game exported as .pck for the Nova Arcade shell PoC
+; Everything lives under res://games/mini_demo/ so multiple packs never collide.
+config_version=5
+
+[application]
+
+config/name="MiniDemo"
+config/features=PackedStringArray("4.5")

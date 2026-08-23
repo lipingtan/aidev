@@ -1,0 +1,30 @@
+; Engine configuration file.
+; NOVA ARCADE 盒子工程（CR-1 shell-bootstrap）
+config_version=5
+
+[application]
+
+config/name="NOVA ARCADE"
+config/description="游戏盒子：多小游戏管理（列表/分类/搜索/推荐/付费/评价），local-first，三运行时（PCK/HTML/Arcade）"
+run/main_scene="res://shell/main.tscn"
+config/features=PackedStringArray("4.5")
+
+[autoload]
+
+EventBus="*res://core/event_bus.gd"
+QualitySettings="*res://core/quality_settings.gd"
+DB="*res://core/db.gd"
+Registry="*res://core/registry.gd"
+Nav="*res://core/nav.gd"
+Sound="*res://core/sound.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1560
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="mobile"

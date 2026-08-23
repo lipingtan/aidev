@@ -1,0 +1,27 @@
+Godot Engine v4.5.stable.official.876b29033 - https://godotengine.org
+
+PASS - registry: pck -> PckRunner
+PASS - registry: html -> HtmlRunner
+PASS - registry: arcade -> ArcadeRunner
+PASS - registry: unknown runtime -> null
+PASS - rom sha256 computed (64 chars)
+PASS - rom validation passes (sha+members)
+PASS - rom validation catches bad sha256
+PASS - rom validation catches missing romset member
+PASS - mock core retro_load_game succeeded
+PASS - core idle before first process
+PASS - retro_run called per frame (180)
+PASS - video callback fired per frame (180)
+PASS - audio sample_batch fired per frame (180)
+PASS - quit_requested emitted on combo
+PASS - result.score extracted from hi-score memory (655)
+PASS - result.playtime ~= 4.0s (4.00)
+PASS - achievements reported
+PASS - savestate persisted to save_dir
+PASS - nvram persisted to save_dir
+PASS - storage isolated per gid
+PASS - tmp rom copy cleaned on quit
+PASS - second launch resumed from savestate
+PASS - game state restored (credits 1)
+
+ALL ARCADE RUNTIME POC DONE

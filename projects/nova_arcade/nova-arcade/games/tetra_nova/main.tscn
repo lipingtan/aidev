@@ -1,0 +1,5 @@
+; TETRA NOVA 占位场景：游戏本体与 GameModule 适配层在 CR-2 迁入（CR-1 仅保证 Registry 可加载 meta）
+
+[gd_scene format=3]
+
+[node name="TetraNova" type="Node"]

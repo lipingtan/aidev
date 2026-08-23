@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>魔塔 Magic Tower</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="game-wrap">
+    <div class="map-col">
+      <header class="hud">
+        <span class="title">🏰 魔塔</span>
+        <span id="floor-badge" class="badge">B1</span>
+        <span id="hud-gold" class="gold">💰 0</span>
+        <span class="spacer"></span>
+        <button id="btn-mute" class="hud-btn">🔊 音效</button>
+        <button id="btn-help" class="hud-btn">帮助 H</button>
+        <button id="btn-restart" class="hud-btn">重开 R</button>
+      </header>
+
+      <div class="map-box">
+        <canvas id="map" width="960" height="960"></canvas>
+        <div id="floaters"></div>
+      </div>
+
+      <div class="dpad">
+        <button data-dir="0,-1">▲</button>
+        <button data-dir="-1,0">◀</button>
+        <button data-dir="0,1">▼</button>
+        <button data-dir="1,0">▶</button>
+      </div>
+    </div>
+
+    <aside class="side-col">
+      <div class="card portrait-card">
+        <canvas id="portrait" width="96" height="96"></canvas>
+        <div class="pname">勇者</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">生命 HP</div>
+        <div class="hpbar"><div id="hp-bar"></div><span id="hp-txt" class="hptxt"></span></div>
+      </div>
+      <div class="card stats-row">
+        <div><span class="stat-label">攻击 ATK</span><b id="stat-atk" class="stat-val atkv"></b></div>
+        <div><span class="stat-label">防御 DEF</span><b id="stat-def" class="stat-val defv"></b></div>
+      </div>
+      <div class="card keys-row">
+        <span class="keydot red"></span><b id="key-r"></b>
+        <span class="keydot blue"></span><b id="key-b"></b>
+        <span class="keydot gold"></span><b id="key-g"></b>
+      </div>
+      <div class="card log-card">
+        <div id="log"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="js/sprites.js"></script>
+  <script src="js/monsters.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/sfx.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

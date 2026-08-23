@@ -1,0 +1,25 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0">
+<pre id="out">loading…</pre>
+<script src="../js/sprites.js"></script>
+<script>
+const out=document.getElementById('out');
+const q=new URLSearchParams(location.search);
+const name=q.get('name')||'wolfman';
+const scale=parseInt(q.get('scale')||'8',10);
+const bg=q.get('bg')||'#2b2620';
+function render(){
+  const sp=MT.SPRITES[name]; if(!sp){out.textContent='NO SPRITE '+name;return;}
+  const G=sp.rows.length;
+  const c=document.createElement('canvas'); c.width=G*scale; c.height=G*scale;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,c.width,c.height);
+  // checker hint
+  ctx.globalAlpha=0.15; ctx.fillStyle='#fff';
+  for(let y=0;y<G;y++)for(let x=0;x<G;x++){ if((x+y)%2===0) ctx.fillRect(x*scale,y*scale,scale,scale); }
+  ctx.globalAlpha=1;
+  const spc=MT.makeSpriteCanvas(sp,scale); ctx.drawImage(spc,0,0);
+  out.textContent='PNGDATA:'+c.toDataURL('image/png').split(',')[1];
+}
+render();
+</script></body></html>

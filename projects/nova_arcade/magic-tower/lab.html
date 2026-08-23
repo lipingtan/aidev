@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>魔塔 · 精灵画廊</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .gallery { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; max-width: 1200px; margin: 0 auto; }
+    .cell { background: #1b1e33; border: 1px solid #2c3050; border-radius: 10px; padding: 14px; text-align: center; width: 170px; }
+    .cell canvas { image-rendering: pixelated; background: repeating-conic-gradient(#232646 0% 25%, #1d2038 0% 50%) 50%/16px 16px; border-radius: 6px; }
+    .cell .nm { margin-top: 8px; font-size: 13px; color: #cfd3e8; }
+    h1 { text-align: center; margin: 10px 0 20px; letter-spacing: 4px; }
+    a.back { display: block; text-align: center; margin-bottom: 16px; color: #7df3ff; }
+  </style>
+</head>
+<body>
+  <a class="back" href="index.html">← 返回游戏</a>
+  <h1>🎨 精灵画廊（32px 高清，4× 放大）</h1>
+  <div class="gallery" id="g"></div>
+  <script src="js/sprites.js"></script>
+  <script>
+    const g = document.getElementById('g');
+    function cell(sp, title) {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      c.appendChild(MT.makeSpriteCanvas(sp, 4)); // 32px×4=128
+      const n = document.createElement('div');
+      n.className = 'nm';
+      n.textContent = title;
+      c.appendChild(n);
+      g.appendChild(c);
+    }
+    // 英雄 4朝向 × 2帧（站立/迈步）
+    for (const d of ['d', 'u', 'l', 'r']) {
+      const cn = { d: '前', u: '后', l: '左', r: '右' }[d];
+      cell(MT.HERO_FRAMES[d][0], `勇者·朝${cn}（站立）`);
+      cell(MT.HERO_FRAMES[d][1], `勇者·朝${cn}（迈步）`);
+    }
+    // 其余精灵
+    for (const [k, sp] of Object.entries(MT.SPRITES)) {
+      if (!sp.rows) continue;
+      if (k === 'hero') continue; // 已单独展示
+      cell(sp, `${sp.label || sp.name} (${k})`);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+Godot Engine v4.5.stable.official.876b29033 - https://godotengine.org
+
+PASS - ZIPPacker.open (0)
+PASS - zip package written
+PASS - ZIPReader.open (0)
+PASS - zip lists 3 files (3)
+PASS - index.html extracted
+PASS - assets/app.js extracted
+PASS - http server listening (port=8917)
+PASS - GET index.html -> 200
+PASS - index.html body served
+PASS - index.html mime text/html
+PASS - GET app.js -> 200
+PASS - app.js mime text/javascript
+PASS - path traversal blocked -> 403 (got 403)
+PASS - missing file -> 404 (got 404)
+PASS - bridge cmd=quit
+PASS - bridge score=1234
+PASS - bridge playtime=65.5
+PASS - bridge achievements split
+PASS - bridge save command
+PASS - non-nova url rejected
+
+ALL HTML RUNTIME POC DONE
