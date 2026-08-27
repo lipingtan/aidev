@@ -9,15 +9,37 @@
 
 | 配置项 | 默认值 |
 |--------|--------|
-| 引擎版本 | **Godot 4.5+**（最低要求 4.5） |
+| 引擎版本 | **Godot 4.7+**（最低要求 4.7，`@abstract` 注解需 4.5+） |
 | 主要语言 | **GDScript** |
 | 辅助语言 | Shader Language（视觉效果） |
-| 渲染管线 | **桌面** `forward_plus`；**移动默认** `mobile`（Forward Mobile）；**兜底** `gl_compatibility`（Compatibility，导出预设显式选用） |
+| 渲染管线 | **桌面** `forward_plus`；**移动默认** `mobile`（Forward Mobile）；**兜底** `gl_compatibility`（仅用于 WebGL/极老设备导出预设，不作为 mobile_high 默认） |
 | 物理引擎 | Godot Physics（默认）/ Jolt（高精度需求时） |
 | 架构模式 | ECS 混合架构（Node + Component + System） |
 | 插件框架 | gd_ecs（ECS）+ dlc_manager（DLC 动态挂接） |
 
-> **最低版本要求**：Godot 4.5。框架使用了 `@abstract` 注解（4.5 新增），不兼容 4.4 及以下版本。
+> **最低版本要求**：Godot 4.7。框架使用了 `@abstract` 注解（4.5 新增），工具链基于 4.7.2 验证。
+
+## 一-A. 工具路径（本地开发环境）
+
+| 用途 | 路径 |
+|------|------|
+| headless 测试（console exe） | `C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64_console.exe` |
+| GUI 截图 / 编辑器验证（win64 exe） | `C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64.exe` |
+| 官方文档本地副本（完整，GFW 下以此为准） | `C:\data\developer\devtool\godot\godot-docs-html-stable\` |
+| 类参考（class reference，1079 个类） | `C:\data\developer\devtool\godot\godot-docs-html-stable\classes\` |
+| 官方最佳实践（13 篇） | `C:\data\developer\devtool\godot\godot-docs-html-stable\tutorials\best_practices\` |
+
+**本地文档查阅规范：**
+- 类参考按类名索引：文件名 = `class_` + **全小写、去下划线**的类名（`TextureRect`→`class_texturerect.html`，`ClassDB`→`class_classdb.html`，`StyleBoxFlat`→`class_styleboxflat.html`）
+- 写代码前查 API：先 `grep -oE "方法名\([^)]{0,60}" classes/class_<类>.html` 确认签名/参数；枚举常量值、属性类型同理可 grep
+- 设计节点结构 / 数据流 / 项目组织时，先读 `tutorials/best_practices/`（scene_organization、project_organization、scenes_versus_scripts、data_preferences、logic_preferences 等）
+- 文档与实机行为冲突时以实机为准（用 `tools/api_probe.tscn` 探针核实），并把结论记入 `kb/godot-4.7-api-facts.md`
+
+**使用规范：**
+- headless 运行前必须设置 `$env:APPDATA` 指向临时隔离目录（防止污染 `user://`）
+- GUI 截图前清空 `tmp_gui\Godot`（防止 trial 计数耗尽触发 Mock 弹窗）
+- 每次运行前先杀孤儿 Godot 进程（脚本错误在 quit() 前会留活进程）
+- 新增 `class_name` 文件后需先跑一次 `--headless --import` 重建全局类缓存
 
 ---
 
@@ -62,13 +84,16 @@ class_name ClassName extends BaseClass
 # 1. 信号声明
 # 2. 枚举定义
 # 3. 常量
-# 4. 导出变量（@export）
-# 5. 公开变量
-# 6. 私有变量
-# 7. 生命周期函数（_ready, _process, _physics_process）
-# 8. 公开函数
-# 9. 私有函数
+# 4. 导出变量（@export / @export_category / @export_group）
+# 5. @onready 变量
+# 6. 公开变量
+# 7. 私有变量
+# 8. 生命周期函数（_ready, _process, _physics_process）
+# 9. 公开函数
+# 10. 私有函数
 ```
+
+> **`@onready` 规范**：必须放在导出变量之后、公开变量之前。`@onready` 变量在 `_ready` 前初始化，用于获取子节点引用。
 
 ### 2.4 文件头注释模板
 
@@ -184,7 +209,7 @@ projects/{解决方案名}/{游戏名}/
 
 ---
 
-## 六、Autoload 命名规范
+## 七、Autoload 命名规范
 
 Autoload 注册名**不能**与脚本的 `class_name` 相同，否则 Godot 会将其视为类名而非实例，导致实例方法调用报错。
 
@@ -199,7 +224,7 @@ Autoload 注册名**不能**与脚本的 `class_name` 相同，否则 Godot 会�
 | `DlcManager` | （无 class_name） | 同上 |
 | `SaveManager` | （无 class_name） | 同上 |
 
-## 七、Autoload 注册顺序
+## 八、Autoload 注册顺序
 
 | 顺序 | 名称 | 职责 |
 |------|------|------|
@@ -218,10 +243,10 @@ Autoload 注册名**不能**与脚本的 `class_name` 相同，否则 Godot 会�
 
 ---
 
-## 八、禁止事项
+## 九、禁止事项
 
 - `var x = value` 不带类型标注
-- 单文件超过 200 行
+- 单文件超过 300 行（建议上限），800 行（强制上限）
 - 使用英文注释
 - 硬编码魔法数字
 - 在 `_process` 中执行可用信号驱动的逻辑
@@ -232,7 +257,7 @@ Autoload 注册名**不能**与脚本的 `class_name` 相同，否则 Godot 会�
 
 ---
 
-## 九、Shader 注释规范
+## 十、Shader 注释规范
 
 ```glsl
 shader_type spatial;
@@ -245,7 +270,7 @@ uniform float param_name : hint_range(0.0, 1.0) = 0.5;  // 参数用途说明
 
 ---
 
-## 十、导出变量规范
+## 十一、导出变量规范
 
 ```gdscript
 @export_group("移动参数")
@@ -263,4 +288,7 @@ uniform float param_name : hint_range(0.0, 1.0) = 0.5;  // 参数用途说明
 - 策划可调参数 → 使用 @export
 - 资源引用 → 使用 @export
 - 内部运行时状态 → 不导出
-- 使用 @export_group 分组
+- 使用 `@export_category` 做一级分类（如"战斗"、"移动"）
+- 使用 `@export_group` 做二级分组（如"基础参数"、"高级参数"）
+
+> **碰撞层分配**：详见 `code-generation.md` 第三节。
