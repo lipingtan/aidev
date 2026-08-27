@@ -38,3 +38,5 @@ signal settings_changed(key: StringName, value: Variant)
 signal theme_changed(theme_name: String)
 ## 游戏记录数据已更新
 signal records_updated(gid: String)
+## 每日任务进度更新（预留 M2 跨系统使用；CR-5 由 DailyTaskService 自身信号驱动，本 CR 暂不接线）
+signal tasks_updated(tasks: Array[Dictionary])

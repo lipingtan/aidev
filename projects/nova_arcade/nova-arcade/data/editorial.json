@@ -1,5 +1,8 @@
 {
-  "banner": [],
+  "banner": [
+    {"image_path": "", "target_gid": "tetra_nova", "title": "TETRA NOVA"}
+  ],
   "featured": [],
-  "categories": []
+  "categories": [],
+  "hot_queries": ["TETRA NOVA", "俄罗斯方块", "消除", "益智", "街机", "roguelike"]
 }
