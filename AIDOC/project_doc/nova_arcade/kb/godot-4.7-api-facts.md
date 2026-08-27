@@ -10,6 +10,23 @@
 - 官方最佳实践：`...\tutorials\best_practices\`（13 篇：scene/project organization、scenes vs scripts、data/logic preferences 等）
 - 查 API：`grep -oE "方法名\([^)]{0,60}" classes/class_<类>.html`；设计节点结构/数据流前先读 best_practices
 
+## 大类文件提取法（class_*.html 单文件可达 1~2MB，禁止整读）
+
+> 1.7MB 的 HTML ≈ 40+ 万 token，远超模型上下文；且大半是导航/目录/散文。正确姿势 = **定向 grep 提取签名**，压缩比约 1:300（实测 class_control.html：1.7MB → ~23KB 纯签名文本）。
+
+| 目标 | 提取命令（对 classes/class_<类>.html） |
+|---|---|
+| 方法签名（含默认值） | `grep -oE '<span class="std std-ref">[a-z_][a-z0-9_]*</span></a>\([^)]*\)' \| sed 's/<[^>]*>//g'` |
+| 属性（类型+默认值） | 先定位 `id="property-descriptions"`，再提取该段内 `<p class="classref-property"...>(.*?)</p>`，去标签 |
+| 枚举常量（含数值） | 提取所有 `<p class="classref-enumeration-constant"...>(.*?)</p>`，去标签 |
+| 信号列表 | `grep -oE 'id="class-<类>-signal-[a-z0-9_-]+"'` |
+| 单成员语义说明 | `grep -n "成员名" file` 定位行号后，只读该行 ±20 行（描述段） |
+
+规则：
+1. 永远不要 read_file 整个 class_*.html；先提取签名表（通常 <10KB），需要语义细节时再按行号定点读取。
+2. 跨类引用（文档里指向其他 class_*.html 的链接）不跟随，直接 grep 目标类的文件。
+3. 文档是 4.7-stable 静态快照；与引擎实际行为存疑时仍以 `tools/api_probe.tscn` headless 实机输出为准（文档查签名 → 探针验存疑项，两级验证）。
+
 ## 已核实 API 事实（2026-08-27 实机验证）
 
 | API / 语义 | 正确用法 | 踩坑记录 |
