@@ -80,6 +80,27 @@ func lookup(gid: String) -> Variant:
 	var m: GameMeta = _games.get(gid)
 	return m if m != null else null
 
+## 相似推荐（Q2=A）：同类目且标签交集，排除自身；无则空数组（标题序）
+func similar(gid: String) -> Array[GameMeta]:
+	var base: GameMeta = lookup(gid)
+	if base == null or base.category == "":
+		return []
+	var out: Array[GameMeta] = []
+	for m in all():
+		if m.id == gid or m.category != base.category:
+			continue
+		if _tags_overlap(m.tags, base.tags):
+			out.append(m)
+	out.sort_custom(_cmp_title)
+	return out
+
+## 两个标签集是否有交集
+func _tags_overlap(a: Array[String], b: Array[String]) -> bool:
+	for t in a:
+		if b.has(t):
+			return true
+	return false
+
 ## 全部 meta
 func all() -> Array[GameMeta]:
 	var out: Array[GameMeta] = []
@@ -87,16 +108,23 @@ func all() -> Array[GameMeta]:
 		out.append(_games[k] as GameMeta)
 	return out
 
-## 查询：category 精确 / tag 包含 / price 上限 / min_rating 预留（CR-1 无评分数据）/ sort 排序键
-## 注意：本 Godot 4.5 构建解析器不支持单行 lambda，过滤/比较用显式辅助函数
+## 查询：category 精确（空字符串跳过）/ tag 包含 / price 上限
+## 新增：price_models 多选 / min_rating M1 占位 / is_new M1 占位 / sort 排序键
+## 向后兼容：不传新 key 时行为不变
 func query(filters: Dictionary) -> Array[GameMeta]:
 	var out := all()
-	if filters.has("category"):
+	if filters.has("category") and str(filters["category"]) != "":
 		out = _filter_category(out, str(filters["category"]))
 	if filters.has("tag"):
 		out = _filter_tag(out, str(filters["tag"]))
 	if filters.has("price"):
 		out = _filter_price(out, int(filters["price"]))
+	if filters.has("price_models"):
+		out = _filter_price_models(out, filters["price_models"] as Array)
+	if filters.has("min_rating"):
+		out = _filter_min_rating(out, float(filters["min_rating"]))
+	if filters.has("is_new") and bool(filters["is_new"]):
+		out = _filter_is_new(out)
 	var sort := str(filters.get("sort", "title"))
 	match sort:
 		"price":
@@ -130,6 +158,25 @@ func _filter_price(list: Array[GameMeta], max_price: int) -> Array[GameMeta]:
 		if m.price <= max_price:
 			out.append(m)
 	return out
+
+## 按 price_model 多选过滤；models 为空时直接返回（不过滤）
+func _filter_price_models(list: Array[GameMeta], models: Array) -> Array[GameMeta]:
+	if models.is_empty():
+		return list
+	var out: Array[GameMeta] = []
+	for m in list:
+		if models.has(m.price_model):
+			out.append(m)
+	return out
+
+## 按最低评分过滤；M1 占位：GameMeta 无 rating 字段时直接透传
+func _filter_min_rating(list: Array[GameMeta], _min_r: float) -> Array[GameMeta]:
+	# M1 GameMeta 无 rating，占位透传；M2 补充 rating 字段后再实现
+	return list
+
+## 按"新上架"过滤；M1 占位：直接透传不过滤
+func _filter_is_new(list: Array[GameMeta]) -> Array[GameMeta]:
+	return list
 
 ## 比较器：标题（本构建 String 无 natural_compare，用大小写不敏感字典序）
 func _cmp_title(a: GameMeta, b: GameMeta) -> bool:

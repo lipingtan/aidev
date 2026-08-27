@@ -26,9 +26,17 @@ var _paths: Array[String] = []
 var _page_stack: Control = null
 var _current_tab: int = -1
 
+## A-3：OverlayLayer 路径缓存（T10 执行时实查确认：/root/Main/App/OverlayLayer）
+var _overlay_layer: Control = null
+
 func _ready() -> void:
 	_init_tab_roots()
 	locate_page_stack()
+	call_deferred("_cache_overlay_layer")
+
+## 延迟缓存 OverlayLayer，确保主场景树完整后再查
+func _cache_overlay_layer() -> void:
+	_overlay_layer = get_node_or_null("/root/Main/App/OverlayLayer") as Control
 
 ## 初始化 Tab 根页映射（_ready 时；测试可覆盖 _tab_roots 后重查）
 func _init_tab_roots() -> void:
@@ -156,6 +164,11 @@ func _animate_out(page: Page) -> void:
 	tw.tween_property(page, "position:x", SLIDE_OFFSET, TRANSITION_MS).from(page.position.x)
 	tw.tween_callback(page.queue_free)
 
-## 模态 Dialog 查询点（CR-1 无，预留；CR-3 接入后在此关闭并返回 true）
+## 模态 Dialog 查询：OverlayLayer 下任一子节点 visible=true 时返回 true（A-3：遍历方式，新增弹窗无需改此函数）
 func _modal_dialog_open() -> bool:
+	if _overlay_layer == null:
+		return false
+	for child in _overlay_layer.get_children():
+		if child.visible:
+			return true
 	return false
