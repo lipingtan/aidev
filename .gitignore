@@ -114,3 +114,15 @@ projects/**/exported/
 projects/**/logs/
 
 projects/**/bak/
+
+# ----------------------------------------
+# 本地测试临时目录（Godot appdata 隔离 / 日志 / shader cache，勿入库）
+# ----------------------------------------
+dev/
+AIDOC/project_doc/nova_arcade/dev/tmp_*/
+
+# ----------------------------------------
+# AI 会话临时产物 / 一次性探针脚本
+# ----------------------------------------
+projects/**/tools/.hermes-tmp.*
+projects/**/tools/probe_*
