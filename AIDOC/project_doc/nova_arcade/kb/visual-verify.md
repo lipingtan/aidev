@@ -10,7 +10,7 @@
   - PowerShell `System.Drawing` 缩放：`HighQualityBicubic` 2×（平滑渐变图放大不糊，见 `assets/buttons_large/`）
 
 ## 2. 看"正在运行的游戏"画面
-1. 起 GUI：`& 'C:\data\developer\devtool\godot\godot4.5\Godot_v4.5-stable_win64.exe' --path <工程目录>`（或在编辑器里按 **F6**）。
+1. 起 GUI：`& 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7-stable_win64.exe' --path <工程目录>`（或在编辑器里按 **F6**）。
 2. 若当前有可见桌面 / 显示器会话，用 PowerShell 截屏存 PNG：
    ```powershell
    Add-Type -AssemblyName System.Drawing

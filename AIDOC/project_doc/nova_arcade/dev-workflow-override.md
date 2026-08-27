@@ -85,3 +85,32 @@
 | **M3** | 客户端接入云评价、目录增量下发 | 跨层集成 CR |
 | **M4** | 支付 SDK + 订单验签 | Go 后端 CR + 跨层集成 CR |
 | **M5** | PCK 打包流水线 + DLC 商店 | Shell CR + Go 后端 CR |
+
+---
+
+## 8. AI 交互行为规范（防失忆规则）
+
+> 这些规则约束 AI 在本项目任何会话中的行为，违反即为错误。
+
+### 8.1 needs_plan.md / requirements_plan.md 的 Answer 处理
+
+- **读文件确认 Answer，不要反问用户**：用户在 requirements_plan.md 或 design_plan.md 中填写 Answer 后说"继续"，AI 必须先读取文件获取所有 Answer，直接进入下一阶段，**禁止重复向用户提问已经在文件中回答过的问题**。
+- Answer 所在位置：`[Answer-N]` 行紧跟在对应 `[Question-N]` 的推荐答案之后，或在推荐文字之后另起一行。
+- 若文件中 Answer 确实缺失（空白行或标记但无内容），才允许询问；但先尝试用推荐答案兜底，在询问前标注"已按推荐答案兜底"。
+
+### 8.2 进度文件（progress.md）
+
+- 每个 CR 完成后必须创建 `cr{N}-{name}/progress.md`，记录：完成状态、交付文件清单、测试结果、执行期关键决策、遗留事项。
+- 下一个会话恢复时，先读 progress.md 了解上下文，不重复已完成工作。
+
+### 8.3 测试验证规范
+
+- 子代理汇报"全绿"后，主代理必须用实际 headless 命令实机验证，不得仅凭报告确认。
+- 多个测试套件连续执行时，每次测试前清空 `dev/tmp_test/Godot/app_userdata/` 下项目 DB 目录，避免跨测试数据污染。
+- test_rg5 双相调用方式：`--rg5-phase=write` 后 `--rg5-phase=verify`（同 `$env:APPDATA` 不清 DB 直接 verify）。
+
+### 8.4 Godot 可执行文件路径（防版本混淆）
+
+- headless：`C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64_console.exe`
+- GUI：`C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64.exe`
+- 执行前环境：`$env:APPDATA = "C:\data\developer\studio\games\aidev\dev\tmp_test"`；杀孤儿进程：`Get-Process -Name "Godot*" -ErrorAction SilentlyContinue | Stop-Process -Force`

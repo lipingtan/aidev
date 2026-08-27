@@ -30,7 +30,7 @@
 | GET | /v1/games/:gid/reviews?sort&cursor | 评价分页(sort=useful/new/good/bad) | 无 |
 | POST | /v1/games/:gid/reviews | 提交评价(服务端二次校验时长) | JWT |
 | PUT/DELETE | /v1/reviews/:rid | 修改/删除自己的评价 | JWT |
-| POST | /v1/reviews/:rid/like \| unlike | 点赞（一设备一评一赞） | JWT |
+| POST | /v1/reviews/:rid/like \| unlike | 点赞（一用户一评一赞，见 review_likes PK） | JWT |
 | POST | /v1/reports/reviews/:rid | 举报评价 | JWT |
 | POST | /v1/payments/orders | 创建订单(返回渠道预支付单) | JWT |
 | POST | /v1/payments/verify | 渠道票据验签（幂等） | JWT |
@@ -124,9 +124,9 @@ DLC 下载: meta.dlc_url 指向 CDN; 响应头带 sha256, 客户端下载后校�
 
 ```
 资源类型新增:
-  core   : myosd-0.288 核心包(libmain.so + gdextension, 80~150MB, 版本锁)【待按 v2 调整：libMAME4droid.so 按 ABI 分发，见 mame-godot-plugin/DESIGN.md】
-           /catalog 返回 {type:"core", version:"0.288", cdn_url, sha256, required:true}
-           客户端每次启动 CoreManager.check_installed("0.288") 做版本比对
+  core   : MAME 核心（v2：libMAME4droid.so ~74MB 按 ABI 分发 + jni 胶水 .so 0.1MB 随包，版本锁 0.288）
+           /catalog 返回 {type:"core", version:"0.288", abi, cdn_url, sha256, required:true}
+           客户端每次启动 MameRuntime.is_ready() 做版本比对（未就绪 → ensure_native()）
   arcade : 街机内容包
            /catalog 返回 gid 级 manifest:
              {

@@ -16,7 +16,7 @@
 
 ```
 Main.tscn (Node)
-├── Sound / EventBus / DB / Registry / Nav     ← Autoload 单例（不在此树）
+├── EventBus / QualitySettings / DB / Registry / Nav / Sound  ← Autoload 单例（不在此树）
 ├── BgLayer (Control)          # 星空/网格动态背景，全局常驻
 ├── App (Control)
 │   ├── PageStack (Control)    # 页面栈容器（滑入/滑出动画）
@@ -49,8 +49,9 @@ Main.tscn (Node)
 | 模块 | 职责 | 关键接口 |
 |---|---|---|
 | **EventBus** | 全局信号枢纽，模块解耦 | 见 §3.3 信号表 |
+| **QualitySettings** | 设备档位检测（`--aidev-tier=` CLI 覆盖 + 平台判定）与资源分档解析；须先于数据类单例注册 | `detect_tier()`<br>`resolve_texture(path)`<br>`get_scalar(key)` |
 | **DB** | 全部本地持久化的唯一出口；JSON/ConfigFile 封装，写入分两级：**强写**（立即落盘，用于关键数据）/ **防抖写**（500ms 合并落盘，用于非关键数据）。强写范围：`trial_used`（消耗次数）、`orders`（订单状态）、`total_playtime/best/finish_count`（game_finished 时）；防抖写范围：`search_history`、`daily`、`profile`（昵称/设置）。崩溃恢复可靠性由强写保证。 | `get_profile() / save_profile()`<br>`get_record(gid) / upsert_record(gid, patch)`<br>`list_records()`<br>`get_review(gid) / put_review(gid, dict)`<br>`list_orders() / put_order(dict)`<br>`add_search_history(q) / get_search_history()`<br>`get_achievements() / unlock(id)`<br>`get_daily() / touch_daily()` |
-| **Registry** | 游戏目录：内置 meta + DLC meta；查询/筛选/排序/版本比较；成就定义表 | `reload()`<br>`get(gid) -> GameMeta?`<br>`all() -> [GameMeta]`<br>`query({category, price, min_rating, tag, sort}) -> [GameMeta]`<br>`installed_version(gid)`<br>`ach_def(aid)` |
+| **Registry** | 游戏目录：内置 meta + DLC meta；查询/筛选/排序/版本比较；成就定义表 | `reload()`<br>`lookup(gid) -> GameMeta?`（偏差：原设计 `get(gid)` 与 Node 基类 Object.get 签名冲突，实现改名）<br>`all() -> [GameMeta]`<br>`query({category, price, min_rating, tag, sort}) -> [GameMeta]`<br>`installed_version(gid)`<br>`ach_def(aid)` |
 | **Nav** | 页面栈管理 + Tab 切换 + 转场动画 + 返回键拦截 | `push(page_path, data)`<br>`pop()` / `pop_to_root()`<br>`switch_tab(idx)`（清栈回 Tab 根页）<br>`current() -> String` |
 | **Sound** | UI 音效/震动（尊重设置开关）；预合成 PCM，延续 TETRA NOVA 方案 | `click() / toggle() / success() / error() / coin()`<br>`haptic(str)` |
 
@@ -66,7 +67,7 @@ Main.tscn (Node)
 | **AchievementEngine** | 盒子级成就判定（监听 EventBus + PlayRecord） | `evaluate(event)` |
 | **Analytics** | 埋点：内存 buffer + JSONL 追加 user://logs/；后期批量上报 | `track(event, props)` |
 | **DLCManager**（后期） | 下载/校验/挂载 PCK | `download(gid)` `mount(gid)` |
-| **CoreManager**（Arcade） | 核心包管理：检查已装/版本比对/下载/校验/安装/删除重下 | `is_installed(version) -> bool`<br>`check_installed(version) -> bool`<br>`download(version, sha256)`<br>`remove(version)` |
+| **CoreManager**（Arcade） | Arcade 核心 .so 与 ROM 状态管理；Android 委托 MameRuntime 插件（v2），桌面返回「不可用」（arcade 仅真机可玩，CTA 置灰）。现有 Mock 桩待 M2 spike 后替换 | `ensure_native()`<br>`is_ready() -> bool`<br>`launch(rom, extras)`<br>`download_progress() -> float`<br>signal `game_exited` |
 
 ### 2.3 页面层
 
@@ -90,9 +91,9 @@ Main.tscn (Node)
 
 `GameHost`（Main 下全屏容器）+ `GameModule` 协议（见 §3.1）。玩游戏时 `App.visible=false`，退出恢复。
 
-三种运行时实现统一 `Runner` 接口（PckRunner / HtmlRunner / ArcadeRunner），由 `meta.json.runtime` 分发——详见 `nova-arcade-runtime-design.md`。ArcadeRunner = MAME 0.288 + myosd 直嵌（参照 mjarch3，不用 libretro）：首次需下载核心包（系统级 DLC）+ 该游戏的 rom zip 集与说明文件（专属文件夹），退出协议/结算卡与其他运行时完全同构。
+三种运行时实现统一 `Runner` 接口（PckRunner / HtmlRunner / ArcadeRunner），由 `meta.json.runtime` 分发——详见 `nova-arcade-runtime-design.md`。ArcadeRunner = MAME4droid native Activity + MameRuntime 插件桥（v2，参照 mjarch3 内容管线，不用 libretro）：首次需下载核心 .so（~74MB/ABI）+ 该游戏的 rom zip 集与说明文件（专属文件夹），退出协议/结算卡与其他运行时完全同构。
 
-> ⚠️ **状态（待调整）**：Arcade 运行时最新定稿为 `projects/nova_arcade/mame-godot-plugin/DESIGN.md`（v2：独立 native MAME4droid Activity + AndroidRuntime 插件 `MameRuntime.ensureNative()/launch(rom)/gameExited`，以 v2 为准）。本文 ArcadeRunner 相关小节（§2.2 CoreManager、§4.6 Arcade 分支、§5 cores 目录）的 Godot 侧设计**临时保留**，待 v2 实现验证确认无误后统一调整。
+> **状态（v2 定稿）**：Arcade 运行时以 `projects/nova_arcade/mame-godot-plugin/DESIGN.md` v2 为准（标准 Godot 导出 + 独立 native Activity + MameRuntime 桥接）。本文 ArcadeRunner 相关小节（§2.2 CoreManager、§4.6 Arcade 分支、§5 核心目录）已按 v2 对齐；行为细节（帧率/音频/进程语义/插件打包）待 M2 真机 spike 验证后定稿。
 
 ---
 
@@ -151,7 +152,8 @@ func on_back() -> bool                     # 返回键；return false 走默认 
 | `achievement_unlocked` | def, points | AchievementEngine → Toast/成就页 |
 | `dlc_installed` | gid | DLCManager → Registry.reload/刷新UI |
 | `tab_changed` | idx | Nav → TabBar/Analytics |
-| `settings_changed` | key, value | SettingsPage → Sound/BgLayer |
+| `settings_changed` | key, value | SettingsPage → Sound（非主题类设置） |
+| `theme_changed` | theme_name | ThemeTokens.apply_theme → BgLayer/页面重渲染 |
 | `records_updated` | gid | DB → 首页"继续游戏" |
 
 ### 3.4 数据结构（Registry 里的标准 GameMeta）
@@ -189,7 +191,7 @@ achievements:             # 该游戏成就定义
 desc: "..."
 # Arcade 特有字段（runtime: "arcade" 时必填）：
 runtime: "pck"            # pck|html|arcade
-core: ""                  # 运行时依赖的核心包名（arcade="myosd-0.288"，其余为空）
+core: ""                  # 运行时依赖的核心包名（arcade="mame4droid-0.288"，其余为空）
 roms: []                  # [{
   # 每个 ROM 对应一个 MAME 驱动（romset）
   name: "pacman",         # MAME 驱动名（romset 名），对应 argv[0]
@@ -273,7 +275,7 @@ Splash(0.8s 品牌动画)
 ```
 进入 → 自动聚焦输入框 → 展示:
   热搜（M1 用本地 editorial.json 预配置 6 条；M2+ 改为本地词频统计 top-8）
-  历史（top-10，可清空）
+  历史（top-20，可清空；与 DB HISTORY_CAP=20 一致，review P-3）
 输入(去抖 150ms) → Searcher.query:
     分词 → 每游戏打分:
       标题前缀命中 +100 │ 标题包含 +40 │ 别名包含 +35
@@ -331,7 +333,7 @@ hint 行在 CTA 固定区域内，按钮上方，始终可见，字号 10px，�
 ```
 用户点 ▶ (任意卡片/详情CTA)
 1. Launcher.launch(gid)
-2.   meta = Registry.get(gid)
+2.   meta = Registry.lookup(gid)
 3.   DLC未装? → DownloadDialog → 失败中止，成功继续
 4.   权益检查 PayGate:
        free/ad/iap/owned → 通过
@@ -374,9 +376,10 @@ hint 行在 CTA 固定区域内，按钮上方，始终可见，字号 10px，�
         │   similar() 为空时隐藏整个迷你卡区
 15.  用户选择:
        再来一局 → 重走步骤 6b-8（重新设置分辨率/方向，因为恢复时已经重置）；
-                  Arcade 内置ROM重跑runT() / 导入ROM OS::quit()重建进程
+                  Arcade = CoreManager.launch(rom) 重新拉起 MAME Activity（v2）
+                   ⚠️ Arcade 拉起/收回依赖 MameRuntime 插件（v2 spike 未开始，M2 真机验证前置，review P-4）
        其他     → 回 Tab 根页（分辨率已在步骤11恢复，直接显示）
-16.  **第 2 次**结束的结算卡上主动引导评价；仅在 finish_count==2 时展示
+16.  **结算卡评价引导（按被评价游戏，review P-1）**：该游戏累计 `finish_count` 达门槛（如 ≥2）且本次 `playtime≥600s` 时，在该游戏结算卡引导写评价；计数按游戏独立维护，消除"仅全局第 2 次"的错位与一次性触发
 ```
 
 **视口切换 GDScript 参考实现：**
@@ -404,31 +407,30 @@ func _restore_shell_viewport() -> void:
 
 `_apply_game_viewport` 在 `TransitionLayer.fade_out()` 的 `await` 之后调用，`_restore_shell_viewport` 在 `module.queue_free()` 之前、遮罩不透明时调用。
 
-**ArcadeRunner 分支（替代上述 7→8→9→10→11 步，其余一致）：**
+> **A-6 已关闭（4.5 headless 实测）**：`root.content_scale_size` 运行时切换有效——`tools/test_viewport.gd` 实测 visible rect 1560×1560 →（切 1920×1080）→ 1920×1920 →（恢复）→ 1560×1560，canvas 变换按 expand 公式即时重算，参考实现成立。`screen_set_orientation` 真机行为 headless 不可验，归 M2 真机项。
+
+**ArcadeRunner 分支（替代上述 7→8→9→10→11 步，其余一致；v2）：**
 
 ```
-7b. ArcadeRunner.launch(ctx, rom_zip, meta):
-      - CoreManager.check_installed("myosd-0.288") → 未装则 DownloadDialog
-      - MyOsdHost.init(core_dir, game_dir, w, h)
-      - set_rom(rom_name, rom_path) + set_cli_params + buttonConfig
-      - run_threaded(argv) → 阻塞于 myosd_main 独立线程
-8b. 游戏中: input_poll ← 触摸/虚拟按键; frame_ready → ImageTexture; sound → AudioStreamGenerator
-10b. myosd_main 返回 → request_quit() → exited(code) 信号
-11b. Launcher.冻结: 保存 savestate(若 cansl=true) → 解析 hiscore → quit_requested(result)
-12b. (同 12): 写 DB.upsert_record
-14b. (同 14): 结算卡显示; [再来一局] 对内置 ROM = push_event(EXIT) 后重新 runT();
-       对导入 ROM = push_event(EXIT) + OS::quit() → Activity 重建 → 重走 7b
+7b. ArcadeRunner.launch(ctx, rom, meta):
+      - CoreManager.ensure_native() → 未就绪则 DownloadDialog 显示进度（libMAME4droid.so ~74MB/ABI）
+      - MameRuntime.launch(rom, extras)   # startActivity→MAME 游戏 Activity（extra=ROM 路径/cfg/buttonConfig）
+      - Godot 主 Activity 后台 pause；游戏中 native 侧独立渲染（GLSurfaceView + OpenSL），Godot 不参与
+8b. 游戏中: native 侧独立渲染（GLSurfaceView + OpenSL 音频），Godot 不参与帧/音频/输入
+10b. 游戏内退出 → Activity finish() → MameRuntime 发 game_exited → Launcher 接收，走步骤 11-16
+12b. (同 12): 写 DB.upsert_record；score 读 hiscore/nvram（MAME 侧写 game_dir），提取不到 score:-1
+14b. (同 14): 结算卡显示; [再来一局] = CoreManager.launch(rom) 重新拉起 Activity（内置/自导入 ROM 同此路径）
 ```
 
-**"再来一局"按钮的进程语义差异：**
+**"再来一局"语义（v2）：**
 
 | ROM 来源 | [再来一局] | [返回] |
 |---|---|---|
-| 内置/授权 ROM (rom_path 为空) | push_event(EXIT) → myosd_main 返回 → 立即重新 run_threaded(argv)（同会话再进，不重建 native 层） | 同右 |
-| 用户自导入 ROM (rom_path 非空) | push_event(EXIT) → OS::quit() → Activity 重建 → 重走完整 launch 流程 | 同右 |
+| 内置/授权 ROM | `launch(rom)` 重新拉起 Activity（每局一次 Activity 生命周期） | `game_exited` → 回盒子 |
+| 用户自导入 ROM | 同上（路径经 Intent extra，runtime §3.4 自导入路线） | 同左 |
 | PCK/HTML 游戏 | module 复位重 boot()（不重建场景） | module.queue_free() + App 淡入 |
 
-> 说明：mjarch3 对外部 ROM 的 `Process.killProcess` 是因为外部 ROM 加载后的 native 状态不保证可干净重初始化。NOVA 继承此行为——用户导入 ROM 退出后必须重建进程，而内置授权 ROM 可同会话再进（与 PCK/HTML 一致）。
+> v2 无 mjarch3 killProcess 分支：Godot 进程全程不杀、无进程内 native 状态，「再来一局」= 重新 launch。
 
 ### 4.7 购买流程（现 Mock、后接真渠道）
 
@@ -523,17 +525,19 @@ AchievementEngine 在 `evaluate(event)` 中额外消化全局成就触发条件�
 
 ## 5. 本地存储设计（user://）
 
+> A-4（review）：下方为概念布局 Sketch；实现采用 `core/db.gd` 的合并布局 `user://db/{profile,records,reviews,orders,daily,search_history,achievements}.json`，功能等价、写入分级一致。
+
 ```
 user://
   profile.cfg            # ConfigFile: [user]昵称/头像idx  [settings]音效/震动/语言
-  records/<gid>.json     # PlayRecord: last_played/total_playtime/sessions/best/finish_count
+  records/<gid>.json     # PlayRecord: last_played/total_playtime/sessions/best/finish_count/trial_used
   reviews/<gid>.json     # 本地评价(含编辑历史)
   orders.json            # 订单数组(pending/paid)
   achievements.json      # {aid: unlocked_at}
   daily.json             # 每日任务进度 + date
   search.json            # 历史 + 词频统计
   saves/<gid>/           # 各游戏私有区（Shell 不读内容）
-  cores/myosd-0.288/     # 核心包（libmain.so + gdextension + 版本标记，见 runtime-design §3.5）
+  <filesDir>/mame/       # 核心 .so（v2：libMAME4droid.so 按 ABI ~74MB + 版本标记，Android app 私有目录，见 runtime-design §3.5）
   games/<gid>/           # Arcade 游戏专属文件夹（roms/cfg/states/nvram，见 runtime-design §3.4-§3.5）
   dlcs/<gid>.pck
   logs/analytics-YYYYMMDD.jsonl
@@ -952,7 +956,7 @@ func _draw() -> void:
 
 ```
 nova-arcade/
-  project.godot            # autoload×5 注册
+  project.godot            # autoload×6 注册（EventBus/QualitySettings/DB/Registry/Nav/Sound）
   shell/
     main.tscn / theme/  components/  pages/  overlays/
   games/
@@ -966,9 +970,9 @@ nova-arcade/
 
 ## 11. M1 任务拆解（可开工粒度）
 
-- [ ] 新工程 + autoload×5 + 主题 Token + TabBar/PageStack/转场
+- [ ] 新工程 + autoload×6 + 主题 Token + TabBar/PageStack/转场
 - [ ] DB/Registry + GameMeta 定义 + 内置 tetra_nova meta
-- [ ] CoreManager（核心包检查/下载/校验/版本标记，见 runtime §3.4-§3.5）
+- [ ] CoreManager（Android 委托 MameRuntime 插件 v2；桌面返回「不可用」，见 runtime §3.2）
 - [ ] TETRA NOVA 迁入 + GameModule 适配（boot/quit/result/存档目录）
 - [ ] Launcher 全时序（含权益门/转场/结算卡骨架）
 - [ ] HomePage 五区块 + GameCard 组件

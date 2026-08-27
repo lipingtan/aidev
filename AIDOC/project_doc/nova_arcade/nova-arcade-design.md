@@ -17,9 +17,9 @@
 | 决策点 | 方案 | 理由 |
 |---|---|---|
 | 架构 | 本地优先（Local-first），后端分期接入 | MVP 零后端可上线；评价/推荐/支付三期再上云 |
-| 游戏接入 | 统一 `Runner` 接口（PCK/HTML/Arcade 三运行时）+ 内置编译 + 动态下载 | Godot 原生支持 `load_resource_pack()`；街机最新定稿见 `projects/nova_arcade/mame-godot-plugin/DESIGN.md` v2（独立 native MAME4droid Activity，以 v2 为准；旧 myosd 直嵌表述待调整），商店可后装游戏 |
+| 游戏接入 | 统一 `Runner` 接口（PCK/HTML/Arcade 三运行时）+ 内置编译 + 动态下载 | Godot 原生支持 `load_resource_pack()`；街机按 `mame-godot-plugin/DESIGN.md` v2（标准 Godot 导出 + 独立 native MAME4droid Activity + MameRuntime 桥，详见 runtime-design §3），商店可后装游戏 |
 | 导航 | 竖屏 + 底部 Tab（首页/分类/搜索/我的） | 单手可达，移动端标准范式 |
-| 变现 | 买断 + 试玩解锁 + 激励视频广告，三档并行 | 休闲小游戏最优解，不强制账号 |
+| 变现 | 五种付费模式（free/ad/trial/paid/iap）并行，见 §6.1 | 休闲小游戏最优解，不强制账号 |
 | 评价 | 阶段1 仅本地；阶段2 云端（游玩≥600s才可评） | 防刷 + 降低冷启动合规复杂度 |
 
 ---
@@ -94,8 +94,8 @@ GameMeta:            # 游戏元数据（本地内置表 + 云端可更新）
   category: puzzle        # 消除/益智/动作/街机/休闲/roguelike
   tags: [tetris, roguelike, neon, offline]
   price_model: free|paid|trial|iap|ad
-  price: 6                # 买断价（分）
-  trial_limit: {plays: 3} # 试玩制：3次
+  price: 6                # 买断价（元）；free/ad/iap 为 0
+  trial: {plays: 3}       # 试玩制：3次（或 {minutes: 10}）
   version: 1.0.0
   size_kb: 4200           # DLC 用
   icon / screenshots[]: res://...
@@ -109,7 +109,7 @@ GameMeta:            # 游戏元数据（本地内置表 + 云端可更新）
 
   # Arcade 特有字段（runtime="arcade" 时）：
   runtime: "pck"               # "pck" | "html" | "arcade"
-  core: ""                     # 依赖的核心包名（arcade="myosd-0.288"）
+  core: ""                     # 依赖的核心包名（arcade="mame4droid-0.288"）
   roms: [{
     name: "pacman",            # MAME 驱动名
     title: "PAC-MAN",
@@ -125,6 +125,7 @@ GameMeta:            # 游戏元数据（本地内置表 + 云端可更新）
 
 PlayRecord:          # 本地游玩记录（驱动推荐/继续游戏）
   game_id / last_played / total_playtime / sessions / best_score
+  trial_used / finish_count   # 试玩计数（强写）/ 完成局数（评价引导门槛用）
 
 DailyTask:           # 每日任务（本地，按自然日重置；详细字段见 client-design §4.2）
   date / tasks[{id, done}] / reward_claimed
@@ -141,7 +142,7 @@ UserProfile:
 
 ---
 
-## 3. 页面设计（竖屏，720×1280 画布，详见 `nova-arcade-client-design.md` §8）
+## 3. 页面设计（竖屏，720×1560 画布，详见 `nova-arcade-client-design.md` §8）
 
 ### 3.1 首页（推荐流）
 
@@ -227,9 +228,10 @@ UserProfile:
 # services/search_index.gd
 构建: games[] → 每个游戏产出 keys = [title, title_lower, aliases[],
       pinyin_full, pinyin_initials, tags[], dev]
-查询: 输入串 tokenize → 对每个 key 计算得分
-      前缀命中 +100 / 包含 +40 / 拼音首字母 +30 / 标签 +15
-      → 总分排序，取前 20
+查询: 输入串去抖 150ms → tokenize → 对每个游戏打分
+      标题前缀 +100 | 标题包含 +40 | 别名包含 +35
+      拼音全拼前缀 +30 | 拼音首字母前缀 +25 | 标签命中 +15
+      → 总分排序，取前 20（规则定稿见 client-design §4.4）
 热词: 本地统计输入→点击，云端阶段下发热搜榜
 ```
 
@@ -262,7 +264,7 @@ UserProfile:
 
 ## 6. 付费设计
 
-### 6.1 付费模式（每游戏四选一）
+### 6.1 付费模式（每游戏五选一）
 | 模式 | 说明 | 示例 |
 |---|---|---|
 | free | 完全免费 | 引流游戏 |
@@ -305,22 +307,28 @@ UserProfile:
 
 ## 8. 通用服务（Shell 层）
 
-| 服务 | 职责 |
-|---|---|
-| EventBus | 全局信号：game_launched/finished/rated/purchased… |
-| SaveService | `user://saves/<game_id>/` 按游戏隔离；盒子级 profile 单独存 |
-| AchievementService | 跨游戏成就定义/解锁/展示，游戏内通过 EventBus 上报 |
-| PaymentService | 订单/票据/权益/恢复购买 |
-| ReviewService | 本地评价存储 + 云端同步(阶段3) |
-| RecommendService | 上述三阶段推荐 |
-| AnalyticsService | 埋点：曝光/点击/开玩/时长/付费（本地留存，云端上报） |
-| LauncherService | 游戏生命周期：launch → boot(ctx) → 暂停Shell → 退出恢复Shell+上报 |
+> 模块定稿清单与接口见 `nova-arcade-client-design.md` §2.1/§2.2（单例层 + 服务层），本表仅职责概览。
 
-**游戏退出协议**：游戏调 `ctx.quit(result)` → Shell 弹"成绩结算卡"（分数/成就/评价引导/推荐下一款）→ 返回首页。评价引导时机 = 第2次游玩结束时，转化最高且不打扰。
+| 模块 | 职责 |
+|---|---|
+| EventBus（单例） | 全局信号枢纽，模块解耦（信号契约见 client §3.3） |
+| DB（单例） | 本地持久化唯一出口：强写/防抖写分级；profile/records/reviews/orders/daily/search_history/achievements + `user://saves/<game_id>/` 按游戏隔离 |
+| Launcher | 游戏生命周期总管：launch → 权益门 → boot(ctx) → 转场 → 结算卡（client §4.6） |
+| TrialGuard | 试玩资格判定与计数消耗 |
+| PayService | 订单状态机/票据/权益/恢复购买（现阶段 Mock，后期接渠道 SDK） |
+| Searcher | 搜索索引构建与打分查询（规则见 §4） |
+| Recommender | 首页各区块数据源（三阶段演进见 §5） |
+| AchievementEngine | 盒子级 + 游戏级成就判定（监听 EventBus + PlayRecord），游戏内经 EventBus 上报解锁 |
+| Analytics | 埋点：曝光/点击/开玩/时长/付费/评价（本地 JSONL，M3 起云端上报） |
+| DLCManager / CoreManager（后期） | PCK 下载/校验/挂载；Arcade 核心包与 rom 内容下发（runtime-design §3.4） |
+
+**游戏退出协议**：游戏调 `ctx.quit(result)` → Shell 弹"成绩结算卡"（分数/成就/评价引导/推荐下一款）→ 返回首页。评价引导时机 = 该游戏累计 finish_count≥2 且本次 playtime≥600s（按游戏独立计数，client-design §4.6 步骤16），转化最高且不打扰。
 
 ---
 
 ## 9. 后端设计（阶段3 才需要）
+
+> ⚠️ 本节为早期概念草图，接口以 `nova-arcade-server-design.md` 为准（REST /v1 + JWT Bearer、catalog 增量下发、支付验签幂等）。下方清单仅作概念参考。
 
 ```
 技术选型(轻量): Supabase/Firebase(BaaS省事) 或 Go+Postgres+Redis
@@ -360,5 +368,5 @@ UserProfile:
 | PCK DLC 被篡改/盗版 | 阶段5再加签名校验；前期游戏免费不痛 |
 | 评价冷启动空页 | 预置编辑评价 + "成为第一个评价的人"引导 |
 | 主包膨胀 | 主包只装 Shell+1游戏，其余全 DLC |
-| 街机核心体积大 / ROM 版权 | 核心按 ABI 运行时下载（v2：`libMAME4droid.so` 约 74MB，见 mame-godot-plugin/DESIGN.md）；ROM 只走授权下发或用户自导入（标注），详见 runtime-design §3.4/§3.6（待按 v2 调整） |
+| 街机核心体积大 / ROM 版权 | 核心按 ABI 运行时下载（v2：`libMAME4droid.so` 约 74MB，见 mame-godot-plugin/DESIGN.md）；ROM 只走授权下发或用户自导入（标注），详见 runtime-design §3.4/§3.6 |
 | 多 zip romset（parent/clone/BIOS）/ 校验复杂 | meta.json 每个 ROM 声明 `parent`/`bios`/`zips[]`；服务端每个 zip 独立签名；客户端逐文件校验后 MAME 原生 romset 校验兜底（沿 parent/BIOS 链）；详见 runtime-design §3.4 |
