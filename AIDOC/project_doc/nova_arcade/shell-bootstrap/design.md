@@ -123,7 +123,7 @@ func on_back() -> bool      # return false 走默认 pop
 
 ## 6. CoreManager 桩（Q3=A）
 
-`services/core_manager.gd`：接口 `is_installed(version) -> bool`、`check_installed(version) -> bool`、`download(version, sha256)`、`remove(version)`；Mock 实现恒返回"未安装"并记录日志，**不阻塞任何流程**。真实下载/校验待 mame-godot-plugin v2 验证后填（runtime-design §3 待调整注记）。
+`services/core_manager.gd`：接口 `is_installed(version) -> bool`、`check_installed(version) -> bool`、`download(version, sha256)`、`remove(version)`；Mock 实现恒返回"未安装"并记录日志，**不阻塞任何流程**。真实下载/校验待 mame-godot-plugin v2 spike 验证后填（v2 已定稿，见 runtime-design §3.2；桩接口暂留至 M2）。
 
 ## 7. GameMeta 与内置 tetra_nova meta（Q4=A）
 

@@ -5,8 +5,8 @@
 
 ## 进度摘要
 
-- 总任务数：10　已完成：9　进行中：0　待开始：1（T10）
-- 当前阶段：批次4（T5 ✅ / T4 ✅ / T3 ✅ / T6 ✅ / T7 ✅；子代理两度中断，改主会话直接执行）
+- 总任务数：10　已完成：10　进行中：0　待开始：0（**CR-1 完全闭环**：§5.1 编辑器实测零报错 + §5.5 GUI 视觉含 Fix-1 + 三角色终版验收通过，见 review_report.md；低优遗留 db.gd 拆 db_io.gd → CR-2）
+- 当前阶段：已收口（§5.3/§5.4 属 CR-2/CR-3 范围）
 
 ## 依赖关系（按接口调用关系重推，Review 第3轮；第4轮 A-5 简化图）
 
@@ -161,7 +161,7 @@
 - [x] 信号流正确：apply_theme → Token 切换 → root.theme 换资源 → profile force 写 → settings_changed+theme_changed；BgLayer 仅响应 theme_changed（400ms Tween）
 - [x] grep 验证页面/BgLayer 无硬编码 Color/十六进制色值（ThemeTokens 内部除外；bglayer.tscn 初始色为占位，_ready 即被 token 覆盖）
 - [x] 工程未启用 hdr_2d/glow（project.godot 仅 renderer=mobile；quality_settings 的 glow_enabled 为 demo 拷贝查表项，CR-1 未应用）
-- [ ] 视觉项（双主题切换无布局跳变 / 重启恢复上次选择，RG-4）移交 T10 在完整场景树后执行（Review P-5）
+- [x] 视觉项（双主题切换无布局跳变 / 重启恢复上次选择，RG-4）T10 承接：2026-08-24 GUI 实测通过（四截图 read_image + rect 跨主题一致 + [restore] PASS；期间修复 Fix-1，Review P-5）
 - **偏差（实测）**：4.5 Gradient 无 set_point_color/point_count/points 属性，用 `offsets + colors` 直接赋值构造渐变
 
 ---
@@ -182,7 +182,7 @@
 
 **Acceptance:**
 - [x] 启动进入 Home，四 Tab 可切换无崩溃（RG-1/RG-2）——test_main 13/13
-- [ ] 两种视口比例（约 9:19.5 与 9:20）下布局无溢出/错位 → 视觉项移交 T10（Risk-1，headless 不可验）
+- [x] 两种视口比例（720×1560 / 720×1600）下布局无溢出/错位——T10 GUI 实测通过：双主题 × 双视口溢出检查全过，关键节点 rect 跨主题一致（Risk-1 关闭）
 - [x] Toast 触发/消失时序正确——test_main 13/13；根因：`tween_interval` 之后重复 `set_parallel(true)` 压平停留，已改为 interval 后不再 toggle
 - [x] 点击 🎨 完成主题切换、播放音效、有按压缩放反馈（RG-4）
 
@@ -201,7 +201,7 @@
 
 ---
 
-### Task 10: 集成冒烟 + 回归验证 ⬜ 📋
+### Task 10: 集成冒烟 + 回归验证 ✅ 🎯
 
 **复杂度**: 中
 
@@ -210,7 +210,9 @@
 - 视觉验证用 GUI 版 Godot 截图 + read_image（kb/visual-verify.md），.tres 样式 headless 无法验证
 - 产出 `AIDOC/project_doc/nova_arcade/shell-bootstrap/smoke_report.md`
 
-**Acceptance:**
-- [ ] 冒烟 3 项通过：工程打开无报错 / Tab 切换无崩溃 / 双主题无跳变（附截图）
-- [ ] RG-1~RG-6 逐条运行验证通过（含 RG-5 杀进程重启）
-- [ ] smoke_report.md 记录每项结果与视口比例实测截图/日志
+**Acceptance（2026-08-21，Godot 4.5 headless，见 smoke_report.md）：**
+- [x] Tab 切换无崩溃 ✅（test_smoke 12/12）｜工程打开（需 Godot 编辑器）⏳ 挂账（人工）｜双主题无跳变 ✅（2026-08-24 GUI 实测 + Fix-1，Risk-1 关闭）
+- [x] RG-1~RG-6 逐条验证通过（含 RG-5 强写持久化双相 6/6）✅
+- [ ] §5.3 详情页 CTA / §5.4 Launcher 生命周期（Services 层未实现→CR-2/CR-3）⏳ 挂账
+- [x] §5.5 视觉验证（双主题无跳变/双视口溢出）✅ 2026-08-24 GUI 实测关闭：neon/elegant × 720×1560/720×1600 四截图 + rect 跨主题一致 + [restore] PASS（含 Fix-1 修复）
+- [x] smoke_report.md 记录每项结果与视口比例实测截图/日志（`dev/tmp_vis/vis_*.png` + `_shot2` 批量驱动 `vis_run.ps1`）
