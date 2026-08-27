@@ -48,8 +48,12 @@
 ## 探针用法（未覆盖 API 先探后写）
 
 ```
-$G --headless --path . --quit-after 60 res://tools/api_probe.tscn -- TextureRect stretch_mode   # 成员查询
-$G --headless --path . --quit-after 60 res://tools/api_probe.tscn -- StyleBoxFlat              # 列出全部整型常量 + 方法/属性计数
+$G --headless --path . --quit-after 60 res://tools/api_probe.tscn -- TextureRect stretch_mode   # 成员查询（反射）
+$G --headless --path . --quit-after 60 res://tools/api_probe.tscn -- StyleBoxFlat              # 列出全部整型常量 + 方法/属性计数（反射）
+$G --headless --path . --quit-after 60 res://tools/api_probe.tscn -- Control doc               # 文档提取：完整签名表（methods+props+signals+enum consts）
+$G --headless --path . --quit-after 60 res://tools/api_probe.tscn -- Control doc anchor       # 文档提取 + 按关键字过滤（跨方法/属性/信号/常量）
 ```
 
-输出：class 存在性、成员是枚举常量（含值）/方法（含参数数）/属性，还是不存在。
+- 反射模式输出：class 存在性、成员是枚举常量（含值）/方法（含参数数）/属性，还是不存在。
+- `doc` 模式直接解析本地文档 HTML（默认 docs 目录 `C:\data\developer\devtool\godot\godot-docs-html-stable\classes`，可传第 4 参覆盖），输出 `[doc:m]/[doc:p]/[doc:s]/[doc:c]` 签名行——大类文件（1~2MB）无需 grep by hand。
+- 两级验证：`doc` 模式查签名 → 反射模式验存疑项（文档是静态快照，引擎实际行为以反射输出为准）。

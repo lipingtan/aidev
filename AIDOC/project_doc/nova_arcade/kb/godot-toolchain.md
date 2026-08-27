@@ -4,10 +4,10 @@
 
 | 文件 | 用途 |
 |---|---|
-| `C:\data\developer\devtool\godot\godot4.7\Godot_v4.7-stable_win64.exe` | GUI 编辑器，日常开发、场景编辑、导出 |
-| `C:\data\developer\devtool\godot\godot4.7\Godot_v4.7-stable_win64_console.exe` | 无头命令行，CI/脚本/PoC 验证（`--headless`），输出直接打到终端 |
+| `C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64.exe` | GUI 编辑器，日常开发、场景编辑、导出 |
+| `C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64_console.exe` | 无头命令行，CI/脚本/PoC 验证（`--headless`），输出直接打到终端 |
 
-导出模板已安装：`Godot_v4.7-stable_export_templates.tpz`（同目录）。
+导出模板已安装：`Godot_v4.7.2-stable_export_templates.tpz`（同目录）。
 
 > `win64_console.exe` 体积只有 197KB，是 stub 启动器，依赖主 exe 旁的运行时库——**两个 exe 必须在同一目录下**。
 
@@ -16,8 +16,8 @@
 ## 常用命令
 
 ```powershell
-$G  = 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7-stable_win64_console.exe'
-$GE = 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7-stable_win64.exe'
+$G  = 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64_console.exe'
+$GE = 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64.exe'
 
 # 打开工程（GUI）
 & $GE --path <工程目录>
@@ -52,7 +52,7 @@ $GE = 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7-stable_win64.exe'
 ## PoC 运行示例
 
 ```powershell
-$G = 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7-stable_win64_console.exe'
+$G = 'C:\data\developer\devtool\godot\godot4.7\Godot_v4.7.2-stable_win64_console.exe'
 
 # HTML 运行时 PoC
 & $G --headless --path projects\nova_arcade\nova-arcade-poc -s res://poc/html_runtime_driver.gd
