@@ -1,0 +1,91 @@
+[gd_scene load_steps=3 format=3 uid="uid://detail_page"]
+
+[ext_resource type="Script" path="res://shell/pages/detail.gd" id="1_detail"]
+[ext_resource type="PackedScene" path="res://shell/pages/cta_bar.tscn" id="2_ctabar"]
+
+[node name="DetailPage" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_detail")
+
+[node name="BackButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 68.0
+offset_bottom = 56.0
+text = "← 返回"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 64.0
+offset_bottom = -140.0
+
+[node name="VBox" type="VBoxContainer" parent="ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 720.0
+offset_bottom = 0.0
+
+[node name="IconRect" type="TextureRect" parent="ScrollContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(720, 300)
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TitleLabel" type="Label" parent="ScrollContainer/VBox"]
+layout_mode = 2
+text = ""
+theme_override_font_sizes/font_size = 28
+
+[node name="VersionLabel" type="Label" parent="ScrollContainer/VBox"]
+layout_mode = 2
+text = ""
+theme_override_font_sizes/font_size = 14
+
+[node name="TagsRow" type="HBoxContainer" parent="ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DescLabel" type="Label" parent="ScrollContainer/VBox"]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 16
+
+[node name="SimilarSection" type="VBoxContainer" parent="ScrollContainer/VBox"]
+layout_mode = 2
+visible = false
+
+[node name="SimilarTitle" type="Label" parent="ScrollContainer/VBox/SimilarSection"]
+layout_mode = 2
+text = "相关推荐"
+theme_override_font_sizes/font_size = 18
+
+[node name="SimilarCards" type="HBoxContainer" parent="ScrollContainer/VBox/SimilarSection"]
+layout_mode = 2
+
+[node name="ReviewsBtn" type="Button" parent="ScrollContainer/VBox"]
+layout_mode = 2
+text = "全部评价 →"
+theme_override_font_sizes/font_size = 18
+
+[node name="CtaBar" parent="." instance=ExtResource("2_ctabar")]
+layout_mode = 1

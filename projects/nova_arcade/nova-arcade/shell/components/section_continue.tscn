@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3 uid="uid://section_continue"]
+
+[ext_resource type="Script" path="res://shell/components/section_continue.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://game_card" path="res://shell/components/game_card.tscn" id="2_card"]
+
+[node name="SectionContinue" type="VBoxContainer"]
+script = ExtResource("1_script")
+card_scene = ExtResource("2_card")
+
+[node name="SectionTitle" type="Label" parent="."]
+text = "继续游戏"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="HBox" type="HBoxContainer" parent="ScrollContainer"]
+layout_mode = 2
+size_flags_vertical = 3

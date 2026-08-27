@@ -1,0 +1,53 @@
+[gd_scene load_steps=3 format=3 uid="uid://cta_bar"]
+
+[ext_resource type="Script" path="res://shell/pages/cta_bar.gd" id="1_ctabar"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.05, 0.05, 0.08, 0.95)
+border_color = Color(0.2, 0.2, 0.3, 1)
+border_width_top = 1
+
+[node name="CtaBar" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -140.0
+offset_bottom = 0.0
+grow_vertical = 0
+script = ExtResource("1_ctabar")
+
+[node name="BgRect" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 12.0
+offset_right = -24.0
+offset_bottom = -12.0
+theme_override_constants/separation = 8
+
+[node name="HintLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CtaButton" type="Button" parent="VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+text = "▶ 开玩"
