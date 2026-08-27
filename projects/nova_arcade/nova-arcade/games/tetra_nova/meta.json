@@ -11,7 +11,7 @@
   "size_kb": 0,
   "icon": "res://games/tetra_nova/icon.png",
   "screenshots": [],
-  "scene": "res://games/tetra_nova/main.tscn",
+  "scene": "res://games/tetra_nova/module.tscn",
   "dlc_url": "",
   "aliases": ["俄罗斯方块", "els", "tetris"],
   "pinyin": ["eluosifangkuai", "elsfk"],

@@ -16,6 +16,10 @@ const DEFAULT := "neon"
 ## 当前主题名
 static var current: String = DEFAULT
 
+## 主题目标容器（Main._ready 置 $App）。
+## 4.5 实测：root Window 的 theme 不向子 Control 传播（预设赋值同样无效），Theme 资源必须落到 Control 祖先才生效
+static var theme_target: Control = null
+
 ## 颜色 token（CD §8.1）
 const TOKENS: Dictionary = {
 	"neon": {
@@ -165,13 +169,20 @@ static func icon_grad(game_col: Color) -> Gradient:
 	g.offsets = PackedFloat32Array([0.0, 1.0])
 	return g
 
-## 切换主题入口（design §5 流程）：Token → root.theme → profile force 写 → 双信号
+## 应用主题资源：root + theme_target 同时赋值（Fix-1：4.5 root Window theme 不传播给子 Control）
+static func _set_theme_res(root: Window, name: String) -> void:
+	var res := load("res://shell/theme/theme_%s.tres" % name) as Theme
+	root.theme = res
+	if theme_target != null and is_instance_valid(theme_target):
+		theme_target.theme = res
+
+## 切换主题入口（design §5 流程）：Token → Theme 资源 → profile force 写 → 双信号
 static func apply_theme(name: String, root: Window) -> void:
 	if not TOKENS.has(name):
 		push_warning("ThemeTokens: 未知主题 %s" % name)
 		return
 	current = name
-	root.theme = load("res://shell/theme/theme_%s.tres" % name) as Theme
+	_set_theme_res(root, name)
 	DB.save_profile({"theme": name}, true)
 	EventBus.settings_changed.emit("theme", name)
 	EventBus.theme_changed.emit(name)
@@ -183,5 +194,5 @@ static func restore(root: Window) -> void:
 	if not TOKENS.has(t):
 		t = DEFAULT
 	current = t
-	root.theme = load("res://shell/theme/theme_%s.tres" % t) as Theme
+	_set_theme_res(root, t)
 	EventBus.theme_changed.emit(t)

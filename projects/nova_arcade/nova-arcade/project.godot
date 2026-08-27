@@ -1,5 +1,11 @@
 ; Engine configuration file.
-; NOVA ARCADE 盒子工程（CR-1 shell-bootstrap）
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
 config_version=5
 
 [application]
@@ -17,6 +23,8 @@ DB="*res://core/db.gd"
 Registry="*res://core/registry.gd"
 Nav="*res://core/nav.gd"
 Sound="*res://core/sound.gd"
+TrialGuard="*res://services/trial_guard.gd"
+Launcher="*res://services/launcher.gd"
 
 [display]
 

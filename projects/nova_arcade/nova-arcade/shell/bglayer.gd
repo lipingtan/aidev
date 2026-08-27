@@ -10,6 +10,7 @@ extends Control
 var _nebula: Array[ColorRect] = []
 var _grid_neon: Control
 var _dot_grid: Control
+var _bg: ColorRect
 var _tween: Tween
 
 func _ready() -> void:
@@ -18,6 +19,9 @@ func _ready() -> void:
 			_nebula.append(n as ColorRect)
 	_grid_neon = get_node_or_null("GridNeon")
 	_dot_grid = get_node_or_null("DotGrid")
+	var bg: Variant = get_node_or_null("Bg")
+	if bg is ColorRect:
+		_bg = bg as ColorRect
 	EventBus.theme_changed.connect(_on_theme_changed)
 	_apply(ThemeTokens.current, true)
 
@@ -25,7 +29,7 @@ func _ready() -> void:
 func _on_theme_changed(theme_name: String) -> void:
 	_apply(theme_name, false)
 
-## 应用主题：纹理层切换 + nebula 颜色/透明度（instant=true 时直设，用于初始状态）
+## 应用主题：底色 + 纹理层切换 + nebula 颜色/透明度（instant=true 时直设，用于初始状态）
 func _apply(theme_name: String, instant: bool) -> void:
 	var is_neon := theme_name == "neon"
 	if _grid_neon != null:
@@ -34,6 +38,8 @@ func _apply(theme_name: String, instant: bool) -> void:
 	if _dot_grid != null:
 		_dot_grid.visible = not is_neon
 		_dot_grid.queue_redraw()
+	# 底色（Fix-1）：tscn 初始值为 neon 占位，必须按 bg token 更新（elegant=米白）
+	var bg_color := ThemeTokens.color("bg")
 	# nebula（CD §8.2）：霓虹 2 块 opacity .14 / 青瓷 3 块 .5；色块取 accent/alt/bg_out
 	var alpha := 0.14 if is_neon else 0.5
 	var targets: Array[Color] = []
@@ -41,14 +47,16 @@ func _apply(theme_name: String, instant: bool) -> void:
 		var c := ThemeTokens.color(key)
 		c.a = alpha
 		targets.append(c)
-	if _nebula.size() == 0:
-		return
 	if instant:
+		if _bg != null:
+			_bg.color = bg_color
 		for i in _nebula.size():
 			_nebula[i].color = targets[i % targets.size()]
 		return
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	_tween = create_tween()
+	if _bg != null:
+		_tween.tween_property(_bg, "color", bg_color, 0.4)
 	for i in _nebula.size():
 		_tween.tween_property(_nebula[i], "color", targets[i % targets.size()], 0.4)
