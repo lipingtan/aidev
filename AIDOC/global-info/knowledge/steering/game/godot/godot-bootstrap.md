@@ -14,7 +14,7 @@
 config/name="{游戏显示名}"
 config/description="{核心体验一句话}"
 run/main_scene="res://scenes/ui/main_menu.tscn"
-config/features=PackedStringArray("4.5")
+config/features=PackedStringArray("4.7")
 
 [display]
 window/size/viewport_width=1920
@@ -111,6 +111,23 @@ fast_forward（加速战斗）
 move_left, move_right
 jump, dash, attack
 interact
+```
+
+### 3.4 手柄映射（通用）
+
+```
+# 左摇杆
+joy_axis_left_x, joy_axis_left_y
+
+# 右摇杆
+joy_axis_right_x, joy_axis_right_y
+
+# 按键（Xbox 命名）
+joy_button_a (确认), joy_button_b (取消)
+joy_button_x (攻击), joy_button_y (道具)
+joy_button_lb (格挡), joy_button_rb (闪避)
+joy_button_lt (锁定), joy_button_rt (重击)
+joy_button_start (暂停), joy_button_back (背包)
 ```
 
 ---

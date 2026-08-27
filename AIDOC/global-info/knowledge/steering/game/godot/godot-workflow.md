@@ -43,6 +43,14 @@
 | 4 | @export 分组 | 导出变量使用 @export_group 分组 |
 | 5 | 信号使用过去时态 | 信号名使用 snake_case 过去时态命名 |
 
+### 2.1a 运行时 POST-CHECK
+
+| # | 检查项 | 说明 |
+|---|--------|------|
+| 1 | F5 运行无红色报错 | Output 面板无 `push_error` 输出 |
+| 2 | 预期外警告为零 | 无意外 `push_warning`（已知/预期警告需在文档标注） |
+| 3 | 场景切换无内存泄漏 | 切换后 Orphan Nodes 数量不增长（Debugger > Monitors） |
+
 ### 2.2 场景级 POST-CHECK
 
 | # | 检查项 | 说明 |
@@ -59,6 +67,7 @@
 | 1 | .tres 格式正确 | 资源文件可被 Godot 正确加载 |
 | 2 | 资源类型匹配 | Resource 子类与数据结构一致 |
 | 3 | 路径引用有效 | 资源中引用的其他资源路径存在 |
+| 4 | UID 文件配对 | `.uid` 文件存在且与 `.tres` 配对（Godot 4.x 资源标识） |
 
 ### 2.4 多平台 / QualityProfile（含纹理分档）
 

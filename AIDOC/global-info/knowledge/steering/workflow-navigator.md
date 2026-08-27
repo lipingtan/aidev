@@ -92,7 +92,7 @@ project-bootstrap.md             ← 新项目启动（Phase 0）
 development-workflow.md          ← Phase 0~5 全流程
     ├── execution-protocol.md        ← 每步的 PRE/POST-CHECK
     ├── task-representation.md       ← 任务三要素格式
-    └── code-generation.md           ← 代码生成规范
+    └── godot/code-generation.md     ← 代码生成规范
 
 feature-development-flow.md      ← 单功能开发
     ├── experience-benchmarks.md     ← 手感参数参考
@@ -116,7 +116,7 @@ project-bootstrap.md ──→ development-workflow.md
     │                      │
     │                      ├── feature-development-flow.md（Phase 2~4 每个功能）
     │                      │       └── task-representation.md
-    │                      │       └── code-generation.md
+    │                      │       └── godot/code-generation.md
     │                      │       └── execution-protocol.md
     │                      │
     │                      ├── asset-pipeline.md（资产集成）

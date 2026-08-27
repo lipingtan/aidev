@@ -66,6 +66,19 @@ func apply_renderer_and_quality_settings() -> void:
 
 任一步 `ResourceLoader.exists` 为真即用；全否在 DEV 下 `push_warning`。
 
+## 6. 命令行测试示例
+
+```bash
+# Windows PowerShell - 桌面模拟移动档
+& "C:\path\to\godot.exe" --headless --aidev-tier=mobile_high -- res://scenes/test.tscn
+
+# 正常 F5 运行（无参数，自动检测为 desktop_high）
+& "C:\path\to\godot.exe" res://project.godot
+
+# Android 导出后命令行测试（adb）
+adb shell am start -n com.example.game/.GodotApp --es aidev_tier mobile_high
+```
+
 ## 7. 验证清单（Phase 2）
 
 - [ ] PC 编辑器 F5：`current_tier` 为 `desktop_high`（无参数时）。
