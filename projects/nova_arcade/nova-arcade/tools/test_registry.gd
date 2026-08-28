@@ -27,12 +27,15 @@ func _run_tests() -> void:
 		_check(m.get_viewport_size() == Vector2i(720, 1560), "viewport 继承 Shell 默认")
 		_check(m.get_orientation() == "portrait", "orientation 继承 portrait")
 
-	# 2. query({category:"puzzle"}) 命中 tetra_nova
+	# 2. query({category:"puzzle"}) 命中 tetra_nova + magic_tower + game_2048（CR-6 新增两款 puzzle）
 	var q: Array[GameMeta] = Registry.query({"category": "puzzle"})
-	_check(q.size() == 1 and (q[0] as GameMeta).id == "tetra_nova", "query category=puzzle")
+	var q_ids := {}
+	for gm in q:
+		q_ids[str((gm as GameMeta).id)] = true
+	_check(q.size() == 3 and q_ids.has("tetra_nova") and q_ids.has("magic_tower") and q_ids.has("game_2048"), "query category=puzzle (3款)")
 
 	# 3. all / installed_version / ach_def
-	_check(Registry.all().size() == 1, "all size=1")
+	_check(Registry.all().size() == 4, "all size=4（tetra_nova+魔塔+2048+贪吃蛇）")
 	_check(Registry.installed_version("tetra_nova") == "1.0.0", "installed_version")
 	var ach: Dictionary = Registry.ach_def("tn_wave10")
 	_check(ach != null and str(ach.get("name", "")) == "突破十波", "ach_def")

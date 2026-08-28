@@ -1,0 +1,7 @@
+; T3 贪吃蛇 headless 测试场景（CR-6）：Node + _probe_snake.gd
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/_probe_snake.gd" id="1"]
+
+[node name="ProbeSnake" type="Node"]
+script = ExtResource("1")

@@ -1,0 +1,10 @@
+; 贪吃蛇 游戏模块（CR-6 T3）：GameModule 协议适配器 + src 主场景
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://games/snake/module_adapter.gd" id="1"]
+[ext_resource type="PackedScene" path="res://games/snake/src/snake_game.tscn" id="2"]
+
+[node name="SnakeModule" type="Node"]
+script = ExtResource("1")
+
+[node name="Src" parent="." instance=ExtResource("2")]

@@ -1,0 +1,7 @@
+; 2048 游戏场景（CR-6 T2）：CanvasLayer + game_2048.gd
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://games/game_2048/src/game_2048.gd" id="1"]
+
+[node name="Src" type="CanvasLayer"]
+script = ExtResource("1")

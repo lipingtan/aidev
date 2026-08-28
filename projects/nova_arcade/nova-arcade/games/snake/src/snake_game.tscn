@@ -1,0 +1,7 @@
+; 贪吃蛇 游戏场景（CR-6 T3）：CanvasLayer + snake_game.gd
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://games/snake/src/snake_game.gd" id="1"]
+
+[node name="Src" type="CanvasLayer"]
+script = ExtResource("1")
