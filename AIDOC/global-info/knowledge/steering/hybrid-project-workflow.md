@@ -266,8 +266,23 @@ Bugfix 文档必须包含：
    - **写任何计划文档（requirements_plan/design_plan）前，必须重读 `go-development-workflow.md` 附录 A/B 模板 + 取一个工作区既有 plan 实例对照格式，不得凭记忆或沿用旧 CR 的自定格式；每题结构 = [Question-N] → 业界最佳实践 → 推荐答案及理由（结合本项目现状）→ 空 [Answer-N] 填写位，用户只需确认或修改**
 3. **确认文档存放路径**（§5）
 4. **无设计文档时**：先走需求 → 设计阶段，不得直接拆任务
+5. **任务拆解 / 执行前**：必须读取对应技术栈的编码规范（见下表）
 
-> **对所有 AI 实体约束**：本规范对主代理、子代理均具有约束力，子代理不得以"已由上级代理确认"为由跳过用户确认步骤。
+**各 CR 类型的编码规范必读清单（违反即返工）：**
+
+| CR 类型 | 任务拆解前必读 | 动代码前必读 |
+|---------|---------------|-------------|
+| **Go 后端 CR** | `go-conventions.md`, `go-project-structure.md`, `go-api-design.md`, `go-security.md` | `go-conventions.md`, `go-testing.md` |
+| **Shell CR / GameModule CR / 游戏内部 CR** | `godot/code-generation.md`, `godot/godot-engine.md`, `execution-protocol.md` | `godot/code-generation.md` |
+| **跨层集成 CR** | 同时读取 Go + Godot 两套 | 同时读取 Go + Godot 两套 |
+| **内容填充 CR** | 无强制要求 | 无强制要求 |
+
+**规则：**
+- 不得凭记忆拆解任务或写代码，必须打开规范文件确认最新约束
+- 每个 CR 首次执行时必读；同一 CR 内后续任务可跳过（除非跨日）
+- 规范文件有更新时，已拆解的任务需重新审视是否需要调整
+
+> **对所有 AI 实体约束**：本规范对主代理、子代理均具有约束力，子代理不得以"已由上级代理确认"为由跳过用户确认步骤或跳过规范阅读。
 
 ---
 
