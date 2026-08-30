@@ -225,6 +225,7 @@ func _build_over() -> Control:
 	_over_score_lbl = _mk_label("", 26, ThemeTokens.color("gold"))
 	box.add_child(_over_score_lbl)
 	_restart_btn = Button.new()
+	_restart_btn.focus_mode = Control.FOCUS_NONE   # 防抢键盘焦点（方向键被吞）
 	_restart_btn.text = "↻ 再来一局"
 	_restart_btn.add_theme_font_size_override("font_size", 20)
 	_restart_btn.custom_minimum_size = Vector2(240, 56)

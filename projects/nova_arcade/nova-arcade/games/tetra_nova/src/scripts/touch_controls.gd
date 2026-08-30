@@ -41,6 +41,7 @@ func _build_buttons() -> void:
     ]
     for d in defs:
         var b := Button.new()
+        b.focus_mode = Control.FOCUS_NONE   # 防抢键盘焦点（方向键被吞）
         b.text = d[0]
         b.add_theme_font_size_override("font_size", 26)
         b.custom_minimum_size = Vector2(64, 64)

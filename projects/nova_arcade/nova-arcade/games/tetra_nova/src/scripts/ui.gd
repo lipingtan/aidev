@@ -160,6 +160,7 @@ func _mk_overlay(parent: Control) -> Control:
 
 func _mk_button(parent: Control, txt: String, cb: String) -> Button:
     var b := Button.new()
+    b.focus_mode = Control.FOCUS_NONE   # 防抢键盘焦点（方向键被吞）
     b.text = txt
     b.add_theme_font_size_override("font_size", 20)
     b.custom_minimum_size = Vector2(240, 56)
@@ -193,6 +194,7 @@ func _build_select(ov: Control) -> void:
     _cards.alignment = BoxContainer.ALIGNMENT_CENTER
     box.add_child(_cards)
     _reroll_btn = Button.new()
+    _reroll_btn.focus_mode = Control.FOCUS_NONE   # 防抢键盘焦点（R 键被吞）
     _reroll_btn.text = "↻ 重抽 [R]"
     _reroll_btn.add_theme_font_size_override("font_size", 16)
     _reroll_btn.custom_minimum_size = Vector2(180, 44)

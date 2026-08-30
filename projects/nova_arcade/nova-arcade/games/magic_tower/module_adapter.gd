@@ -65,6 +65,7 @@ func _install_menu_button() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	_menu_btn = Button.new()
+	_menu_btn.focus_mode = Control.FOCUS_NONE   # 防抢键盘焦点（方向键/空格被吞）
 	_menu_btn.text = "↩ 回菜单"
 	_menu_btn.add_theme_font_size_override("font_size", 20)
 	_menu_btn.custom_minimum_size = Vector2(150, 48)

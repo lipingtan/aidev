@@ -288,8 +288,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	var e = event as InputEventKey
 	if e != null and e.pressed:
 		if in_battle:
-			if e.keycode == KEY_SPACE or e.keycode == KEY_ENTER or e.keycode == KEY_J:
-				_attack()
+			# 空格/回车/J 攻击；方向键也视为攻击（防「方向键失灵」体感：战斗中只认空格）
+			match e.keycode:
+				KEY_SPACE, KEY_ENTER, KEY_J, \
+				KEY_LEFT, KEY_A, KEY_RIGHT, KEY_D, KEY_UP, KEY_W, KEY_DOWN, KEY_S:
+					_attack()
 			return
 		match e.keycode:
 			KEY_LEFT, KEY_A: _step(-1, 0)
