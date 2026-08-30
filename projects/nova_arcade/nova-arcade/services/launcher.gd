@@ -182,6 +182,7 @@ func release() -> void:
 		_module = null
 	await _tr.to_shell()
 	_u.set_game_ui(false)
+	await _tr.reveal()   # 缺此步则 to_shell 的黑罩（alpha=1）永驻屏幕顶层 → 全屏黑 + 点击全吞
 
 ## Shell 暂停键转发到当前模块
 func pause_game() -> void:
