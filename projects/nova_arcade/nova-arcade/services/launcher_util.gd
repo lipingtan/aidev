@@ -7,7 +7,7 @@ func host() -> Control:
 	return get_tree().root.find_child("GameHost", true, false) as Control
 
 ## 游戏态 UI 切换（on=进入游戏）：GameHost 显隐与 Shell App 相反——
-## 运行中 GameHost 可见 + 整壳隐藏防叠加；回 Shell 后反之
+## 运行中 GameHost 可见 + 整壳隐藏防叠加；回 Shell 后反之（含 PageStack 页面恢复可见）
 func set_game_ui(on: bool) -> void:
 	var h := host()
 	if h != null:
@@ -15,6 +15,15 @@ func set_game_ui(on: bool) -> void:
 	var app := get_tree().root.find_child("App", true, false) as Control
 	if app != null:
 		app.visible = not on
+	# 回 Shell 时确保当前页面可见（游戏不走 Nav.pop，需手动恢复）
+	if not on:
+		var ps := get_tree().root.find_child("PageStack", true, false) as Control
+		if ps != null:
+			for child in ps.get_children():
+				child.visible = true
+	var bg := get_tree().root.find_child("BgLayer", true, false) as Control
+	if bg != null:
+		bg.visible = not on
 
 ## Toast（经 find_child 找 UI 层）
 func toast(msg: String) -> void:

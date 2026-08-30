@@ -34,6 +34,13 @@ func _ready() -> void:
 	_btn_again.pressed.connect(_on_again)
 	_btn_review.pressed.connect(_on_review)
 	_btn_back.pressed.connect(_on_back)
+	_dim.gui_input.connect(_on_dim_tap)
+
+## 点击遮罩关闭结算卡
+func _on_dim_tap(event: InputEvent) -> void:
+	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		visible = false
+		_set_layer_visible(false)
 
 ## 显示结算卡（Launcher 退出链 400ms 后调用；可重复）
 func show_card(gid: String, result: Dictionary) -> void:

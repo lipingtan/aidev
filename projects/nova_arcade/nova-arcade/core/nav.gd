@@ -70,9 +70,16 @@ func push(page_path: String, data: Dictionary = {}) -> void:
 	if page == null:
 		push_error("Nav.push: 非 Page 实例 %s" % page_path)
 		return
+	# 隐藏旧页面 + BgLayer，避免穿透叠加（A-4）
+	for p in _pages:
+		p.visible = false
+	var bg := get_tree().root.find_child("BgLayer", true, false) as Control
+	if bg != null:
+		bg.visible = false
 	_pages.append(page)
 	_paths.append(page_path)
 	_page_stack.add_child(page)
+	page.transparent_bg = false  # 新页不透明，遮住旧内容
 	page.on_enter(data)
 	_animate_in(page)
 
@@ -83,8 +90,14 @@ func pop() -> void:
 		return
 	var top: Page = _pages.pop_back()
 	_paths.pop_back()
+	# 恢复旧页面可见性 + BgLayer（pop 后顶层页应显示）
 	if not _pages.is_empty():
-		_pages.back().on_resume()
+		var restored: Page = _pages.back()
+		restored.visible = true
+		restored.on_resume()
+	var bg := get_tree().root.find_child("BgLayer", true, false) as Control
+	if bg != null:
+		bg.visible = true
 	_animate_out(top)
 
 ## 弹回到当前 Tab 根页（保留栈底）

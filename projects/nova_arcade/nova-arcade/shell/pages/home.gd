@@ -57,7 +57,7 @@ func _render_for_you() -> void:
 		card.call("setup", item["meta"], item["record"])
 		card.connect("card_pressed",
 			func(gid: String) -> void:
-				Nav.push("res://shell/pages/detail.tscn", {"gid": gid})
+				Launcher.launch(gid)
 		)
 
 ## 🎨 按下：scale(.9) 反馈 + 切换音 + neon/elegant 切换

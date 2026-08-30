@@ -33,7 +33,7 @@ func render() -> void:
 		var card: Node = card_scene.instantiate()
 		card.connect("card_pressed",
 			func(gid: String) -> void:
-				Nav.push("res://shell/pages/detail.tscn", {"gid": gid})
+				Launcher.launch(gid)
 		)
 		card.connect("card_long_pressed",
 			_on_long_press.bind(item["meta"].id, item["meta"].title)

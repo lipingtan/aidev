@@ -104,7 +104,7 @@ func _on_row_input(event: InputEvent, gid: String) -> void:
 	if event is InputEventMouseButton:
 		var e := event as InputEventMouseButton
 		if e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
-			Nav.push("res://shell/pages/detail.tscn", {"gid": gid})
+			Launcher.launch(gid)
 
 func _on_theme_changed(_name: String) -> void:
 	_render()

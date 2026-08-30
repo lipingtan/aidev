@@ -8,12 +8,16 @@
 
 config_version=5
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="NOVA ARCADE"
 config/description="游戏盒子：多小游戏管理（列表/分类/搜索/推荐/付费/评价），local-first，三运行时（PCK/HTML/Arcade）"
 run/main_scene="res://shell/main.tscn"
-config/features=PackedStringArray("4.5")
+config/features=PackedStringArray("4.7")
 
 [autoload]
 
@@ -32,6 +36,7 @@ window/size/viewport_width=720
 window/size/viewport_height=1560
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/stretch/shrink=1.0
 
 [rendering]
 

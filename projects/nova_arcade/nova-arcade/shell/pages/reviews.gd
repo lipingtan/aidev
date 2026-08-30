@@ -60,7 +60,7 @@ func _render() -> void:
 func _add_review_item(rv: Dictionary, is_own: bool) -> void:
 	var item := VBoxContainer.new()
 	var stars_lbl := Label.new()
-	stars_lbl.text = "★" * int(rv.get("stars", 0))
+	stars_lbl.text = "★".repeat(int(rv.get("stars", 0)))
 	stars_lbl.add_theme_color_override("font_color", ThemeTokens.color("gold"))
 	item.add_child(stars_lbl)
 	var text_lbl := Label.new()

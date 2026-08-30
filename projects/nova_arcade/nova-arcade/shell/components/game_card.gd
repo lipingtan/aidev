@@ -37,7 +37,10 @@ func _apply_badge(meta: GameMeta, record: Variant) -> void:
 		var left: int = 0
 		if TrialGuard != null:
 			left = TrialGuard.left(meta.id)
-		_status_badge.text = "试玩 %d 次" % left if left > 0 else "试玩结束"
+		if left > 0:
+			_status_badge.text = "试玩 %d 次" % left
+		else:
+			_status_badge.text = "试玩结束"
 		_status_badge.visible = true
 	else:
 		_status_badge.visible = false
