@@ -78,4 +78,28 @@
 
 - banner[] image_path 非空时加载真实 Texture（M1 一律渐变色块，target_gid 走 meta.icon 占位）
 - featured 字段为预留，M2 接推荐位
+
+## 2026-08-30 追加：交付缺陷修复（用户实测反馈）
+
+用户实测发现四游戏退出/输入/渲染问题，逐一定位修复（commit d61fafc~7259589，见各 commit message）：
+
+| # | 问题 | 根因 | 修复 |
+|---|------|------|------|
+| 1 | 方向键点几下失灵/按钮无响应 | 「回菜单」Button 默认 focus_mode=AUTO，点击后抢键盘焦点吞事件 | 四 adapter 回菜单按钮 focus_mode=FOCUS_NONE（d61fafc） |
+| 2 | 魔塔战斗中方向键无响应 | 战斗态只认空格/回车/J 攻击 | 方向键亦触发攻击（d61fafc） |
+| 3 | 点返回后游戏画面残留 | ①CanvasLayer 不随祖先 visible 隐藏；②模块根为普通 Node，GameHost.visible 传播断链，Node2D 照渲染 | GameModule.set_module_visible：子树 CanvasItem 快照+逐项隐藏，恢复只点亮隐藏前可见项（98bd896/fab17b6） |
+| 4 | 页面跳转 on_enter 传参全失效 | Nav.push 加了 `transparent_bg` 无效赋值（Godot 3 API，Page 无此属性），SCRIPT ERROR 中断函数致 on_enter 不执行 | 删除该行（98bd896） |
+| 5 | 结算卡/首页点不动 | 转场 fade_in 只恢复容器 mouse_filter，Mask(ColorRect) 自身 STOP 未恢复 → alpha=0 隐形玻璃吞全部点击 | fade_in 结束一并放行 Mask（d480d71） |
+| 6 | 点返回后全屏黑 | release() 调 to_shell(黑罩淡入)后缺 reveal()，黑罩永驻 | release 补 reveal（dcd5fec） |
+| 7 | 二次启动 2048/snake 棋盘"消失" | GridContainer 忽略子节点手动 position，16 格全叠一点；且 CanvasLayer 无背景板露 root 深灰 | 改普通 Control+手动布局；补全屏不透明背景板（a5725fa） |
+| 8 | 四游戏无开始界面/玩法说明 | 魔塔/2048/snake 缺 start overlay；tetra MENU 弹窗因 anchors 入树前失效 size 恒 0 隐形 | 三游戏加 _start_overlay（标题+说明+开始按钮，boot 不自动开局）；tetra 显式 size 修复（c484ded） |
+| 9 | tetra 游玩中无返回按钮 | 唯一退出在 OVER 结算屏 | adapter 常驻 CanvasLayer(layer=20) 右上角回菜单（7259589） |
+
+**关键教训：以上 3/4/5/8 均为 headless 测试查不出的 GUI 渲染/事件层 bug（标志位正确但视觉/输入异常），必须 GUI 渲染+截图+hover 探针取证。** 相关测试断言已同步更新（test_2048/test_snake/test_magic_tower 的 boot 后不再自动开局，改为显式 start_game 模拟点击）。修复后全量回归：launch(26)/smoke(12)/magic_tower(12)/2048(13)/snake(15)/nav(7组) 全绿。
+- min_rating / is_new 过滤器 M1 占位透传（GameMeta 无 rating 字段）
+
+## 遗留项（M2）
+
+- banner[] image_path 非空时加载真实 Texture（M1 一律渐变色块，target_gid 走 meta.icon 占位）
+- featured 字段为预留，M2 接推荐位
 - min_rating / is_new 过滤器 M1 占位透传（GameMeta 无 rating 字段）
