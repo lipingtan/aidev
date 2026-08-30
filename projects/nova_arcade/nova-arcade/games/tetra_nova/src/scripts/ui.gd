@@ -141,7 +141,11 @@ func _mk_bar(parent: Control, sz: Vector2, col: Color) -> ColorRect:
 
 func _mk_overlay(parent: Control) -> Control:
     var ov := Control.new()
-    ov.set_anchors_preset(Control.PRESET_FULL_RECT)
+    # 注意：仅设 anchors 不够——menu 加入时父 root 已完成布局且不再 resize，
+    # 子级 anchors 不会被重新解算，ov.size 恒 (0,0) 弹窗隐形（GUI 实测）。
+    # 修法：入树后按父尺寸显式撑满
+    ov.anchor_right = 1.0
+    ov.anchor_bottom = 1.0
     ov.mouse_filter = Control.MOUSE_FILTER_STOP
     var dim := ColorRect.new()
     dim.color = Color(0.01, 0.016, 0.05, 0.86)
@@ -155,6 +159,8 @@ func _mk_overlay(parent: Control) -> Control:
     box.offset_bottom = 320
     box.alignment = BoxContainer.ALIGNMENT_CENTER
     ov.add_child(box)
+    parent.add_child(ov)          # 先入树（拿到父的最终尺寸）
+    ov.size = parent.size         # 再显式撑满（anchors 在无 resize 时不会自动解算）
     ov.set_meta("box", box)
     return ov
 

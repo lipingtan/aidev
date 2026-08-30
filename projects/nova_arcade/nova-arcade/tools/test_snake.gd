@@ -28,6 +28,8 @@ func _run(mod: Node) -> void:
 	_check(src != null and src.has_signal("on_game_over"), "P2 src 存在且 on_game_over 信号")
 	mod.boot({"save_dir": "user://", "trial_mode": true, "owned": false, "best": 0, "viewport_size": Vector2i(720, 1560)})
 	_check(src.get("SAVE_PATH") == "user://save.cfg", "P3 boot 注入 SAVE_PATH")
+	# boot 后停在开始遮罩（等待玩家点「开始游戏」），不自动开局
+	src.start_game()   # 模拟玩家点击开始
 	_check(int(src.get("state")) == int(src.State.PLAYING), "P4 boot 后 state=PLAYING")
 	mod.pause_game()
 	_check(int(src.get("state")) == int(src.State.PAUSED), "P5 pause_game → PAUSED")

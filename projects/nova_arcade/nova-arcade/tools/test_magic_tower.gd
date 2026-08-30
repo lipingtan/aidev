@@ -29,6 +29,8 @@ func _run(mod: Node) -> void:
 	mod.boot({"save_dir": "user://", "trial_mode": true, "owned": false, "best": 0, "viewport_size": Vector2i(720, 1560)})
 	_check(src.get("SAVE_PATH") == "user://save.cfg", "P3 boot 注入 SAVE_PATH")
 	var paused_before: bool = src.get("paused")
+	src.call("set_paused", not paused_before)   # 开始遮罩态 paused=true，先切到正常态再验证转发
+	paused_before = src.get("paused")
 	mod.pause_game()
 	_check(bool(src.get("paused")) != paused_before, "P4 pause_game 转发 set_paused(true)")
 	mod.resume_game()

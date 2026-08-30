@@ -34,6 +34,7 @@ var _tile_labels: Array[Label] = []
 var _score_lbl: Label
 var _best_lbl: Label
 var _overlay: Control
+var _start_overlay: Control
 var _over_score_lbl: Label
 var _restart_btn: Button
 var _touch_active := false
@@ -216,6 +217,42 @@ func _build_view() -> void:
 	_overlay = _build_over()
 	_overlay.visible = false
 	add_child(_overlay)
+	_start_overlay = _build_start()
+	add_child(_start_overlay)   # 启动时显示：用户点「开始游戏」才开局
+
+## 开始遮罩：标题 + 玩法说明 + 开始按钮（boot 时覆盖，点击后 start_game）
+func _build_start() -> Control:
+	var ov := Control.new()
+	ov.size = Vector2(VIEWPORT_W, VIEWPORT_H)   # CanvasLayer 下无 Control 父，anchors 无参照，手动定尺寸
+	ov.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = ThemeTokens.color("ov_bg")
+	dim.size = Vector2(VIEWPORT_W, VIEWPORT_H)
+	ov.add_child(dim)
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.size = Vector2(VIEWPORT_W, VIEWPORT_H)
+	box.add_theme_constant_override("separation", 20)
+	for it in [["2048", 56, ThemeTokens.color("gold")],
+			["滑动或方向键合并相同数字", 20, ThemeTokens.color("ink")],
+			["合成 2048 即获胜", 18, ThemeTokens.color("ink2")]]:
+		var l := _mk_label(it[0], it[1], it[2])
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # 占满行宽，配合水平居中
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(l)
+	var btn := Button.new()
+	btn.text = "▶ 开始游戏"
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.custom_minimum_size = Vector2(260, 64)
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.add_theme_font_size_override("font_size", 24)
+	btn.pressed.connect(func() -> void:
+		ov.visible = false
+		ov.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		start_game())
+	box.add_child(btn)
+	ov.add_child(box)
+	return ov
 
 ## 结束遮罩：暗底 + 分数 + 再来一局（「回菜单」由 adapter 侧追加）
 func _build_over() -> Control:

@@ -23,7 +23,7 @@ func boot(ctx_in: Dictionary) -> void:
 	ctx = ctx_in
 	var path := str(ctx.get("save_dir", "user://")) + "save.cfg"
 	_src.SAVE_PATH = path
-	_src.start_game()
+	# 不在此调 start_game：等玩家点开始遮罩的「开始游戏」
 	_run_start_ms = Time.get_ticks_msec()
 
 ## 回菜单（D5=A unique active exit）：emit quit_requested（本局结果）

@@ -28,10 +28,58 @@ func _ready() -> void:
 	_build_hud()
 	_build_dpad()
 	_build_buttons()
+	_build_start()
+
+## 开始遮罩：标题 + 玩法说明 + 开始按钮（覆盖全屏，点击后隐藏；main.gd 的 _process 靠 paused 判定无需改）
+func _build_start() -> void:
+	var ov := Control.new()
+	ov.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ov.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = Color(0.01, 0.016, 0.05, 0.88)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ov.add_child(dim)
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.add_theme_constant_override("separation", 20)
+	var title := Label.new()
+	title.text = "魔 塔"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 56)
+	title.add_theme_color_override("font_color", Color(1, 0.824, 0.247))
+	box.add_child(title)
+	var d1 := Label.new()
+	d1.text = "方向键/十字盘移动 · 撞怪物进入战斗"
+	d1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	d1.add_theme_font_size_override("font_size", 19)
+	d1.add_theme_color_override("font_color", Color(0.812, 0.918, 1))
+	box.add_child(d1)
+	var d2 := Label.new()
+	d2.text = "战斗中按空格/A/方向键攻击 · 拾取道具变强"
+	d2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	d2.add_theme_font_size_override("font_size", 17)
+	d2.add_theme_color_override("font_color", Color(0.6, 0.72, 0.85))
+	box.add_child(d2)
+	var btn := Button.new()
+	btn.text = "▶ 开始游戏"
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.custom_minimum_size = Vector2(260, 64)
+	btn.add_theme_font_size_override("font_size", 24)
+	btn.pressed.connect(func() -> void:
+		ov.visible = false
+		ov.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if _main != null:
+			_main.set_paused(false))
+	box.add_child(btn)
+	box.add_child(Control.new())
+	ov.add_child(box)
+	_hud_layer.add_child(ov)
 
 ## 由 main._ready 注入（子节点 _ready 先于 main）
 func attach(main: Node) -> void:
 	_main = main
+	main.paused = true   # 开始遮罩期间锁定游戏，点「开始游戏」解锁
 
 # ---- HUD ----
 func _build_hud() -> void:
