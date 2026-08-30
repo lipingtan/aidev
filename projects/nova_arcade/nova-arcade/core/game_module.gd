@@ -25,11 +25,30 @@ func resume_game() -> void:
 	pass
 
 ## 模块整体显隐（退出/回壳时由 Launcher 调用）：
-## CanvasLayer 不随祖先 Control.visible 隐藏，须显式遍历子树逐一处理。
-## 默认实现：递归隐藏/恢复子树中所有 CanvasLayer（含各自子节点）；
-## src 中普通 Node2D/Control 随 GameHost.visible 走，无需在此处理。
+## 两个引擎坑（GUI 截图实测）：
+## 1. CanvasLayer 不随祖先 Control.visible 隐藏 → 逐层显式处理
+## 2. 模块根是普通 Node（非 CanvasItem），GameHost.visible 的传播在此断链，
+##    下属 Node2D（棋盘等）即使 GameHost 已隐藏仍会渲染 → 必须逐 CanvasItem 快照+隐藏
+## 恢复时只点亮隐藏前可见的项，避免复活游戏内本就隐藏的实体（已拾取道具/已击败怪物）
+var _vis_snapshot: Array = []
+
 func set_module_visible(v: bool) -> void:
+	if v:
+		for it in _vis_snapshot:
+			if is_instance_valid(it):
+				(it as CanvasItem).visible = true
+		_vis_snapshot.clear()
+	else:
+		_vis_snapshot.clear()
+		_snap_and_hide(self)
 	_set_canvas_layers_visible(self, v)
+
+func _snap_and_hide(n: Node) -> void:
+	for ch in n.get_children():
+		if ch is CanvasItem and (ch as CanvasItem).visible:
+			_vis_snapshot.append(ch)
+			(ch as CanvasItem).visible = false
+		_snap_and_hide(ch)
 
 func _set_canvas_layers_visible(n: Node, v: bool) -> void:
 	if n is CanvasLayer:
