@@ -162,8 +162,13 @@ func _set_dir(d: Vector2i) -> void:
 	dir = d
 	_update_dpad_tex()
 
-## 视图构建：HUD + 网格 + 食物 + 十字盘 + death overlay（all ThemeTokens，no hardcoded colors）
+## 视图构建：背景板 + HUD + 网格 + 食物 + 十字盘 + death overlay（all ThemeTokens，no hardcoded colors）
 func _build_view() -> void:
+	# 全屏不透明背景板（最底层）：游戏态 BgLayer 隐藏，无此板则露出 root 深灰清屏色（黑屏感）
+	var bg := ColorRect.new()
+	bg.color = ThemeTokens.color("bg")
+	bg.size = Vector2(VIEWPORT_W, VIEWPORT_H)
+	add_child(bg)
 	var top := HBoxContainer.new()
 	top.position = Vector2(30, 96)
 	_score_lbl = _mk_label("SCORE 0", 26, ThemeTokens.color("ink"))
@@ -176,8 +181,10 @@ func _build_view() -> void:
 	add_child(top)
 
 	var board := GRID * CELL
-	var grid_node := GridContainer.new()
-	grid_node.columns = GRID
+	# 棋盘容器：普通 Control + 手动 position 布局。
+	# 不能用 GridContainer：容器会忽略子节点手动 position，把所有 cell 叠到同一点
+	# （GUI 截图实测：棋盘格全部重叠、只剩裸数字，即此因）
+	var grid_node := Control.new()
 	grid_node.position = Vector2((VIEWPORT_W - board) / 2.0, VIEWPORT_H * 0.30)
 	for i in GRID:
 		for j in GRID:
