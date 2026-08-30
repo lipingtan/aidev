@@ -80,6 +80,7 @@ func _on_run_over(stats: Dictionary) -> void:
 	_last_stats = stats
 
 ## 结算屏追加「回菜单」按钮（src OVER overlay box；只读访问 src 节点，src 零 diff）
+## 另在 adapter 侧常驻 CanvasLayer 加游玩中随时可点的「回菜单」（右上角，与其他三游戏一致）
 func _install_menu_button() -> void:
 	if _menu_btn != null or _ui == null:
 		return
@@ -94,3 +95,18 @@ func _install_menu_button() -> void:
 	_menu_btn.custom_minimum_size = Vector2(240, 56)
 	_menu_btn.pressed.connect(quit_to_shell)
 	box.add_child(_menu_btn)
+	_install_play_menu_button()
+
+## 游玩中常驻「回菜单」（右上角，独立 CanvasLayer 不随结算屏显隐）
+func _install_play_menu_button() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 20   # 高于 ui(layer=10)，不被任何 overlay 盖住
+	add_child(layer)
+	var btn := Button.new()
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.text = "↩ 回菜单"
+	btn.add_theme_font_size_override("font_size", 20)
+	btn.custom_minimum_size = Vector2(150, 48)
+	btn.position = Vector2(720 - 160, 10)
+	btn.pressed.connect(quit_to_shell)
+	layer.add_child(btn)
