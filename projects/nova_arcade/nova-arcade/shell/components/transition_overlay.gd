@@ -48,6 +48,9 @@ func fade_in() -> void:
 	_tween = tw
 	tw.tween_property(_mask, "color:a", 0.0, FADE_S).from(1.0)
 	await tw.finished
+	# Mask 本层须一并放行输入：alpha=0 但 mouse_filter=STOP 时是「隐形玻璃」，
+	# 盖在 root 最顶会吞掉结算卡/首页全部点击（GUI 截图+hover 实测定位）
+	_mask.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fade_done.emit()
 
