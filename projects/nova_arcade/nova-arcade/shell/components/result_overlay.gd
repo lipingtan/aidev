@@ -63,8 +63,11 @@ func show_card(gid: String, result: Dictionary) -> void:
 	_set_layer_visible(true)  # 父层 OverlayLayer 默认隐藏，展示前必须打开
 	visible = true
 
-## 显隐父层（OverlayLayer；fallback 挂 root 时不动 Window）
+## 显隐父层（OverlayLayer）：只在自己展示时打开层；关闭时只藏自己——
+## OverlayLayer 还承载 ConfirmBubble/ReviewEditor 等同层弹窗，关闭连坐会把它们一起藏掉
 func _set_layer_visible(v: bool) -> void:
+	if not v:
+		return
 	var p := get_parent()
 	if p is Control and (p as Control).name != "root":
 		(p as Control).visible = v

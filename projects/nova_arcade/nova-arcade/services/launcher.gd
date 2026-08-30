@@ -143,6 +143,7 @@ func _on_quit_requested(result: Dictionary, gid: String) -> void:
 	state = State.QUITTING
 	if is_instance_valid(_module):
 		_module.process_mode = Node.PROCESS_MODE_DISABLED
+		_module.set_module_visible(false)   # CanvasLayer 不随 GameHost 隐藏，须显式处理
 	await _tr.to_shell()
 	_u.set_game_ui(false)
 	_u.finish_record(gid, result)
@@ -163,8 +164,9 @@ func play_again(gid: String) -> void:
 	state = State.LAUNCHING
 	current_gid = gid
 	_u.bump_session(gid)
-	# 复用入场：reset_run → 解冻 → 转场切视口（不重走权益/不 boot）
+	# 复用入场：reset_run → 恢复可见+解冻 → 转场切视口（不重走权益/不 boot）
 	(_module as Node).call("reset_run")
+	_module.set_module_visible(true)
 	_module.process_mode = Node.PROCESS_MODE_INHERIT
 	await _tr.to_game(meta)
 	_u.set_game_ui(true)
@@ -175,6 +177,7 @@ func play_again(gid: String) -> void:
 ## 释放游戏实例（结算卡「返回」调用）：free 模块 + 恢复视口
 func release() -> void:
 	if is_instance_valid(_module):
+		_module.set_module_visible(false)   # free 前先摘掉 CanvasLayer，防释放帧闪现
 		_module.queue_free()
 		_module = null
 	await _tr.to_shell()

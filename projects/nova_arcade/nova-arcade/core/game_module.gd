@@ -20,10 +20,19 @@ signal achievement_unlocked(aid: String)
 func boot(ctx_in: Dictionary) -> void:
 	ctx = ctx_in
 
-## 暂停（子类转发到游戏自身暂停机制）
-func pause_game() -> void:
-	pass
-
 ## 恢复（子类转发到游戏自身恢复机制）
 func resume_game() -> void:
 	pass
+
+## 模块整体显隐（退出/回壳时由 Launcher 调用）：
+## CanvasLayer 不随祖先 Control.visible 隐藏，须显式遍历子树逐一处理。
+## 默认实现：递归隐藏/恢复子树中所有 CanvasLayer（含各自子节点）；
+## src 中普通 Node2D/Control 随 GameHost.visible 走，无需在此处理。
+func set_module_visible(v: bool) -> void:
+	_set_canvas_layers_visible(self, v)
+
+func _set_canvas_layers_visible(n: Node, v: bool) -> void:
+	if n is CanvasLayer:
+		(n as CanvasLayer).visible = v
+	for ch in n.get_children():
+		_set_canvas_layers_visible(ch, v)

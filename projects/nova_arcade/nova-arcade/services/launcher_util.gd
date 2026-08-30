@@ -15,12 +15,13 @@ func set_game_ui(on: bool) -> void:
 	var app := get_tree().root.find_child("App", true, false) as Control
 	if app != null:
 		app.visible = not on
-	# 回 Shell 时确保当前页面可见（游戏不走 Nav.pop，需手动恢复）
+	# 回 Shell 时只恢复 Nav 栈顶页可见（游戏不走 Nav.pop；全量恢复会点亮栈中下层页）
 	if not on:
 		var ps := get_tree().root.find_child("PageStack", true, false) as Control
 		if ps != null:
-			for child in ps.get_children():
-				child.visible = true
+			var top: Page = Nav.top_page()
+			if top != null and top.get_parent() == ps:
+				top.visible = true
 	var bg := get_tree().root.find_child("BgLayer", true, false) as Control
 	if bg != null:
 		bg.visible = not on

@@ -79,7 +79,8 @@ func push(page_path: String, data: Dictionary = {}) -> void:
 	_pages.append(page)
 	_paths.append(page_path)
 	_page_stack.add_child(page)
-	page.transparent_bg = false  # 新页不透明，遮住旧内容
+	# 注意：Page(Control) 无 transparent_bg 属性（Godot 3 API），无效赋值会中断本函数
+	# 导致 on_enter 不执行（已实测）；旧页遮盖由上方 visible=false 保证
 	page.on_enter(data)
 	_animate_in(page)
 
@@ -143,6 +144,12 @@ func current() -> String:
 	if _paths.is_empty():
 		return ""
 	return _paths.back()
+
+## 栈顶页节点；栈空返回 null（游戏退出后 set_game_ui 恢复页面可见性用）
+func top_page() -> Page:
+	if _pages.is_empty():
+		return null
+	return _pages.back()
 
 # === 私有 ===
 
