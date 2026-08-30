@@ -3,7 +3,13 @@
   "title": "贪吃蛇",
   "subtitle": "经典街机 · 越吃越长",
   "category": "action",
-  "tags": ["snake", "arcade", "classic", "neon", "offline"],
+  "tags": [
+    "snake",
+    "arcade",
+    "classic",
+    "neon",
+    "offline"
+  ],
   "price_model": "free",
   "price": 0,
   "trial": {},
@@ -13,11 +19,33 @@
   "screenshots": [],
   "scene": "res://games/snake/module.tscn",
   "dlc_url": "",
-  "viewport_size": [720, 1560],
+  "viewport_size": [
+    720,
+    1560
+  ],
   "orientation": "portrait",
-  "aliases": ["贪吃蛇", "she"],
-  "pinyin": ["tanchishe", "tcs"],
-  "achievements": [],
+  "aliases": [
+    "贪吃蛇",
+    "she"
+  ],
+  "pinyin": [
+    "tanchishe",
+    "tcs"
+  ],
+  "achievements": [
+    {
+      "id": "sn_eat50",
+      "name": "大胃王",
+      "desc": "吃到50个食物",
+      "points": 10
+    },
+    {
+      "id": "sn_length30",
+      "name": "巨蛇",
+      "desc": "身长达到30节",
+      "points": 20
+    }
+  ],
   "desc": "经典贪吃蛇：方向键/十字盘操控，吃食物变长提速，撞墙或咬到自己即结束。",
   "runtime": "pck",
   "core": ""

@@ -3,7 +3,12 @@
   "title": "魔塔",
   "subtitle": "经典闯关 · 属性博弈",
   "category": "puzzle",
-  "tags": ["magic tower", "roguelike", "neon", "offline"],
+  "tags": [
+    "magic tower",
+    "roguelike",
+    "neon",
+    "offline"
+  ],
   "price_model": "free",
   "price": 0,
   "trial": {},
@@ -13,11 +18,33 @@
   "screenshots": [],
   "scene": "res://games/magic_tower/module.tscn",
   "dlc_url": "",
-  "viewport_size": [720, 1560],
+  "viewport_size": [
+    720,
+    1560
+  ],
   "orientation": "portrait",
-  "aliases": ["魔塔", "MDX"],
-  "pinyin": ["motaxie", "mtx"],
-  "achievements": [],
+  "aliases": [
+    "魔塔",
+    "MDX"
+  ],
+  "pinyin": [
+    "motaxie",
+    "mtx"
+  ],
+  "achievements": [
+    {
+      "id": "mt_floor50",
+      "name": "勇攀高峰",
+      "desc": "到达第50层",
+      "points": 15
+    },
+    {
+      "id": "mt_boss_slayer",
+      "name": "屠龙者",
+      "desc": "击败最终Boss",
+      "points": 25
+    }
+  ],
   "desc": "经典魔塔：逐格探索、属性博弈、击败怪物收集金币，单层完整玩法演示。",
   "runtime": "pck",
   "core": ""

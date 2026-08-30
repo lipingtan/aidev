@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://services/searcher.gd" id="7_searcher"]
 [ext_resource type="PackedScene" path="res://shell/overlays/review_editor.tscn" id="8_review_editor"]
 [ext_resource type="Script" path="res://services/daily_task_service.gd" id="9_daily_task_service"]
+[ext_resource type="Script" path="res://services/achievement_engine.gd" id="10_achievement_engine"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1")
@@ -121,6 +122,9 @@ script = ExtResource("7_searcher")
 
 [node name="DailyTaskService" type="Node" parent="Services"]
 script = ExtResource("9_daily_task_service")
+
+[node name="AchievementEngine" type="Node" parent="Services"]
+script = ExtResource("10_achievement_engine")
 
 [node name="ConfirmBubble" parent="App/OverlayLayer" instance=ExtResource("6_confirm_bubble")]
 

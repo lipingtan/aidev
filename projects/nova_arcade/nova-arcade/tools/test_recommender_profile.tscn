@@ -1,0 +1,7 @@
+; 推荐画像 headless 测试（CR-7 T7）
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/test_recommender_profile.gd" id="1"]
+
+[node name="TestRecommenderProfile" type="Node"]
+script = ExtResource("1")

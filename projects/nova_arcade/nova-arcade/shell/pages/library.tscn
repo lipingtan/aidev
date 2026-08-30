@@ -1,7 +1,8 @@
-; 我的页骨架（CR-1）：标题 + EmptyState 占位；颜色全部走 Theme/Token
-[gd_scene load_steps=2 format=3]
+; 我的页（CR-7 FR-4）：头部信息 + 成就墙区块；颜色全部走 Theme/Token
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://shell/pages/library.gd" id="1"]
+[ext_resource type="Script" path="res://shell/components/section_achievement_wall.gd" id="2_section_ach"]
 
 [node name="Library" type="Control"]
 layout_mode = 3
@@ -12,42 +13,52 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 
-[node name="Title" type="Label" parent="."]
-layout_mode = 0
+[node name="RootVBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Header" type="VBoxContainer" parent="RootVBox"]
+layout_mode = 1
+size_flags/fill = 3
 offset_left = 32.0
-offset_top = 96.0
+offset_top = 16.0
 offset_right = 480.0
-offset_bottom = 156.0
-theme_override_font_sizes/font_size = 48
-text = "我的"
+offset_bottom = 80.0
 
-[node name="EmptyEmoji" type="Label" parent="."]
+[node name="Title" type="Label" parent="RootVBox/Header"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 200.0
+offset_bottom = 48.0
+theme_override_font_sizes/font_size = 36
+text = "📚 我的"
+
+[node name="ScrollView" type="ScrollContainer" parent="RootVBox"]
 layout_mode = 1
-anchor_left = 0.5
-anchor_top = 0.4
-anchor_right = 0.5
-anchor_bottom = 0.4
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
-offset_left = -120.0
-offset_top = -60.0
-offset_right = 120.0
+grow_vertical = 2
+
+[node name="ContentVBox" type="VBoxContainer" parent="RootVBox/ScrollView"]
+layout_mode = 2
+size_flags/fill = 3
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 480.0
 offset_bottom = 120.0
-modulate = Color(1, 1, 1, 0.45)
-theme_override_font_sizes/font_size = 96
-horizontal_alignment = 1
-text = "📚"
 
-[node name="EmptyText" type="Label" parent="."]
-layout_mode = 1
-anchor_left = 0.5
-anchor_top = 0.58
-anchor_right = 0.5
-anchor_bottom = 0.58
-grow_horizontal = 2
-offset_left = -240.0
-offset_top = -28.0
-offset_right = 240.0
-offset_bottom = 28.0
-theme_override_font_sizes/font_size = 28
-horizontal_alignment = 1
-text = "暂无收藏与记录（CR-3 接入）"
+[node name="AchievementWall" type="Control" parent="RootVBox/ScrollView/ContentVBox"]
+layout_mode = 2
+size_flags/fill = 3
+script = ExtResource("2_section_ach")
+
+[node name="VBox" type="VBoxContainer" parent="RootVBox/ScrollView/ContentVBox/AchievementWall"]
+layout_mode = 2
+size_flags/fill = 3

@@ -16,6 +16,8 @@ extends Node
 var _games: Dictionary = {}
 ## data/editorial.json（banner/featured/categories，空模板）
 var _editorial: Dictionary = {}
+## 全局成就缓存（CR-7 T1：data/achievements.json）
+var _global_achievements: Dictionary = {}
 
 func _ready() -> void:
 	EventBus.dlc_installed.connect(_on_dlc_installed)
@@ -41,6 +43,24 @@ func reload() -> void:
 			name = dir.get_next()
 		dir.list_dir_end()
 	_load_editorial()
+	_load_global_achievements()
+
+## 加载全局成就定义（data/achievements.json）；缺失/损坏用空缓存（A-2修复）
+func _load_global_achievements() -> void:
+	_global_achievements.clear()
+	var path := "res://data/achievements.json"
+	if not FileAccess.file_exists(path):
+		return
+	var raw := FileAccess.get_file_as_string(path)
+	var ja: Variant = JSON.parse_string(raw)
+	if ja is Array:
+		for ga in ja:
+			if ga is Dictionary and ga.has("id"):
+				_global_achievements[str(ga["id"])] = ga
+			else:
+				push_warning("Registry: 全局成就条目缺 id 字段，跳过", ga)
+	elif ja != null:
+		push_warning("Registry: achievements.json 非 Array 格式（%s），保留旧缓存" % type_string(ja))
 
 ## 加载单个 meta.json；解析失败仅告警跳过（不阻断启动）
 func _load_meta(path: String) -> void:
@@ -195,8 +215,10 @@ func installed_version(gid: String) -> String:
 	var m: GameMeta = lookup(gid)
 	return m.version if m != null else ""
 
-## 跨游戏查成就定义；不存在返回 null（返回类型用 Variant，理由同 lookup）
+## 跨游戏查成就定义：先全局缓存，再遍历游戏级（CR-7 T1）；不存在返回 null
 func ach_def(aid: String) -> Variant:
+	if _global_achievements.has(aid):
+		return _global_achievements[aid]
 	for m in all():
 		for a in m.achievements:
 			if str(a.get("id", "")) == aid:

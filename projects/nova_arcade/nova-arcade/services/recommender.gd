@@ -1,6 +1,12 @@
 class_name Recommender extends Node
-## 推荐服务：继续游戏行 + 为你推荐
+## 推荐服务：继续游戏行 + 为你推荐（画像加权）+ 热门榜
 ## 非单例；挂 Main/Services 节点下，由 home.gd 通过 get_node 取引用。
+
+var _cached_result: Array[Dictionary] = []
+var _cache_dirty: bool = true
+
+func _ready() -> void:
+	EventBus.records_updated.connect(func(_gid: String) -> void: _cache_dirty = true)
 
 # ── 公开 API ──────────────────────────────────────────────
 
@@ -9,52 +15,91 @@ class_name Recommender extends Node
 ## 返回格式：[{"meta": GameMeta, "record": Dictionary}, ...]
 func continue_row() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
-	# 遍历所有本地记录，筛选曾经游玩过的条目
 	for gid: String in DB.list_records():
 		var rec: Variant = DB.get_record(gid)
 		if rec == null:
 			continue
 		var r := rec as Dictionary
 		if int(r.get("last_played", 0)) > 0:
-			# 查 Registry，meta 缺失则跳过（避免孤儿记录污染结果）
 			var meta: Variant = Registry.lookup(gid)
 			if meta != null:
 				rows.append({"meta": meta as GameMeta, "record": r})
-	# 按 last_played 倒序
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["record"]["last_played"]) > int(b["record"]["last_played"])
 	)
-	# 最多返回 5 条
 	return rows.slice(0, 5)
 
-
-## 为你推荐
-## 全量游戏按 title 排序，扣除 continue_row 已展示的 gid
-## record 字段允许为 null（DB.get_record 返回 null 时照常追加，调用方自行处理）
+## 为你推荐（CR-7 T6：画像加权 + 未玩过优先 + 冷启动回退）
+## 返回 top 4，格式 [{"meta": GameMeta, "record": Variant}, ...]
 func for_you() -> Array[Dictionary]:
-	# 先取继续游戏行，收集已展示 gid
-	var cont_gids: Array[String] = []
-	for item: Dictionary in continue_row():
-		cont_gids.append((item["meta"] as GameMeta).id)
-
-	# 全量 meta 按 title 排序
-	var all_metas: Array[GameMeta] = Registry.all()
-	all_metas.sort_custom(func(a: GameMeta, b: GameMeta) -> bool:
-		return a.title.to_lower() < b.title.to_lower()
+	if not _cache_dirty:
+		return _cached_result
+	var profile: Dictionary = _build_profile()
+	var scored: Array[Dictionary] = []
+	for meta: GameMeta in Registry.all():
+		var score: float = _score_for(meta, profile)
+		var rec: Variant = DB.get_record(meta.id)
+		var played: bool = (rec is Dictionary) and int((rec as Dictionary).get("last_played", 0)) > 0
+		scored.append({"meta": meta, "record": rec, "score": score, "played": played})
+	scored.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a["played"] != b["played"]:
+			return not a["played"]  # 未玩过排前
+		if a["score"] != b["score"]:
+			return a["score"] > b["score"]
+		return (a["meta"] as GameMeta).title.to_lower() < (b["meta"] as GameMeta).title.to_lower()
 	)
-
-	# 扣除已展示条目，组装结果
 	var result: Array[Dictionary] = []
-	for meta: GameMeta in all_metas:
-		if not cont_gids.has(meta.id):
-			result.append({"meta": meta, "record": DB.get_record(meta.id)})
+	if profile.is_empty():
+		result = _fallback_editorial()
+	else:
+		for item in scored.slice(0, 4):
+			result.append({"meta": item["meta"], "record": item["record"]})
+	_cached_result = result
+	_cache_dirty = false
+	return result
+
+## 构建用户画像（类目偏好 + 标签偏好）
+func _build_profile() -> Dictionary:
+	var cats: Dictionary = {}
+	var tags: Dictionary = {}
+	for gid: String in DB.list_records():
+		var rec: Variant = DB.get_record(gid)
+		if rec is Dictionary and int((rec as Dictionary).get("last_played", 0)) > 0:
+			var meta: Variant = Registry.lookup(gid)
+			if meta is GameMeta:
+				cats[str(meta.category)] = cats.get(str(meta.category), 0) + 1
+				for tag in meta.tags:
+					tags[str(tag)] = tags.get(str(tag), 0) + 1
+	for gid: String in DB.list_records():
+		if DB.get_review(gid) != null:
+			var meta: Variant = Registry.lookup(gid)
+			if meta is GameMeta:
+				cats[str(meta.category)] = cats.get(str(meta.category), 0) + 2
+	return {"cats": cats, "tags": tags}
+
+## 计算画像匹配分（类目权重 5x + 标签权重 1x）
+func _score_for(meta: GameMeta, profile: Dictionary) -> float:
+	if profile.is_empty():
+		return 0.0
+	var score: float = 0.0
+	var cats: Dictionary = profile.get("cats", {})
+	var tags: Dictionary = profile.get("tags", {})
+	score += float(cats.get(str(meta.category), 0)) * 5.0
+	for tag in meta.tags:
+		score += float(tags.get(str(tag), 0))
+	return score
+
+## 冷启动回退：charts("all") 转 for_you() 格式 {"meta","record"}（B-3修复）
+func _fallback_editorial() -> Array[Dictionary]:
+	var charts_rows: Array[Dictionary] = charts("all")
+	var result: Array[Dictionary] = []
+	for row in charts_rows.slice(0, 4):
+		result.append({"meta": row["meta"], "record": row["record"]})
 	return result
 
 # ── 热门榜（CR-5 FR-3）──────────────────────────────────────
 
 ## 热门榜（mode: "all"=综合 / "new"=新游 / "rated"=好评；未知 mode 按 "all"）
-## M1 单款游戏时三模式结果相同；M2 多游戏后自动生效
-## 返回 [{"meta": GameMeta, "record": Variant, "rank": int, "players": int}]，最多 10 条
 func charts(mode: String) -> Array[Dictionary]:
 	var all_metas: Array[GameMeta] = Registry.all()
 	var rows: Array[Dictionary] = []
@@ -73,26 +118,21 @@ func charts(mode: String) -> Array[Dictionary]:
 		result[i]["rank"] = i + 1
 	return result
 
-## 玩过人数：本地 sessions + 1万基准（Q6；M3 获取云端数据后叠加）
 func _calc_players(gid: String, rec: Variant) -> int:
 	var sessions: int = 0
 	if rec is Dictionary:
 		sessions = int((rec as Dictionary).get("sessions", 0))
 	return sessions + 10000
 
-## 比较器：version 字符串倒序（M2 接入真实 version 后需复核排序语义：空 version 当前排最前）
 func _cmp_version_desc(a: Dictionary, b: Dictionary) -> bool:
 	return (a["meta"] as GameMeta).version > (b["meta"] as GameMeta).version
 
-## 比较器：本地评价均分倒序（无评价=0，排末尾）
 func _cmp_rating_desc(a: Dictionary, b: Dictionary) -> bool:
 	return _local_rating((a["meta"] as GameMeta).id) > _local_rating((b["meta"] as GameMeta).id)
 
-## 比较器：sessions（players）倒序
 func _cmp_sessions_desc(a: Dictionary, b: Dictionary) -> bool:
 	return int(a["players"]) > int(b["players"])
 
-## 本地评价均分（0~5.0；无评价返回 0.0）
 func _local_rating(gid: String) -> float:
 	var rv: Variant = DB.get_review(gid)
 	if rv is Dictionary:

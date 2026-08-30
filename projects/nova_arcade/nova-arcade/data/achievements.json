@@ -1,0 +1,5 @@
+[
+    {"id": "global_collector", "name": "收藏家", "desc": "拥有全部游戏记录", "points": 30},
+    {"id": "global_reviewer", "name": "好评人", "desc": "提交≥3条评价", "points": 20},
+    {"id": "global_marathon", "name": "马拉松", "desc": "累计游玩≥10小时", "points": 50}
+]

@@ -3,7 +3,13 @@
   "title": "2048",
   "subtitle": "数字消除 · 经典益智",
   "category": "puzzle",
-  "tags": ["2048", "number", "puzzle", "neon", "offline"],
+  "tags": [
+    "2048",
+    "number",
+    "puzzle",
+    "neon",
+    "offline"
+  ],
   "price_model": "free",
   "price": 0,
   "trial": {},
@@ -13,11 +19,33 @@
   "screenshots": [],
   "scene": "res://games/game_2048/module.tscn",
   "dlc_url": "",
-  "viewport_size": [720, 1560],
+  "viewport_size": [
+    720,
+    1560
+  ],
   "orientation": "portrait",
-  "aliases": ["2048", "数字消除"],
-  "pinyin": ["erling", "ersifba"],
-  "achievements": [],
+  "aliases": [
+    "2048",
+    "数字消除"
+  ],
+  "pinyin": [
+    "erling",
+    "ersifba"
+  ],
+  "achievements": [
+    {
+      "id": "g2048_tile512",
+      "name": "初露锋芒",
+      "desc": "合成512方块",
+      "points": 10
+    },
+    {
+      "id": "g2048_tile2048",
+      "name": "终极目标",
+      "desc": "合成2048方块",
+      "points": 30
+    }
+  ],
   "desc": "经典 2048：滑动合并同值数字，冲击 2048 目标。",
   "runtime": "pck",
   "core": ""
