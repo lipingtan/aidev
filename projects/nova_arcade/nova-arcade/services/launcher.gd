@@ -174,8 +174,12 @@ func play_again(gid: String) -> void:
 	EventBus.game_launched.emit(meta.id)
 	await _tr.reveal()
 
-## 释放游戏实例（结算卡「返回」调用）：free 模块 + 恢复视口
+## 释放游戏实例（结算卡「返回」/「换一个」调用）：free 模块 + 恢复视口
+## QUITTING 门禁（2026-08-31）：转场期间 state=IDLE 裸奔，launch 可并发进入与 to_shell 竞态
 func release() -> void:
+	if state == State.QUITTING or state == State.LAUNCHING:
+		return
+	state = State.QUITTING
 	if is_instance_valid(_module):
 		_module.set_module_visible(false)   # free 前先摘掉 CanvasLayer，防释放帧闪现
 		_module.queue_free()
@@ -183,6 +187,7 @@ func release() -> void:
 	await _tr.to_shell()
 	_u.set_game_ui(false)
 	await _tr.reveal()   # 缺此步则 to_shell 的黑罩（alpha=1）永驻屏幕顶层 → 全屏黑 + 点击全吞
+	state = State.IDLE
 
 ## Shell 暂停键转发到当前模块
 func pause_game() -> void:

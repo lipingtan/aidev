@@ -2,8 +2,8 @@ extends Control
 ## 结算卡（CR-2 T6）：本局得分/用时/历史最佳 + 成就提示 + [再来一局][评价*][返回] + 「换一个」区
 ## - 评价按钮（解读注记2）：finish_count≥2 且本局 playtime≥600s → 可点亮；否则灰显
 ##   （playtime 不足 →「还需 X 分钟」；局数不足 →「还需 N 局」），提交链路 CR-3/M1
-## - 「换一个」（Q2=A）：Registry.similar(gid)；空数组 → 隐藏整个区域；非空 → 迷你卡，
-##   点击 → Toast「详情页即将上线」（详情页本身 CR-3）
+## - 「换一个」（Q2=A；2026-08-31 改为直切游戏）：Registry.similar(gid)；空数组 → 隐藏整个区域；
+##   非空 → 迷你卡，点击 → release 当前 + launch 目标（详情页仍归 CR-3）
 ## - [返回]：Launcher.release() + Nav 回首页
 ## - 成就提示逐条弹出（DB.unlock + achievement_unlocked；本 CR 恒空数组 → 不弹）
 
@@ -118,12 +118,15 @@ func _fill_switch_area(gid: String) -> void:
 		card.text = m.title
 		card.custom_minimum_size = Vector2(180, 64)
 		card.add_theme_font_size_override("font_size", 20)
-		card.pressed.connect(_on_similar_pressed)
+		card.pressed.connect(_on_similar_pressed.bind(m.id))
 		_switch_row.add_child(card)
 
-## 迷你卡点击：详情页即将上线（CR-3）
-func _on_similar_pressed() -> void:
-	_toast("详情页即将上线")
+## 迷你卡点击：直接切换到目标游戏（release 当前模块 → launch 新游戏）
+func _on_similar_pressed(target_gid: String) -> void:
+	visible = false
+	_set_layer_visible(false)
+	await Launcher.release()   # release 有 QUITTING 门禁，须等转场完成回 IDLE 再 launch
+	Launcher.launch(target_gid)
 
 ## [再来一局]：隐藏卡片 + Launcher.play_again（复用模块，不耗 trial）
 func _on_again() -> void:
