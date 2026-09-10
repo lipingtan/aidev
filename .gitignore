@@ -126,3 +126,18 @@ AIDOC/project_doc/nova_arcade/dev/tmp_*/
 # ----------------------------------------
 projects/**/tools/.hermes-tmp.*
 projects/**/tools/probe_*
+
+# ----------------------------------------
+# 构建导出产物（Godot export / Web 构建 / Go 编译输出，勿入库）
+# ----------------------------------------
+projects/**/builds/
+projects/**/bin/
+*.test
+coverage.out
+
+# ----------------------------------------
+# 前端多端构建输出（dist-h5 / dist-pc）与 E2E 测试报告
+# ----------------------------------------
+projects/**/dist-*/
+projects/**/e2e/playwright-report/
+projects/**/e2e/test-results/

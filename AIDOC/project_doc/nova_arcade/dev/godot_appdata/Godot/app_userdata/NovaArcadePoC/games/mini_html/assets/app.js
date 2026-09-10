@@ -1,1 +1,0 @@
-location.href='nova://quit?score=123'; // bridge example
