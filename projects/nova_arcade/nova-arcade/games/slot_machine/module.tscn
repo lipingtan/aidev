@@ -1,0 +1,11 @@
+; 幸运轮盘 游戏模块（CR-8）：GameModule 协议适配器 + src 主场景
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://games/slot_machine/module_adapter.gd" id="1"]
+[ext_resource type="Script" path="res://games/slot_machine/src/slot_main.gd" id="2"]
+
+[node name="SlotMachineModule" type="Node"]
+script = ExtResource("1")
+
+[node name="Src" type="Node2D" parent="."]
+script = ExtResource("2")

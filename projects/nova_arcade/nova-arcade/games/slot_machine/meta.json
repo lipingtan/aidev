@@ -1,0 +1,53 @@
+{
+  "id": "slot_machine",
+  "title": "幸运轮盘",
+  "subtitle": "转圈押注 · 停哪赔哪",
+  "category": "casual",
+  "tags": [
+    "roulette",
+    "casino",
+    "betting",
+    "neon",
+    "offline"
+  ],
+  "price_model": "free",
+  "price": 0,
+  "trial": {},
+  "version": "1.0.0",
+  "size_kb": 0,
+  "icon": "res://games/slot_machine/icon.png",
+  "screenshots": [],
+  "scene": "res://games/slot_machine/module.tscn",
+  "dlc_url": "",
+  "viewport_size": [
+    720,
+    1560
+  ],
+  "orientation": "portrait",
+  "aliases": [
+    "轮盘",
+    "幸运轮盘",
+    "老虎机"
+  ],
+  "pinyin": [
+    "xingyunlunpan",
+    "xl"
+  ],
+  "achievements": [
+    {
+      "id": "sl_jackpot",
+      "name": "头奖手气",
+      "desc": "押中大奖符号七",
+      "points": 20
+    },
+    {
+      "id": "sl_rich300",
+      "name": "一夜暴富",
+      "desc": "单局赢取≥300币",
+      "points": 30
+    }
+  ],
+  "desc": "幸运轮盘：边缘符号转圈，底部押注不同符号和币数，停在哪赔哪，连停同符号押中翻倍。",
+  "runtime": "pck",
+  "core": ""
+}
