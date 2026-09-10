@@ -6,7 +6,7 @@ require (
 	github.com/alibaba/sentinel-golang v1.0.4
 	github.com/alibaba/sentinel-golang/pkg/adapters/gin v0.0.0-20241224061304-f4c2c5964666
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
-	github.com/bitly/go-simplejson v0.5.1
+	github.com/bitly/go-simplejson v0.5.1 // indirect
 	github.com/bytedance/go-tagexpr/v2 v2.9.11
 	github.com/casbin/casbin/v2 v2.104.0
 	github.com/gin-gonic/gin v1.10.0
@@ -15,16 +15,13 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-plugin v1.8.0
 	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.24.9+incompatible
-	github.com/mssola/user_agent v0.6.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/qiniu/go-sdk/v7 v7.25.3
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/spf13/cobra v1.9.1
-	github.com/swaggo/files v1.0.1
-	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
 	github.com/unrolled/secure v1.17.0
 	golang.org/x/crypto v0.37.0
@@ -82,7 +79,6 @@ require (
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
