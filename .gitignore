@@ -142,3 +142,8 @@ coverage.out
 projects/**/dist-*/
 projects/**/e2e/playwright-report/
 projects/**/e2e/test-results/
+
+# ----------------------------------------
+# 独立 Git 仓库（子项目有自有 git，排除避免冲突）
+# ----------------------------------------
+projects/demo/platform_admin/
