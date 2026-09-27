@@ -76,3 +76,14 @@ func (s *LoginLogService) List(params LoginLogListParams) (*LoginLogListResult, 
 func (s *LoginLogService) Delete(id int64) error {
 	return s.db.Delete(&model.LoginLog{}, id).Error
 }
+
+// CreateAsync 异步写入登录日志（goroutine，不阻塞请求）
+func (s *LoginLogService) CreateAsync(userID int64, username, ip, userAgent string, status int, message string) {
+	go func() {
+		// 用 Exec raw SQL 避免 GORM 零值跳过问题（status=0 时 GORM Create 会用 default:1）
+		s.db.Exec(
+			"INSERT INTO admin_login_log (id, user_id, username, ip, browser, status, message) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			model.NextID(), userID, username, ip, userAgent, status, message,
+		)
+	}()
+}

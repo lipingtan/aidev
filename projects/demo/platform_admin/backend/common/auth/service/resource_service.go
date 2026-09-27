@@ -202,6 +202,20 @@ func (s *ResourceService) SortResources(items []repository.SortItem) error {
 	return s.resourceRepo.BatchUpdateSort(s.db, items)
 }
 
+// GetPublicMenu 获取公开的 user 端菜单（无需登录，返回指定 platform 的所有菜单）
+func (s *ResourceService) GetPublicMenu(platform string) ([]*ResourceNode, error) {
+	var resources []model.Resource
+	query := s.db.Where("type = 'menu'")
+	if platform != "" {
+		query = query.Where("platform = ?", platform)
+	}
+	err := query.Order("sort_order ASC, created_at ASC").Find(&resources).Error
+	if err != nil {
+		return nil, err
+	}
+	return buildTree(resources), nil
+}
+
 // GetUserMenu 获取用户有权限的菜单树
 // SUPER_ADMIN 角色返回对应 platform 的所有菜单
 // 普通角色：查角色绑定应用 → 查角色资源 → 按 platform + enabled_modules 过滤

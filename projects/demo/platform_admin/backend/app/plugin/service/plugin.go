@@ -18,5 +18,5 @@ func Init(db *gorm.DB) {
 	pluginsDir := "./plugins"
 	Manager = plugin.NewPluginManager(db, pluginsDir)
 	syncer := plugin.NewPluginResourceSyncer(db)
-	Installer = plugin.NewInstaller(pluginsDir, "./static/plugins", db, syncer)
+	Installer = plugin.NewInstaller(pluginsDir, "./static", db, syncer)
 }

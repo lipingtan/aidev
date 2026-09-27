@@ -111,7 +111,9 @@ export function setupRouterGuard(router: Router): void {
             const pluginStore = usePluginStore()
             const loadedConfigs = await loadAllPlugins()
             loadedConfigs.forEach(config => {
-              pluginStore.addLoadedModule(config.manifest.name, config)
+              if (config && config.manifest) {
+                pluginStore.addLoadedModule(config.manifest.name, config)
+              }
             })
             mergePluginRoutes(router, loadedConfigs)
           } catch (e) {

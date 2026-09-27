@@ -12,8 +12,9 @@ import (
 
 // AuthHandler 认证 HTTP Handler
 type AuthHandler struct {
-	authSvc *service.AuthService
-	router  *strategy.StrategyRouter
+	authSvc     *service.AuthService
+	router      *strategy.StrategyRouter
+	loginLogSvc *service.LoginLogService
 }
 
 // NewAuthHandler 构造认证 Handler
@@ -28,6 +29,11 @@ func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
 	h.router.Register(&strategy.OAuth2Strategy{})
 	h.router.Register(&strategy.LDAPStrategy{})
 	return h
+}
+
+// SetLoginLogService 注入登录日志服务（用于写入登录记录）
+func (h *AuthHandler) SetLoginLogService(svc *service.LoginLogService) {
+	h.loginLogSvc = svc
 }
 
 // GetStrategyRouter 返回策略路由器（供外部注册新策略）
@@ -125,6 +131,19 @@ func (h *AuthHandler) handlePasswordLogin(c *gin.Context, req *LoginRequest) {
 	}
 
 	resp, err := h.authSvc.Login(req.Username, req.Password)
+
+	// 写登录日志
+	if h.loginLogSvc != nil {
+		status := 1
+		message := "登录成功"
+		if err != nil {
+			status = 0
+			message = "用户名或密码错误"
+		}
+		userID := h.authSvc.GetUserIDByUsername(req.Username)
+		h.loginLogSvc.CreateAsync(userID, req.Username, c.ClientIP(), c.Request.UserAgent(), status, message)
+	}
+
 	if err != nil {
 		Error(c, err)
 		return

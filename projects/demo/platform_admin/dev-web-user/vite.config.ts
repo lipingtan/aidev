@@ -16,6 +16,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    target: 'esnext',
     rollupOptions: {
       input: resolve(__dirname, 'index.html')
     }
@@ -23,9 +24,10 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: {
-      '/api':    { target: 'http://localhost:8000', changeOrigin: true },
-      '/auth':   { target: 'http://localhost:8000', changeOrigin: true },
-      '/static': { target: 'http://localhost:8000', changeOrigin: true }
+      '/api':          { target: 'http://localhost:8000', changeOrigin: true },
+      '/auth':         { target: 'http://localhost:8000', changeOrigin: true },
+      '/static':       { target: 'http://localhost:8000', changeOrigin: true },
+      '/plugin-shims': { target: 'http://localhost:8000', changeOrigin: true }
     }
   }
 })

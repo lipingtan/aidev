@@ -50,64 +50,64 @@ export interface DictDataCreateParams {
 
 /** 获取字典类型分页列表 */
 export async function listDictTypes(params: PageQuery): Promise<PageResult<DictTypeItem>> {
-  const res = await request.get('/dict/type', { params })
+  const res = await request.get('/api/v1/dict/type', { params })
   return adaptPageResponse<DictTypeItem>(res)
 }
 
 /** 获取字典类型详情 */
 export function getDictType(id: number) {
-  return request.get(`/dict/type/${id}`)
+  return request.get(`/api/v1/dict/type/${id}`)
 }
 
 /** 获取字典类型全量列表（下拉选择用） */
 export function listAllDictTypes() {
-  return request.get('/dict/type-option-select')
+  return request.get('/api/v1/dict/type-option-select')
 }
 
 /** 创建字典类型 */
 export function createDictType(data: DictTypeCreateParams) {
-  return request.post('/dict/type', data)
+  return request.post('/api/v1/dict/type', data)
 }
 
 /** 更新字典类型 */
 export function updateDictType(id: number, data: Partial<DictTypeCreateParams>) {
-  return request.put(`/dict/type/${id}`, data)
+  return request.put(`/api/v1/dict/type/${id}`, data)
 }
 
 /** 删除字典类型 */
 export function deleteDictType(id: number) {
-  return request.delete('/dict/type', { data: { ids: [id] } })
+  return request.delete('/api/v1/dict/type', { data: { ids: [id] } })
 }
 
 // ===== 字典数据 =====
 
 /** 获取字典数据分页列表 */
 export async function listDictData(params: PageQuery & { dictType: string }): Promise<PageResult<DictDataItem>> {
-  const res = await request.get('/dict/data', { params })
+  const res = await request.get('/api/v1/dict/data', { params })
   return adaptPageResponse<DictDataItem>(res)
 }
 
 /** 获取字典数据详情 */
 export function getDictData(dictCode: number) {
-  return request.get(`/dict/data/${dictCode}`)
+  return request.get(`/api/v1/dict/data/${dictCode}`)
 }
 
 /** 获取字典数据全量列表（按类型） */
 export function listAllDictData() {
-  return request.get('/dict-data/option-select')
+  return request.get('/api/v1/dict-data/option-select')
 }
 
 /** 创建字典数据 */
 export function createDictData(data: DictDataCreateParams) {
-  return request.post('/dict/data', data)
+  return request.post('/api/v1/dict/data', data)
 }
 
 /** 更新字典数据 */
 export function updateDictData(dictCode: number, data: Partial<DictDataCreateParams>) {
-  return request.put(`/dict/data/${dictCode}`, data)
+  return request.put(`/api/v1/dict/data/${dictCode}`, data)
 }
 
 /** 删除字典数据 */
 export function deleteDictData(dictCode: number) {
-  return request.delete('/dict/data', { data: { ids: [dictCode] } })
+  return request.delete('/api/v1/dict/data', { data: { ids: [dictCode] } })
 }

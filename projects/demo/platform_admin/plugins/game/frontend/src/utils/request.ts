@@ -1,20 +1,6 @@
-// 获取登录 token
+// 获取登录 token（admin 端，key 为 access_token）
 export function getToken(): string {
-  try {
-    // 优先从 Cookie 获取
-    const cookieMatch = document.cookie.match(/authorized-token=([^;]+)/);
-    if (cookieMatch) {
-      const data = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      return data?.accessToken || "";
-    }
-    // 兜底从 localStorage 获取（pure-admin 使用 responsive- 前缀）
-    const stored = localStorage.getItem("responsive-user-info");
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data?.accessToken || "";
-    }
-  } catch {}
-  return "";
+  return localStorage.getItem("access_token") || "";
 }
 
 // 通用 JSON 请求

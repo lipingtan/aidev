@@ -48,6 +48,22 @@ func (h *ResourceHandler) GetTree(c *gin.Context) {
 	Success(c, tree)
 }
 
+// GetPublicUserMenu 获取公开的 user 端菜单（无需登录）
+// GET /api/v1/public/user-menu?platform=user
+// 返回 platform='user' 的所有菜单，供匿名用户加载动态插件菜单
+func (h *ResourceHandler) GetPublicUserMenu(c *gin.Context) {
+	platform := c.DefaultQuery("platform", "user")
+
+	// 直接查数据库，返回指定 platform 的所有菜单（不做权限过滤）
+	// 匿名用户可以看到 user 端菜单，具体页面操作再做鉴权
+	tree, err := h.svc.GetPublicMenu(platform)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+	Success(c, tree)
+}
+
 // GetUserMenu 获取用户有权限的菜单树
 // GET /api/v1/common/user-menu?platform=admin
 func (h *ResourceHandler) GetUserMenu(c *gin.Context) {

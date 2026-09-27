@@ -1,6 +1,7 @@
 ﻿package apis
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -121,13 +122,27 @@ func (p Plugin) Stop(c *gin.Context) {
 		return
 	}
 
+	log.Printf("[Plugin.Stop] name=%s Manager=%v Installer=%v", name, service.Manager != nil, service.Installer != nil)
+
 	// 尝试停止子进程（如果 Manager 中有实例）
-	if inst, exists := service.Manager.GetPlugin(name); exists && inst.Status == 1 {
-		_ = service.Manager.Stop(name)
+	if service.Manager != nil {
+		if inst, exists := service.Manager.GetPlugin(name); exists && inst.Status == 1 {
+			if err := service.Manager.Stop(name); err != nil {
+				log.Printf("[Plugin.Stop] Manager.Stop error: %v", err)
+			}
+		} else {
+			log.Printf("[Plugin.Stop] plugin not in manager or not running: exists=%v", exists)
+		}
 	}
 
-	// 更新数据库状态为已停止
+	if service.Installer == nil {
+		log.Printf("[Plugin.Stop] Installer is nil!")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "插件服务未初始化"})
+		return
+	}
+
 	if err := service.Installer.UpdateStatus(name, models.PluginStatusStopped); err != nil {
+		log.Printf("[Plugin.Stop] UpdateStatus error: %v", err)
 		c.JSON(http.StatusOK, gin.H{"code": 500, "msg": "更新插件状态失败: " + err.Error()})
 		return
 	}

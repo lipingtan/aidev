@@ -21,21 +21,32 @@ async function loadSource(name: string): Promise<PluginConfig> {
 /**
  * 加载运行时模式插件
  * 从 /static/plugins/{name}/index.js 动态 import
+ * 支持两种 bundle 格式：
+ * 1. PluginConfig 格式（有 manifest 字段）
+ * 2. 简单 routes 格式（只有 routes 数组，PluginContainer 使用）
  */
-async function loadRuntime(name: string): Promise<PluginConfig> {
+async function loadRuntime(name: string): Promise<PluginConfig | null> {
   const mod = await import(/* @vite-ignore */ `/static/plugins/${name}/index.js`)
-  return mod.default || mod
+  const config = mod.default || mod
+  // 校验是否是有效的 PluginConfig（需要有 manifest 字段）
+  if (config && config.manifest) {
+    return config as PluginConfig
+  }
+  // routes 格式的 bundle 由 PluginContainer 直接加载，不走 PluginConfig 体系
+  return null
 }
 
 /**
  * 加载单个插件（带缓存）
  */
-async function loadPlugin(name: string, mode: 'source' | 'runtime'): Promise<PluginConfig> {
+async function loadPlugin(name: string, mode: 'source' | 'runtime'): Promise<PluginConfig | null> {
   if (loadedPlugins.has(name)) {
     return loadedPlugins.get(name)!
   }
   const config = mode === 'source' ? await loadSource(name) : await loadRuntime(name)
-  loadedPlugins.set(name, config)
+  if (config) {
+    loadedPlugins.set(name, config)
+  }
   return config
 }
 
@@ -56,7 +67,9 @@ export async function loadAllPlugins(): Promise<PluginConfig[]> {
   for (const info of enabledList) {
     try {
       const config = await loadPlugin(info.name, info.mode)
-      results.push(config)
+      if (config) {
+        results.push(config)
+      }
     } catch (e) {
       console.error(`[PluginLoader] 加载插件 ${info.name} 失败:`, e)
     }

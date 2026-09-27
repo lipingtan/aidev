@@ -62,21 +62,34 @@
       />
     </el-card>
 
-    <!-- 详情弹窗（JSON diff） -->
-    <el-dialog v-model="detailVisible" title="操作日志详情" width="700px" destroy-on-close>
+    <!-- 详情弹窗（入参 + 响应结果） -->
+    <el-dialog v-model="detailVisible" title="操作日志详情" width="760px" destroy-on-close>
       <el-descriptions :column="2" border>
         <el-descriptions-item label="模块">{{ detailRow?.module }}</el-descriptions-item>
         <el-descriptions-item label="操作">{{ detailRow?.action }}</el-descriptions-item>
-        <el-descriptions-item label="操作人">{{ detailRow?.user_id }}</el-descriptions-item>
+        <el-descriptions-item label="摘要" :span="2">{{ detailRow?.summary }}</el-descriptions-item>
+        <el-descriptions-item label="操作人 ID">{{ detailRow?.user_id }}</el-descriptions-item>
         <el-descriptions-item label="操作时间">{{ detailRow?.created_at }}</el-descriptions-item>
         <el-descriptions-item label="目标类型">{{ detailRow?.target_type }}</el-descriptions-item>
         <el-descriptions-item label="目标 ID">{{ detailRow?.target_id }}</el-descriptions-item>
         <el-descriptions-item label="IP">{{ detailRow?.client_ip }}</el-descriptions-item>
+        <el-descriptions-item label="风险等级">
+          <el-tag :type="detailRow?.risk_level === 'HIGH' ? 'danger' : detailRow?.risk_level === 'MEDIUM' ? 'warning' : 'info'" size="small">
+            {{ detailRow?.risk_level || 'LOW' }}
+          </el-tag>
+        </el-descriptions-item>
       </el-descriptions>
 
-      <div class="diff-container">
-        <div v-if="diffHtml" class="diff-html" v-html="diffHtml"></div>
-        <div v-else class="no-diff-tip">无变更数据</div>
+      <el-divider content-position="left">请求入参</el-divider>
+      <div class="json-block">
+        <pre v-if="reqJson">{{ reqJson }}</pre>
+        <span v-else class="no-data">无入参</span>
+      </div>
+
+      <el-divider content-position="left">执行结果</el-divider>
+      <div class="json-block">
+        <pre v-if="respJson">{{ respJson }}</pre>
+        <span v-else class="no-data">无响应数据</span>
       </div>
 
       <template #footer>
@@ -90,7 +103,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { listOperationLogs } from '@/api/operation-log'
 import type { OperationLogItem } from '@/api/operation-log'
-import { formatDiffHtml } from '@/utils/json-diff'
 
 const loading = ref(false)
 const tableData = ref<OperationLogItem[]>([])
@@ -120,8 +132,9 @@ async function fetchData() {
   loading.value = true
   try {
     const res: any = await listOperationLogs(queryParams)
-    tableData.value = res.data || res.list || []
-    total.value = res.total || 0
+    const payload = res.data || res
+    tableData.value = payload.list || []
+    total.value = payload.total || 0
   } finally {
     loading.value = false
   }
@@ -149,10 +162,19 @@ function handleDetail(row: OperationLogItem) {
   detailVisible.value = true
 }
 
-const diffHtml = computed(() => {
-  if (!detailRow.value) return ''
-  return formatDiffHtml(detailRow.value.old_value, detailRow.value.new_value)
-})
+// 格式化 JSON 显示
+function formatJson(val: any): string {
+  if (!val) return ''
+  try {
+    const obj = typeof val === 'string' ? JSON.parse(val) : val
+    return JSON.stringify(obj, null, 2)
+  } catch {
+    return String(val)
+  }
+}
+
+const reqJson = computed(() => formatJson(detailRow.value?.old_value))
+const respJson = computed(() => formatJson(detailRow.value?.new_value))
 
 onMounted(fetchData)
 </script>
@@ -161,12 +183,24 @@ onMounted(fetchData)
 .page-container { padding: 16px; }
 .search-card { margin-bottom: 16px; }
 .pagination { margin-top: 16px; justify-content: flex-end; }
-.diff-container {
-  margin-top: 16px;
-  max-height: 400px;
-  overflow: auto;
-  border: 1px solid var(--color-border);
+.json-block {
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
   border-radius: 4px;
   padding: 12px;
+  max-height: 280px;
+  overflow: auto;
+}
+.json-block pre {
+  margin: 0;
+  font-size: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #303133;
+}
+.no-data {
+  color: #909399;
+  font-size: 13px;
 }
 </style>

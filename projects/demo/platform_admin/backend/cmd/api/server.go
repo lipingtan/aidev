@@ -1,13 +1,11 @@
-﻿package api
+package api
 
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +33,6 @@ import (
 	common "go-admin/common/middleware"
 	"go-admin/common/storage"
 	ext "go-admin/config"
-	"go-admin/web"
 )
 
 var (
@@ -111,6 +108,17 @@ func run() error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	initRouter()
+
+	// 注册健康检查路由（始终注册）
+	if r, ok := sdk.Runtime.GetEngine().(*gin.Engine); ok {
+		r.GET("/api/v1/health", func(c *gin.Context) {
+			c.JSON(200, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
+		})
+		// 注册静态文件服务：插件前端 bundle（始终注册，不依赖安装状态）
+		r.Static("/static", "./static")
+		// 注册插件 shim 文件服务：为插件 bundle 提供共享的 vue/element-plus ESM
+		r.Static("/plugin-shims", "./static/plugin-shims")
+	}
 
 	// 注册安装向导路由（始终注册）
 	if r, ok := sdk.Runtime.GetEngine().(*gin.Engine); ok {
@@ -310,69 +318,7 @@ func initRouter() {
 	// 安装检查中间件（未安装时拦截业务请求）
 	r.Use(setup.InstallMiddleware())
 
-	// 注册前端静态文件服务（SPA 路由支持）
-	registerStaticFiles(r)
 }
 
-// registerStaticFiles 将嵌入的前端文件注册为静态资源
-// SPA 路由：所有非 /api、/setup、/swagger 的请求都返回 index.html 或对应静态文件
-func registerStaticFiles(r *gin.Engine) {
-	distFS, err := fs.Sub(web.Files, "dist")
-	if err != nil {
-		log.Warnf("前端文件未嵌入，跳过静态文件服务: %v", err)
-		return
-	}
 
-	fileServer := http.FileServer(http.FS(distFS))
-
-	// pure-admin Vite 构建产物 + 插件前端 bundle
-	// /static/plugins/* 从磁盘读取，其他从嵌入 FS 读取
-	r.GET("/static/*filepath", func(c *gin.Context) {
-		fp := c.Param("filepath")
-		// 插件前端 bundle 从磁盘读取
-		if strings.HasPrefix(fp, "/plugins/") {
-			filePath := "./static" + fp
-			c.Header("Content-Type", "application/javascript")
-			c.File(filePath)
-			return
-		}
-		c.Request.URL.Path = "/static" + fp
-		fileServer.ServeHTTP(c.Writer, c.Request)
-	})
-	r.GET("/favicon.ico", func(c *gin.Context) {
-		c.Request.URL.Path = "/favicon.ico"
-		fileServer.ServeHTTP(c.Writer, c.Request)
-	})
-	r.GET("/logo.svg", func(c *gin.Context) {
-		c.Request.URL.Path = "/logo.svg"
-		fileServer.ServeHTTP(c.Writer, c.Request)
-	})
-	r.GET("/platform-config.json", func(c *gin.Context) {
-		c.Request.URL.Path = "/platform-config.json"
-		fileServer.ServeHTTP(c.Writer, c.Request)
-	})
-
-	// SPA 入口：所有非 API 路径返回 index.html
-	r.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
-		if len(path) >= 4 && path[:4] == "/api" {
-			c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "接口不存在"})
-			return
-		}
-		if len(path) >= 6 && path[:6] == "/setup" {
-			c.Next()
-			return
-		}
-		if len(path) >= 8 && path[:8] == "/swagger" {
-			c.Next()
-			return
-		}
-		indexFile, err := web.Files.ReadFile("dist/index.html")
-		if err != nil {
-			c.String(http.StatusNotFound, "前端文件未找到，请先构建前端")
-			return
-		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", indexFile)
-	})
-}
 

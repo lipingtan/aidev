@@ -57,8 +57,10 @@ async function fetchData() {
   loading.value = true
   try {
     const res: any = await listLoginLogs(queryParams)
-    tableData.value = res.data || res.list || []
-    total.value = res.total || 0
+    // 后端返回: { code, data: { list, total, page, page_size }, message }
+    const payload = res.data || res
+    tableData.value = payload.list || []
+    total.value = payload.total || 0
   } finally { loading.value = false }
 }
 

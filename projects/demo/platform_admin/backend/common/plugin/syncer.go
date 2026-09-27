@@ -209,11 +209,31 @@ func (s *PluginResourceSyncer) cleanOrphanBindings(tx *gorm.DB, appCode string) 
 	return nil
 }
 
-// syncApplicationMeta 同步更新 admin_application 的元数据
+// syncApplicationMeta 同步更新 admin_application 的元数据（内嵌插件自动创建记录）
 func (s *PluginResourceSyncer) syncApplicationMeta(tx *gorm.DB, manifest *ManifestV2) error {
 	platformsJSON, _ := json.Marshal(manifest.Platforms)
 	modulesJSON, _ := json.Marshal(manifest.Modules)
 
+	// 先查是否存在
+	var count int64
+	tx.Model(&model.Application{}).Where("app_code = ?", manifest.Name).Count(&count)
+
+	if count == 0 {
+		// 内嵌插件不走安装流程，自动创建 admin_application 记录
+		app := &model.Application{
+			AppCode:     manifest.Name,
+			Name:        manifest.DisplayName,
+			Description: manifest.Description,
+			AppType:     "PLUGIN",
+			RoutePrefix: manifest.RoutePrefix,
+			Platforms:   datatypes.JSON(platformsJSON),
+			Modules:     datatypes.JSON(modulesJSON),
+			Status:      1,
+		}
+		return tx.Create(app).Error
+	}
+
+	// 已存在则更新
 	updates := map[string]interface{}{
 		"name":         manifest.DisplayName,
 		"description":  manifest.Description,

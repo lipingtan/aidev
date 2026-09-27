@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"go-admin/app/bulletin"
 	userAuth "go-admin/app/user_auth"
 	userAuthHandler "go-admin/app/user_auth/handler"
 	userAuthModel "go-admin/app/user_auth/model"
@@ -68,6 +69,7 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	pluginRouter.SetAuthService(deps.AuthService)
 	// 注入共享 PluginManager（与 PluginHandler 同实例，确保代理路由看到已启动的插件）
 	pluginRouter.SetPluginManager(deps.PluginManager)
+	// 注：SetBizUserChecker 在 initUserAuth() 中注入（bizUserSvc 在那里创建）
 
 	// 注册路由
 	rg := engine.Group("")
@@ -152,7 +154,12 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	// 将 permCodeCache 保存供中间件使用
 	deps.PermCodeCache = permCodeCache
 
-	log.Printf("[auth-rbac] 模块初始化完成 auth-type=%s cache-type=%s", cfg.AuthType, cfg.CacheType)
+	// 显示实际使用的缓存适配器类型
+	cacheTypeName := "none"
+	if cacheAdapter != nil {
+		cacheTypeName = cacheAdapter.String()
+	}
+	log.Printf("[auth-rbac] 模块初始化完成 auth-type=%s cache-type=%s perm-code-cache=%v", cfg.AuthType, cacheTypeName, permCodeCache != nil)
 	return nil
 }
 
@@ -228,6 +235,10 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 	dataScopeSvc := service.NewDataScopeService(db, dataScopeConfigRepo, dataScopeRepo)
 	opLogQuerySvc := service.NewOperationLogQueryService(db, operationLogRepo)
 	loginLogSvc := service.NewLoginLogService(db)
+
+	// 创建异步操作日志写入器并启动 worker goroutine
+	opLogger := service.NewAsyncOperationLogger(db, operationLogRepo)
+	opLogger.Start()
 	fieldRegistrySvc := service.NewFieldRegistry(db, fieldObjectRepo)
 	fieldPermSvc := service.NewFieldPermissionService(db, fieldObjectRepo, fieldPermRepo)
 	recordShareSvc := service.NewRecordShareService(db, recordShareRepo)
@@ -237,6 +248,7 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
+	authHandler.SetLoginLogService(loginLogSvc)
 	tenantHandler := handler.NewTenantHandler(tenantSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	userHandler.SetRoleService(userRoleSvc)
@@ -254,7 +266,7 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 
 	// 插件系统依赖
 	pluginsDir := "./plugins"
-	staticDir := "./static/plugins"
+	staticDir := "./static"  // deployFrontendBundles 会自动拼接 plugins/{name}/
 	pluginSyncer := plugin.NewPluginResourceSyncer(db)
 	pluginMgr := plugin.NewPluginManager(db, pluginsDir)
 	pluginInstaller := plugin.NewInstaller(pluginsDir, staticDir, db, pluginSyncer)
@@ -263,6 +275,11 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 	if err := pluginInstaller.RecoverStaleUpgrade(); err != nil {
 		log.Printf("[auth-rbac] 插件升级残留清理失败: %v", err)
 	}
+
+	// 后端重启时自动恢复数据库中状态为"运行中"的插件（异步，不阻塞启动）
+	go func() {
+		pluginMgr.RestoreRunningPlugins(db)
+	}()
 
 	// 插件管理 Handler
 	pluginHandler := handler.NewPluginHandler(pluginMgr, pluginInstaller)
@@ -304,6 +321,7 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 
 		OperationLogQueryService: opLogQuerySvc,
 		OperationLogHandler:      opLogHandler,
+		OperationLogger:          opLogger,
 
 		LoginLogService: loginLogSvc,
 		LoginLogHandler: loginLogHandler,
@@ -372,6 +390,9 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 	menuSvc := userAuthService.NewUserMenuService(db)
 	smsStrategy := userStrategy.NewSmsStrategy(smsSvc, bizUserSvc, bizUserRepo, cfg, db)
 
+	// 注入 C端用户检查器到插件代理路由（用于 /api/v1/user/auth/plugin/:name/* 认证）
+	pluginRouter.SetBizUserChecker(bizUserSvc)
+
 	// 实例化 Handler
 	uaHandler := userAuthHandler.NewUserAuthHandler(smsSvc, bizUserSvc, menuSvc, cfg, db)
 	bizHandler := userAuthHandler.NewBizUserHandler(bizUserSvc)
@@ -389,13 +410,37 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 	if deps.AppPrefixMap != nil && deps.ModuleCodeCache != nil {
 		adminGroup.Use(middleware.AppResolveMiddleware(deps.AppPrefixMap, deps.ModuleCodeCache, db))
 	}
-	adminGroup.Use(middleware.DynamicPermissionMiddleware(db, cfg, deps.AdminConfigService))
+	adminGroup.Use(middleware.DynamicPermissionMiddlewareWithCache(db, cfg, deps.PermCodeCache, deps.AdminConfigService))
 
 	// 注册路由
 	userAuth.RegisterRoutes(publicGroup, userGroup, adminGroup, uaHandler, bizHandler)
 
 	// 注册 SmsStrategy 到 AuthHandler 的 StrategyRouter
 	userAuth.RegisterSmsStrategy(deps.AuthHandler.GetStrategyRouter(), smsStrategy)
+
+	// ── 内嵌插件注册（方式一示例：bulletin 公告板）──────────────────────────────
+	// 创建 bulletin 插件实例并注册到主框架路由
+	bulletinPlugin := bulletin.NewPlugin(db)
+	// 注册 admin 端路由（已挂载了 auth + 权限中间件的 adminGroup）
+	bulletinPlugin.RegisterAdminRoutes(adminGroup)
+	// 注册 user 端公开路由（无需登录，挂 /api/v1/user/public/ 公开路由组）
+	bulletinPublicGroup := engine.Group("/api/v1/user/public")
+	bulletinPlugin.RegisterPublicUserRoutes(bulletinPublicGroup)
+	// 注册 user 端认证路由（需要 C端用户 token，挂已认证路由组）
+	bulletinAuthGroup := engine.Group("/api/v1/user/auth")
+	bulletinAuthGroup.Use(middleware.AuthMiddleware(deps.AuthService, bizUserSvc))
+	bulletinPlugin.RegisterAuthUserRoutes(bulletinAuthGroup)
+	// 同时注册到 PluginManager（统一生命周期管理，可通过 /api/v1/admin/plugins 查询状态）
+	if deps.PluginManager != nil {
+		if err := deps.PluginManager.RegisterDirect("bulletin", bulletinPlugin); err != nil {
+			log.Printf("[bulletin] RegisterDirect 失败: %v", err)
+		} else if err := deps.PluginManager.Start("bulletin"); err != nil {
+			log.Printf("[bulletin] Start 失败: %v", err)
+		} else {
+			log.Println("[bulletin] 内嵌插件已注册并启动")
+		}
+	}
+	// ────────────────────────────────────────────────────────────────────────────
 
 	log.Println("[user_auth] C端认证域路由注册完成")
 }

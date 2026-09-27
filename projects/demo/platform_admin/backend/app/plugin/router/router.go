@@ -39,28 +39,41 @@ func InitPluginRouter() {
 		}
 	}
 
-	// 获取新 auth-rbac 的 AuthService（从全局获取）
 	authSvc := getAuthService()
 	if authSvc == nil {
 		log.Warn("[plugin-router] auth service 不可用，插件路由未注册认证中间件")
 	}
 
-	// 插件管理 API 已迁移至 common/auth/handler/PluginHandler（CR4）
-	// 此处不再注册 /api/v1/admin/plugins 路由组，避免重复注册 panic
-	// 仅保留插件代理路由
-
-	// 插件代理路由（需要认证 + 租户中间件）：延迟获取 Manager，避免时序问题
 	dbDsn := ""
 	if config.DatabaseConfig != nil {
 		dbDsn = config.DatabaseConfig.Source
 	}
 	lazyProxy := &lazyPluginProxy{dbDsn: dbDsn}
-	proxyGroup := r.Group("/api/v1/admin")
+
+	// ── 1. admin 端代理：/api/v1/admin/plugin/:name/*action
+	//    auth + 权限中间件，需要 admin token
+	adminGroup := r.Group("/api/v1/admin")
 	if authSvc != nil {
-		proxyGroup.Use(authMiddleware.AuthMiddleware(authSvc))
+		adminGroup.Use(authMiddleware.AuthMiddleware(authSvc))
 	}
-	proxyGroup.Use(common.WithTenantId())
-	lazyProxy.RegisterRoutes(proxyGroup)
+	adminGroup.Use(common.WithTenantId())
+	lazyProxy.RegisterAdminRoutes(adminGroup)
+
+	// ── 2. user 公开端代理：/api/v1/user/public/plugin/:name/*action
+	//    无需任何 token，匿名可访问
+	publicGroup := r.Group("/api/v1/user/public")
+	lazyProxy.RegisterPublicRoutes(publicGroup)
+
+	// ── 3. user 认证端代理：/api/v1/user/auth/plugin/:name/*action
+	//    需要 C端用户 token（由 auth.Init 注入 bizUserSvc 后才有效）
+	bizChecker := getBizUserChecker()
+	userGroup := r.Group("/api/v1/user/auth")
+	if authSvc != nil && bizChecker != nil {
+		userGroup.Use(authMiddleware.AuthMiddleware(authSvc, bizChecker))
+	} else if authSvc != nil {
+		userGroup.Use(authMiddleware.AuthMiddleware(authSvc))
+	}
+	lazyProxy.RegisterUserRoutes(userGroup)
 }
 
 // lazyPluginProxy 延迟绑定的插件代理，每次请求时从 globalPluginManager 取最新实例
@@ -68,21 +81,40 @@ type lazyPluginProxy struct {
 	dbDsn string
 }
 
-func (lp *lazyPluginProxy) RegisterRoutes(r *gin.RouterGroup) {
-	r.Any("/plugin/:name/*action", func(c *gin.Context) {
-		// 延迟获取 Manager：auth.Init 已在 AppRouters 之后执行完毕，globalPluginManager 已设置
+func (lp *lazyPluginProxy) handler() func(c *gin.Context) {
+	return func(c *gin.Context) {
 		mgr := globalPluginManager
 		if mgr == nil {
 			mgr = service.Manager
 		}
 		proxy := pluginPkg.NewPluginProxy(mgr, lp.dbDsn)
 		proxy.Handler()(c)
-	})
+	}
+}
+
+// RegisterAdminRoutes 注册 admin 端代理路由
+func (lp *lazyPluginProxy) RegisterAdminRoutes(r *gin.RouterGroup) {
+	r.Any("/plugin/:name/*action", lp.handler())
+}
+
+// RegisterPublicRoutes 注册 user 端公开代理路由（无需登录）
+// 前端请求路径：/api/v1/user/public/plugin/{name}/{action}
+func (lp *lazyPluginProxy) RegisterPublicRoutes(r *gin.RouterGroup) {
+	r.Any("/plugin/:name/*action", lp.handler())
+}
+
+// RegisterUserRoutes 注册 user 端认证代理路由（需要 C端用户 token）
+// 前端请求路径：/api/v1/user/auth/plugin/{name}/{action}
+func (lp *lazyPluginProxy) RegisterUserRoutes(r *gin.RouterGroup) {
+	r.Any("/plugin/:name/*action", lp.handler())
 }
 var globalAuthService *authService.AuthService
 
 // globalPluginManager 从 auth.Init 注入的 PluginManager（与 PluginHandler 共享同一实例）
 var globalPluginManager *pluginPkg.PluginManager
+
+// globalBizUserChecker C端用户检查器（由 auth.Init 注入，供 user 端认证代理使用）
+var globalBizUserChecker authMiddleware.BizUserChecker
 
 // SetAuthService 由 auth.Init 调用，注入 AuthService 供插件路由使用
 func SetAuthService(svc *authService.AuthService) {
@@ -94,6 +126,15 @@ func SetPluginManager(mgr *pluginPkg.PluginManager) {
 	globalPluginManager = mgr
 }
 
+// SetBizUserChecker 由 auth.Init 调用，注入 C端用户检查器供 user 端认证代理使用
+func SetBizUserChecker(checker authMiddleware.BizUserChecker) {
+	globalBizUserChecker = checker
+}
+
 func getAuthService() *authService.AuthService {
 	return globalAuthService
+}
+
+func getBizUserChecker() authMiddleware.BizUserChecker {
+	return globalBizUserChecker
 }

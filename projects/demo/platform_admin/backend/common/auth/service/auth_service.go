@@ -88,6 +88,15 @@ func (l *localBlacklistFallback) Contains(jti string) bool {
 	return true
 }
 
+// GetUserIDByUsername 根据用户名获取用户 ID（用于登录日志写入，查不到返回 0）
+func (s *AuthService) GetUserIDByUsername(username string) int64 {
+	var user model.User
+	if err := s.db.Select("id").Where("username = ?", username).First(&user).Error; err != nil {
+		return 0
+	}
+	return user.ID
+}
+
 // Login 用户登录
 func (s *AuthService) Login(username, password string) (*strategy.LoginResponse, error) {
 	// 查询用户

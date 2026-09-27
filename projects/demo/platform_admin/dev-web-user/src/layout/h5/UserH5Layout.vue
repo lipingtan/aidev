@@ -24,10 +24,6 @@ const tabMenus = computed(() =>
 )
 
 const pageTitle = computed(() => (route.meta.title as string) || '工作台')
-
-function handleLogout() {
-  userStore.logout()
-}
 </script>
 
 <template>
@@ -41,9 +37,16 @@ function handleLogout() {
       </div>
       <div class="topbar-right">
         <div class="user-menu-wrap">
-          <div class="topbar-avatar" @click="handleLogout" role="button" tabindex="0" aria-label="退出登录">
+          <!-- 已登录：显示头像，点击退出 -->
+          <div v-if="userStore.isLoggedIn"
+            class="topbar-avatar" @click="userStore.logout()"
+            role="button" tabindex="0" aria-label="退出登录">
             {{ (userStore.phone || 'U').slice(-2) }}
           </div>
+          <!-- 未登录：显示登录按钮 -->
+          <button v-else class="topbar-login-btn" @click="userStore.requireLogin()">
+            登录
+          </button>
         </div>
       </div>
     </header>
@@ -194,6 +197,16 @@ function handleLogout() {
 
 .topbar-avatar:active::after { opacity: 1; }
 .topbar-avatar:active { opacity: 0.75; }
+
+/* 未登录顶栏登录按钮 */
+.topbar-login-btn {
+  height: 32px; padding: 0 14px;
+  border: 1.5px solid #4f46e5; border-radius: 8px;
+  background: #fff; color: #4f46e5;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.topbar-login-btn:hover { background: #f0effe; }
 
 /* ── 页面内容 ── */
 .h5-main {

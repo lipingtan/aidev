@@ -26,11 +26,45 @@ import { initRouteManager } from './plugin-loader/route-manager'
 // 国际化
 import i18n from './locales'
 
-// 暴露宿主库（供 UMD 格式插件共享依赖，PC 端和 H5 端均需要）
+// 暴露宿主库（供插件 bundle 共享依赖，避免双实例问题）
 import * as Vue from 'vue'
 import * as VueRouter from 'vue-router'
 import * as VantLib from 'vant'
-;(window as any).__PLATFORM_ADMIN_LIBS__ = { Vue, ElementPlus, VueRouter, Vant: VantLib }
+import {
+  ElMessage, ElMessageBox, ElNotification,
+  ElButton, ElInput, ElSelect, ElOption, ElForm, ElFormItem,
+  ElTable, ElTableColumn, ElPagination, ElDialog, ElDrawer,
+  ElCard, ElTag, ElBadge, ElAvatar, ElImage,
+  ElDropdown, ElDropdownMenu, ElDropdownItem,
+  ElPopconfirm, ElPopover, ElTooltip,
+  ElDatePicker, ElCheckbox, ElCheckboxGroup,
+  ElRadio, ElRadioGroup, ElSwitch, ElUpload,
+  ElProgress, ElEmpty, ElResult, ElAlert,
+  ElRow, ElCol, ElDivider, ElScrollbar,
+  ElTabs, ElTabPane, ElTree, ElCascader,
+  ElMenu, ElMenuItem, ElSubMenu,
+  ElBreadcrumb, ElBreadcrumbItem
+} from 'element-plus'
+;(window as any).__PLATFORM_ADMIN_LIBS__ = {
+  Vue,
+  ElementPlus: {
+    ElMessage, ElMessageBox, ElNotification,
+    ElButton, ElInput, ElSelect, ElOption, ElForm, ElFormItem,
+    ElTable, ElTableColumn, ElPagination, ElDialog, ElDrawer,
+    ElCard, ElTag, ElBadge, ElAvatar, ElImage,
+    ElDropdown, ElDropdownMenu, ElDropdownItem,
+    ElPopconfirm, ElPopover, ElTooltip,
+    ElDatePicker, ElCheckbox, ElCheckboxGroup,
+    ElRadio, ElRadioGroup, ElSwitch, ElUpload,
+    ElProgress, ElEmpty, ElResult, ElAlert,
+    ElRow, ElCol, ElDivider, ElScrollbar,
+    ElTabs, ElTabPane, ElTree, ElCascader,
+    ElMenu, ElMenuItem, ElSubMenu,
+    ElBreadcrumb, ElBreadcrumbItem
+  },
+  VueRouter,
+  Vant: VantLib
+}
 
 const app = createApp(App)
 

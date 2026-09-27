@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
-const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
@@ -11,6 +10,7 @@ const sidebarCollapsed = ref(false)
 const activePath = computed(() => route.path)
 
 onMounted(() => {
+  // 有 token 时加载动态菜单，无 token 时仍显示静态菜单
   if (userStore.token) {
     userStore.fetchMenu()
   }
@@ -71,20 +71,32 @@ function handleLogout() {
         </div>
       </nav>
 
-      <!-- 用户信息 -->
+      <!-- 用户信息 / 登录入口 -->
       <div class="sidebar-user">
-        <div class="user-avatar">{{ (userStore.phone || 'U').slice(-2) }}</div>
-        <Transition name="fade">
-          <div v-if="!sidebarCollapsed" class="user-info">
-            <span class="user-phone">{{ userStore.phone }}</span>
-            <button class="logout-btn" @click="handleLogout">退出登录</button>
-          </div>
-        </Transition>
-        <button v-if="sidebarCollapsed" class="logout-icon-btn" @click="handleLogout" title="退出登录">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <template v-if="userStore.isLoggedIn">
+          <div class="user-avatar">{{ (userStore.phone || 'U').slice(-2) }}</div>
+          <Transition name="fade">
+            <div v-if="!sidebarCollapsed" class="user-info">
+              <span class="user-phone">{{ userStore.phone }}</span>
+              <button class="logout-btn" @click="handleLogout">退出登录</button>
+            </div>
+          </Transition>
+          <button v-if="sidebarCollapsed" class="logout-icon-btn" @click="handleLogout" title="退出登录">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </template>
+        <template v-else>
+          <button class="login-entry-btn" @click="userStore.requireLogin()" :title="sidebarCollapsed ? '登录' : ''">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <Transition name="fade">
+              <span v-if="!sidebarCollapsed" class="login-entry-text">点击登录</span>
+            </Transition>
+          </button>
+        </template>
       </div>
     </aside>
 
@@ -318,6 +330,19 @@ function handleLogout() {
   transition: background 0.15s, color 0.15s;
 }
 .logout-icon-btn:hover { background: rgba(248,113,113,0.15); color: #f87171; }
+
+/* 未登录入口 */
+.login-entry-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; height: 40px; padding: 0 10px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 10px; background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8); cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.login-entry-btn:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.35); }
+.login-entry-text { font-size: 13px; font-weight: 500; }
 
 /* ── 主内容区 ── */
 .main-wrap {

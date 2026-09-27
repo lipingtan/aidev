@@ -58,6 +58,18 @@ func (m *PluginManager) HostService() proto.HostService {
 	return NewHostService(m.eventBus)
 }
 
+// RegisterDirect 注册内嵌插件（方式一：内嵌编译）
+// 使用 shared.DirectAdapter 将内嵌实例包装为统一 proto.PluginService 接口，
+// 与 StartProcess（方式二）共用同一套管理路径，无需额外适配。
+//
+// 用法：
+//
+//	manager.RegisterDirect("myplugin", &MyPlugin{})
+//	manager.Start("myplugin")
+func (m *PluginManager) RegisterDirect(name string, svc proto.PluginService) error {
+	return m.Register(name, svc)
+}
+
 // Register 注册插件（进程内），仅将服务实例加入管理，不启动
 func (m *PluginManager) Register(name string, svc proto.PluginService) error {
 	m.mu.Lock()
@@ -100,16 +112,22 @@ func (m *PluginManager) Start(name string) error {
 	// 注册路由/菜单/权限到 Registry
 	m.registry.RegisterPlugin(info)
 
-	// 解析 manifest 并同步资源（进程内模式：失败不阻塞启动）
+	// 优先尝试从 plugin.json 解析 manifest（进程内模式：失败不阻塞）
 	manifest, err := ParseManifest(filepath.Join(m.pluginsDir, name))
 	if err != nil {
-		log.Printf("[PluginManager] 插件 %s 解析 manifest 失败（进程内模式，跳过同步）: %v", name, err)
-		return nil
+		// plugin.json 不存在时，检查插件是否实现了 ManifestProvider 接口
+		if mp, ok := inst.Service.(ManifestProvider); ok {
+			manifest = mp.GetManifest()
+			log.Printf("[PluginManager] 插件 %s 通过 ManifestProvider 获取 manifest", name)
+		} else {
+			// 最后兜底：从 PluginInfo 自动构造（仅 admin 端菜单）
+			manifest = manifestFromPluginInfo(name, info)
+			log.Printf("[PluginManager] 插件 %s 无 plugin.json，从 PluginInfo 自动构造 manifest", name)
+		}
 	}
 
 	if err := m.syncer.SyncOnStart(name, manifest); err != nil {
 		log.Printf("[PluginManager] 插件 %s 资源同步失败: %v", name, err)
-		// syncer 失败回滚状态
 		inst.Status = StatusError
 		m.registry.UnregisterPlugin(name)
 		return fmt.Errorf("插件 %s 资源同步失败: %w", name, err)
@@ -288,4 +306,29 @@ func (m *PluginManager) Healthcheck(name string) (*proto.HealthResponse, error) 
 	}
 
 	return inst.Service.Healthcheck(context.Background())
+}
+
+// RestoreRunningPlugins 后端重启后恢复数据库中状态为"运行中"的插件
+func (m *PluginManager) RestoreRunningPlugins(db *gorm.DB) {
+	type PluginRow struct {
+		Name       string `gorm:"column:name"`
+		BinaryPath string `gorm:"column:binary_path"`
+	}
+	var rows []PluginRow
+	// status=1 = running（见 models.PluginStatusRunning）
+	if err := db.Table("sys_plugin").Where("status = 1").Find(&rows).Error; err != nil {
+		log.Printf("[PluginManager] 查询运行中插件失败: %v", err)
+		return
+	}
+	for _, row := range rows {
+		if row.BinaryPath == "" {
+			continue
+		}
+		log.Printf("[PluginManager] 自动恢复插件: %s", row.Name)
+		if err := m.StartProcess(row.Name, row.BinaryPath); err != nil {
+			log.Printf("[PluginManager] 恢复插件 %s 失败（将状态改为已停止）: %v", row.Name, err)
+			// 恢复失败时更新数据库状态，避免显示假的"运行中"
+			db.Table("sys_plugins").Where("name = ?", row.Name).Update("status", 2) // 2=stopped
+		}
+	}
 }

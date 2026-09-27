@@ -14,7 +14,7 @@ func (p *GamePlugin) Register(ctx context.Context) (*proto.PluginInfo, error) {
 		Name:        "game",
 		Version:     "1.0.0",
 		Description: "游戏管理插件 - 提供游戏列表、DLC、玩家、订单、支付配置、H5 页面管理功能",
-		RoutePrefix: "game",
+		RoutePrefix: "/api/v1/plugin/game",
 		Menus: []*proto.MenuItem{
 			{
 				Title: "游戏管理",

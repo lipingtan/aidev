@@ -32,7 +32,7 @@ export async function getProfile(): Promise<ProfileInfo> {
 
 /** 获取个人详细信息 */
 export function getProfileDetail() {
-  return request.get('/user/profile')
+  return request.get('/api/v1/user/profile')
 }
 
 /** 修改个人信息（V2 用户更新接口） */
@@ -44,12 +44,12 @@ export async function updateProfile(userId: string, data: { nickname?: string; p
 export function updateAvatar(file: File): Promise<void> {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post('/user/avatar', formData, {
+  return request.post('/api/v1/user/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
 
 /** 修改密码 */
 export function updatePassword(data: { oldPassword: string; newPassword: string }): Promise<void> {
-  return request.put('/user/pwd/set', data)
+  return request.put('/api/v1/user/pwd/set', data)
 }

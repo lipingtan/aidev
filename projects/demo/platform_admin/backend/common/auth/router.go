@@ -46,6 +46,7 @@ type Dependencies struct {
 
 	OperationLogQueryService *service.OperationLogQueryService
 	OperationLogHandler      *handler.OperationLogHandler
+	OperationLogger          *service.AsyncOperationLogger // 异步写入器
 
 	LoginLogService *service.LoginLogService
 	LoginLogHandler *handler.LoginLogHandler
@@ -106,6 +107,10 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		if deps.TenantDomainHandler != nil {
 			public.GET("/tenant-domain", deps.TenantDomainHandler.QueryByDomain)
 		}
+		// 公开 user 端菜单：返回 requiresAuth=false 的菜单，供匿名用户访问
+		if deps.ResourceHandler != nil {
+			public.GET("/user-menu", deps.ResourceHandler.GetPublicUserMenu)
+		}
 	}
 
 	// 公共路由（仅需认证，不走权限中间件）
@@ -121,9 +126,13 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 	if deps.AppPrefixMap != nil && deps.ModuleCodeCache != nil {
 		admin.Use(middleware.AppResolveMiddleware(deps.AppPrefixMap, deps.ModuleCodeCache, deps.DB))
 	}
-	admin.Use(middleware.DynamicPermissionMiddleware(deps.DB, deps.Cfg, deps.AdminConfigService))
+	admin.Use(middleware.DynamicPermissionMiddlewareWithCache(deps.DB, deps.Cfg, deps.PermCodeCache, deps.AdminConfigService))
 	if deps.FieldObjectRegistry != nil && deps.FieldPermissionRepo != nil {
 		admin.Use(middleware.FieldFilterMiddleware(deps.FieldObjectRegistry, deps.FieldPermissionRepo, deps.DB))
+	}
+	// 操作日志中间件：自动记录所有写操作（POST/PUT/PATCH/DELETE）
+	if deps.OperationLogger != nil {
+		admin.Use(middleware.OperationLogMiddleware(deps.OperationLogger))
 	}
 	{
 		deps.TenantHandler.RegisterRoutes(admin)

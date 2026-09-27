@@ -50,6 +50,7 @@ type ManifestMenu struct {
 	Platform       string         `json:"platform"`       // admin/user
 	ModuleCode     string         `json:"moduleCode"`     // 所属功能模块
 	Sort           int            `json:"sort"`           // 排序号
+	RequiresAuth   bool           `json:"requiresAuth"`   // user 端：true=需要登录才在菜单显示，false=匿名可见（默认 false）
 	Children       []ManifestMenu `json:"children"`       // 子菜单/按钮
 }
 
@@ -62,6 +63,7 @@ type ManifestApiPermission struct {
 	URLPattern     string                  `json:"urlPattern"`     // URL 匹配模式
 	HTTPMethod     string                  `json:"httpMethod"`     // HTTP 方法
 	ModuleCode     string                  `json:"moduleCode"`     // 所属功能模块
+	Public         bool                    `json:"public"`         // true=公开接口不走 AuthMiddleware，false=需要登录（默认 false）
 	Children       []ManifestApiPermission `json:"children"`       // 子节点（ENDPOINT）
 }
 

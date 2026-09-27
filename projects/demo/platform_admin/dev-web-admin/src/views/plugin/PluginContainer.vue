@@ -54,7 +54,8 @@ async function loadPlugin(pluginName: string) {
     } else {
       error.value = '插件页面加载失败或不存在'
     }
-  } catch {
+  } catch (e) {
+    console.error('[PluginContainer] 插件加载/渲染错误:', e)
     error.value = '插件页面加载失败或不存在'
   } finally {
     loading.value = false

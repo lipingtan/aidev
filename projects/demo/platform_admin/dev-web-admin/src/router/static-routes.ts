@@ -178,6 +178,14 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '插件页面', icon: 'Box', hidden: true }
       },
 
+      // 内嵌插件示例：公告管理（方式一：内嵌编译）
+      {
+        path: 'bulletin/list',
+        name: 'bulletin-list',
+        component: () => import('@/views/bulletin/BulletinList.vue'),
+        meta: { title: '公告管理', icon: 'Bell', permission: 'bulletin:list' }
+      },
+
       // 应用目录
       {
         path: 'system/app-catalog',

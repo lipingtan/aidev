@@ -15,7 +15,7 @@ type LoginLog struct {
 	Location  string     `gorm:"type:varchar(256)" json:"location"`
 	Browser   string     `gorm:"type:varchar(256)" json:"browser"`
 	OS        string     `gorm:"type:varchar(128)" json:"os"`
-	Status    int        `gorm:"default:1" json:"status"` // 1=成功 0=失败
+	Status    int        `gorm:"not null" json:"status"`            // 1=成功 0=失败（不设 default，强制写入）
 	Message   string     `gorm:"type:varchar(512)" json:"message"`
 	LoginTime *time.Time `gorm:"autoCreateTime" json:"login_time"`
 }

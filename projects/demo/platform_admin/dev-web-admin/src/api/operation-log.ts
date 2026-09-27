@@ -23,7 +23,9 @@ export interface OperationLogItem {
   target_type?: string
   target_id?: string
   user_id: string
+  tenant_id?: string
   summary?: string
+  risk_level?: string
   old_value?: Record<string, any> | null
   new_value?: Record<string, any> | null
   client_ip?: string
