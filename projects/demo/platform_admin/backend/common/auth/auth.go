@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go-admin/app/bulletin"
+	"go-admin/app/license"
 	userAuth "go-admin/app/user_auth"
 	userAuthHandler "go-admin/app/user_auth/handler"
 	userAuthModel "go-admin/app/user_auth/model"
@@ -249,6 +250,7 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
 	authHandler.SetLoginLogService(loginLogSvc)
+	authHandler.SetUserService(userSvc)
 	tenantHandler := handler.NewTenantHandler(tenantSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	userHandler.SetRoleService(userRoleSvc)
@@ -438,6 +440,30 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 			log.Printf("[bulletin] Start 失败: %v", err)
 		} else {
 			log.Println("[bulletin] 内嵌插件已注册并启动")
+		}
+	}
+	// ────────────────────────────────────────────────────────────────────────────
+
+	// ── 内嵌插件注册（方式一：license 会员制激活）──────────────────────────────
+	// 创建 license 插件实例并注册到主框架路由
+	licensePlugin := license.NewPlugin(db)
+	// 注册 admin 端路由（已挂载了 auth + 权限中间件的 adminGroup）
+	licensePlugin.RegisterAdminRoutes(adminGroup)
+	// 注册 user 端公开路由（无需登录）
+	licensePublicGroup := engine.Group("/api/v1/user/public")
+	licensePlugin.RegisterPublicUserRoutes(licensePublicGroup)
+	// 注册 user 端认证路由（需要 C端用户 token）
+	licenseAuthGroup := engine.Group("/api/v1/user/auth")
+	licenseAuthGroup.Use(middleware.AuthMiddleware(deps.AuthService, bizUserSvc))
+	licensePlugin.RegisterAuthUserRoutes(licenseAuthGroup)
+	// 同时注册到 PluginManager（统一生命周期管理）
+	if deps.PluginManager != nil {
+		if err := deps.PluginManager.RegisterDirect("license", licensePlugin); err != nil {
+			log.Printf("[license] RegisterDirect 失败: %v", err)
+		} else if err := deps.PluginManager.Start("license"); err != nil {
+			log.Printf("[license] Start 失败: %v", err)
+		} else {
+			log.Println("[license] 内嵌插件已注册并启动")
 		}
 	}
 	// ────────────────────────────────────────────────────────────────────────────

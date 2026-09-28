@@ -83,7 +83,7 @@ INSERT INTO activation_code_types (name, code, default_level_id, default_duratio
 | type_id | int | NOT NULL, FK | 激活码类型ID |
 | level_id | int | NULL, FK | 会员等级ID（NULL则继承类型定义） |
 | duration_days | int | NULL | 激活时长（天）（NULL则继承类型定义） |
-| status | tinyint | DEFAULT 0 | 状态：0=未使用 1=已使用 2=已恢复 3=已过期 |
+| status | tinyint | DEFAULT 0 | 状态：0=未使用 1=已激活 2=已恢复 3=已取消 |
 | restore_count | int | DEFAULT 0 | 恢复次数计数 |
 | used_by | bigint | NULL, FK | 使用者用户ID |
 | used_at | datetime | NULL | 使用时间 |
@@ -146,16 +146,16 @@ INSERT INTO activation_code_types (name, code, default_level_id, default_duratio
 | POST /api/v1/user/auth/login | 手机号+验证码登录（复用） |
 | POST /api/v1/user/auth/logout | 退出登录（复用） |
 
-### 3.1 设备管理（license 插件新增）
+### 3.1 设备管理（C 端用户）
 
-#### GET /api/license/devices
-获取用户设备列表。
+#### GET /api/v1/user/auth/license/devices
+获取当前用户的设备列表。
 ```json
 // Response
 { "code": 0, "msg": "ok", "data": { "devices": [ { "device_id": "uuid-1", "device_name": "Phone A", "last_login_at": "..." } ] } }
 ```
 
-#### POST /api/license/devices/logout
+#### POST /api/v1/user/auth/license/devices/logout
 踢出指定设备。
 ```json
 // Request
@@ -167,18 +167,18 @@ INSERT INTO activation_code_types (name, code, default_level_id, default_duratio
 
 ### 3.2 激活码类型管理（管理端）
 
-#### GET /api/license/code-types
+#### GET /api/v1/admin/license/code-types
 获取所有激活码类型列表。
 ```json
 // Response
-{ "code": 0, "msg": "ok", "data": { "types": [ { "id": 1, "name": "标准年费", "code": "standard_yearly", "default_level_id": 2, "default_duration_days": 365 } ] } }
+{ "code": 0, "msg": "ok", "data": { "types": [ { "id": 1, "name": "VIP年会员", "code": "standard_yearly", "default_level_id": 2, "default_duration_days": 365 } ] } }
 ```
 
-#### POST /api/license/code-types
+#### POST /api/v1/admin/license/code-types
 创建激活码类型。
 ```json
 // Request
-{ "name": "标准年费", "code": "standard_yearly", "default_level_id": 2, "default_duration_days": 365, "logic_type": "standard" }
+{ "name": "VIP年会员", "code": "standard_yearly", "default_level_id": 2, "default_duration_days": 365, "logic_type": "standard" }
 
 // Response
 { "code": 0, "msg": "创建成功", "data": { "id": 1 } }
@@ -186,44 +186,53 @@ INSERT INTO activation_code_types (name, code, default_level_id, default_duratio
 
 ### 3.3 激活码实例管理
 
-#### POST /api/license/codes
+#### POST /api/v1/admin/license/codes
 创建激活码实例（管理端操作）。可以指定类型和覆盖属性，未指定的属性继承类型定义。
 ```json
 // Request（使用类型默认属性）
 { "type_id": 1 }
 
-// Request（覆盖时长）
-{ "type_id": 1, "duration_days": 400 }
+// Request（覆盖时长和等级）
+{ "type_id": 1, "duration_days": 400, "level_id": 3 }
 
 // Response (success)
 { "code": 0, "msg": "创建成功", "data": { "code": "ABC123-DEF456", "level_id": 2, "duration_days": 365 } }
 ```
 
-#### GET /api/license/activation-history
-查询用户的激活记录列表（按激活时间倒序）。
+#### GET /api/v1/admin/license/codes
+获取激活码列表（管理端）。
+
+#### GET /api/v1/user/auth/license/history
+查询当前用户的激活记录列表（按激活时间倒序）。
 ```json
 // Response
 { "code": 0, "msg": "ok", "data": { "records": [ { "code": "ABC123-DEF456", "level": "vip", "level_name": "VIP会员", "activated_at": "2025-01-01 10:00:00", "duration_days": 365, "expires_at": "2025-12-31 23:59:59", "status": "active" }, { "code": "XYZ789-UVW012", "level": "premium", "level_name": "至尊会员", "activated_at": "2025-03-01 10:00:00", "duration_days": 180, "expires_at": "2025-08-28 23:59:59", "status": "active" } ] } }
 ```
 
-#### POST /api/license/activate
-激活会员。
+#### GET /api/v1/admin/license/records
+查询所有激活记录列表（管理端，可按 user_id 筛选）。
+
+#### POST /api/v1/user/auth/license/activate
+激活会员（C 端用户）。
 ```json
 // Request
 { "code": "ABC123-DEF456", "device_id": "uuid-xxx" }
 
 // Response (success)
-{ "code": 0, "msg": "激活成功", "data": { "level": "vip", "level_name": "VIP会员", "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 } }
+{ "code": 0, "msg": "激活成功", "data": { "user_id": 123, "level_id": 2, "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 } }
 
 // Response (error: code already used)
-{ "code": 400, "msg": "激活码已使用" }
+{ "code": 400, "msg": "激活码已激活，请使用恢复功能" }
+
+// Response (error: code canceled)
+{ "code": 400, "msg": "激活码已取消" }
 
 // Response (error: code expired)
 { "code": 400, "msg": "激活码已过期" }
 ```
 
-#### GET /api/license/status
-查询会员状态（返回用户当前所有有效会员身份）。
+#### GET /api/v1/user/auth/license/status
+查询会员状态（返回当前用户所有有效会员身份）。
 ```json
 // Response (multiple active memberships, with expiry warning)
 { "code": 0, "msg": "ok", "data": { "active": true, "warning_days_left": 5, "memberships": [ { "level": "vip", "level_name": "VIP会员", "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 }, { "level": "premium", "level_name": "至尊会员", "expires_at": "2026-06-30 23:59:59", "remaining_days": 548 } ] } }
@@ -235,40 +244,57 @@ INSERT INTO activation_code_types (name, code, default_level_id, default_duratio
 { "code": 0, "msg": "ok", "data": { "active": false, "warning_days_left": null, "memberships": [] } }
 ```
 
-#### POST /api/license/restore
-恢复激活。
+#### POST /api/v1/user/auth/license/restore
+恢复激活（C 端用户，只有原始激活用户才能恢复）。
 ```json
 // Request
-{ "code": "ABC123-DEF456", "device_id": "uuid-xxx" }
+{ "code": "ABC123-DEF456" }
 
 // Response (success)
-{ "code": 0, "msg": "恢复成功", "data": { "level": "vip", "level_name": "VIP会员", "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 } }
+{ "code": 0, "msg": "恢复成功", "data": { "user_id": 123, "level_id": 2, "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 } }
 
 // Response (error)
 { "code": 400, "msg": "该激活码不属于当前用户" }
+
+// Response (error: restore count exceeded)
+{ "code": 400, "msg": "激活码恢复次数已达上限" }
 ```
 
-#### POST /api/license/cancel
+#### POST /api/v1/admin/license/cancel
 取消激活码（管理端操作，取消后该激活码贡献的会员时间从用户总会员时间中减去）。
 ```json
 // Request
 { "code": "ABC123-DEF456" }
 
 // Response (success)
-{ "code": 0, "msg": "取消成功", "data": { "level": "vip", "level_name": "VIP会员", "expires_at": "2025-06-30 23:59:59", "remaining_days": 180 } }
+{ "code": 0, "msg": "取消成功", "data": { "user_id": 123, "level_id": 2, "expires_at": "2025-06-30 23:59:59", "remaining_days": 180 } }
 
 // Response (error)
-{ "code": 400, "msg": "激活码不存在或未被使用" }
+{ "code": 400, "msg": "激活码不存在" }
 ```
 
-### 3.4 会员等级
+### 3.4 会员等级管理（管理端）
 
-#### GET /api/license/levels
+#### GET /api/v1/admin/license/levels
 获取所有会员等级列表。
 ```json
 // Response
 { "code": 0, "msg": "ok", "data": { "levels": [ { "id": 1, "name": "普通会员", "code": "normal" }, ... ] } }
 ```
+
+#### POST /api/v1/admin/license/levels
+创建会员等级。
+
+#### PUT /api/v1/admin/license/levels/:id
+更新会员等级。
+
+#### DELETE /api/v1/admin/license/levels/:id
+删除会员等级。
+
+### 3.5 管理端设备管理
+
+#### GET /api/v1/admin/license/all-devices
+获取所有设备列表（管理端，可按 user_id 筛选）。
 
 ## 4. 核心业务逻辑
 
@@ -309,40 +335,42 @@ new_expiry = GREATEST(NOW(), old_expiry) + INTERVAL duration_days DAY;
 
 ### 4.3 恢复激活流程
 ```
-1. 验证激活码实例存在且 status == 1（已使用）或 status == 2（已恢复）
-2. 验证激活码的 used_by == 当前用户ID
-3. 查询该激活码对应的激活记录（activation_records WHERE code_id = ?）
+1. 验证激活码实例存在且 status == 1（已激活）
+2. 验证激活码的 used_by == 当前用户ID（只有原始激活用户才能恢复）
+3. 检查恢复次数：activation_codes.restore_count >= 3 时拒绝恢复，返回错误"激活码恢复次数已达上限"
 4. 查询该激活码对应的用户会员身份（user_memberships WHERE user_id = ? AND level_id = ?）
-5. 检查恢复次数：activation_codes.restore_count >= 3 时拒绝恢复，返回错误"激活码恢复次数已达上限"
-6. 如果会员身份已过期（status=0 或 expires_at <= now）或仍有效（status=1 且 expires_at > now），均可恢复（相当于重新激活该码）：
+5. 如果会员身份已过期（status=0 或 expires_at <= now）或仍有效（status=1 且 expires_at > now），均可恢复（相当于重新激活该码）：
    - new_expiry = max(now, current_expires_at) + duration_days（顺延方式与激活相同）
    - 更新 user_memberships：status = 1, expires_at = new_expiry
-7. 更新激活码实例：status = 2（已恢复），restore_count = restore_count + 1
-8. 创建新的激活记录（activation_records）：记录本次恢复的激活时间和过期时间
-9. 返回会员状态
+6. 更新激活码实例：status = 2（已恢复），restore_count = restore_count + 1
+7. 创建新的激活记录（activation_records）：记录本次恢复的激活时间和过期时间
+8. 返回会员状态（包含 user_id）
 ```
 
 ### 4.4 取消激活码流程（管理端）
 取消激活码后，使用 **Replay 重算**方式重新计算用户剩余会员时间（而非简单减法），以保证叠加场景下计算正确。
 
 ```
-1. 验证激活码实例存在且 status == 1（已使用）或 status == 2（已恢复）
-2. 查询该激活码对应的激活记录（activation_records WHERE code_id = ?），获取 user_id 和 level_id
-3. 查询该用户该等级的所有状态为有效（status=1）的激活记录（activation_records WHERE user_id=? AND level_id=? AND status=1），排除本次被取消的记录，按 activated_at 升序排列
-4. Replay 重算过期时间：
-   - 如果剩余有效记录为空：
-     - user_memberships.status 改为 0（已过期），expires_at 改为 now
-   - 如果剩余有效记录不为空：
-     - base = 第一条记录的 activated_at
-     - 遍历每条记录（按 activated_at 升序）：
-         base = max(base, record.activated_at) + record.duration_days（天）
-     - 最终 base 即为新的 expires_at
-     - 更新 user_memberships.expires_at = base
-     - 如果 base < now，则 user_memberships.status 改为 0（已过期）
-5. 更新激活记录状态为 2（已取消）
-6. 更新激活码实例状态为 3（已取消）
-7. 通知用户（发送通知或写入消息队列）
-8. 返回用户更新后的会员状态
+1. 验证激活码实例存在
+2. 如果激活码 status == 0（未使用）：
+   - 直接更新激活码实例状态为 3（已取消）
+   - 返回成功
+3. 如果激活码 status == 1（已激活）或 status == 2（已恢复）：
+   a. 查询该激活码对应的激活记录（activation_records WHERE code_id = ?），获取 user_id 和 level_id
+   b. 查询该用户该等级的所有状态为有效（status=1）的激活记录（activation_records WHERE user_id=? AND level_id=? AND status=1），排除本次被取消的记录，按 activated_at 升序排列
+   c. Replay 重算过期时间：
+      - 如果剩余有效记录为空：
+        - user_memberships.status 改为 0（已过期），expires_at 改为 now
+      - 如果剩余有效记录不为空：
+        - base = 第一条记录的 activated_at
+        - 遍历每条记录（按 activated_at 升序）：
+            base = max(base, record.activated_at) + record.duration_days（天）
+        - 最终 base 即为新的 expires_at
+        - 更新 user_memberships.expires_at = base
+        - 如果 base < now，则 user_memberships.status 改为 0（已过期）
+   d. 更新激活记录状态为 2（已取消）
+   e. 更新激活码实例状态为 3（已取消）
+   f. 返回用户更新后的会员状态（包含 user_id）
 ```
 
 ### 4.5 多设备登录流程

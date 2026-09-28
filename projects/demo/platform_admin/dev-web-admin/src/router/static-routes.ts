@@ -186,6 +186,44 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '公告管理', icon: 'Bell', permission: 'bulletin:list' }
       },
 
+      // 内嵌插件：License 管理（方式一：内嵌编译）
+      {
+        path: 'license/code-types',
+        name: 'license-code-types',
+        component: () => import('@/views/license/CodeTypes.vue'),
+        meta: { title: '激活码类型', icon: 'List', permission: 'license:code-types' }
+      },
+      {
+        path: 'license/codes',
+        name: 'license-codes',
+        component: () => import('@/views/license/Codes.vue'),
+        meta: { title: '激活码实例', icon: 'Ticket', permission: 'license:codes' }
+      },
+      {
+        path: 'license/records',
+        name: 'license-records',
+        component: () => import('@/views/license/Records.vue'),
+        meta: { title: '激活记录', icon: 'Document', permission: 'license:records' }
+      },
+      {
+        path: 'license/members',
+        name: 'license-members',
+        component: () => import('@/views/license/Members.vue'),
+        meta: { title: '会员管理', icon: 'User', permission: 'license:members' }
+      },
+      {
+        path: 'license/devices',
+        name: 'license-devices',
+        component: () => import('@/views/license/Devices.vue'),
+        meta: { title: '设备管理', icon: 'Phone', permission: 'license:devices' }
+      },
+      {
+        path: 'license/levels',
+        name: 'license-levels',
+        component: () => import('@/views/license/Levels.vue'),
+        meta: { title: '会员等级', icon: 'Star', permission: 'license:levels' }
+      },
+
       // 应用目录
       {
         path: 'system/app-catalog',

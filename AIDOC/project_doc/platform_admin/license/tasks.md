@@ -39,47 +39,62 @@
 - activation_code_types 表有2条初始记录
 
 ### Task 4: 设备管理 API
-**Scope**: 实现 /devices、/devices/logout API，登录时检查设备数量限制
+**Scope**: 实现设备管理 API（C 端用户和管理端）
 **Constraints**:
 - 复用 user_auth 模块的登录流程
 - 登录时检查设备数量限制（最多 N 台，由 license.max_devices 配置项控制，默认 2）
 - 支持踢出指定设备
+- C 端用户接口：/api/v1/user/auth/license/devices、/api/v1/user/auth/license/devices/logout
+- 管理端接口：/api/v1/admin/license/all-devices（可按 user_id 筛选）
 **Acceptance**:
 - 同一用户超出 license.max_devices 限制时登录失败
-- 可以查看用户设备列表
-- 可以踢出指定设备
+- C 端用户可以查看自己的设备列表
+- C 端用户可以踢出指定设备
+- 管理端可以查看所有设备列表（可按 user_id 筛选）
 
 ### Task 5: 激活码类型管理 API
-**Scope**: 实现 /code-types（列表、创建）API
+**Scope**: 实现激活码类型管理 API（管理端）
 **Constraints**:
 - 激活码类型包含：名称、代码、默认会员等级、默认时长、逻辑类型
-- 初始数据包含标准年费和体验卡两种类型
+- 初始数据包含 VIP年会员（standard_yearly）和体验卡（trial）两种类型
+- 管理端接口：/api/v1/admin/license/code-types（列表、创建）
 **Acceptance**:
-- 可以创建激活码类型
-- 可以获取激活码类型列表
+- 管理端可以创建激活码类型
+- 管理端可以获取激活码类型列表
 
 ### Task 6: 激活码实例管理 API
-**Scope**: 实现 /codes（创建）、/activate、/status、/restore、/activation-history、/cancel API
+**Scope**: 实现激活码实例管理 API（管理端和 C 端用户）
 **Constraints**:
-- 激活码一次性使用，重复使用提示"激活码已使用"
+- 激活码一次性使用，重复使用提示"激活码已激活，请使用恢复功能"
+- 已取消的激活码不能用于激活，激活时提示"激活码已取消"
+- 已激活的激活码不能重新激活，只能由原始用户恢复
 - 同一用户多次激活时顺延时间：new_expiry = max(now, old_expiry) + duration_days
-- 恢复激活检查激活码归属
+- 恢复激活检查激活码归属（只有原始激活用户才能恢复）
 - 激活记录按时间倒序排列
 - 会员身份可叠加，不同会员类型独立计算过期时间
 - 取消激活码时使用 **Replay 重算**方式计算剩余会员时间（不是简单减法）：查询该用户该等级所有仍有效的激活记录（排除被取消的），按 activated_at 升序累加，得出正确的 expires_at
+- 未使用的激活码取消时直接取消，已使用的激活码取消时 Replay 重算
 - 每个激活码恢复次数上限为 3 次（activation_codes.restore_count 字段控制），超过限制返回错误"激活码恢复次数已达上限"
 - 创建激活码时生成随机字符串（16位，格式 XXXX-XXXX-XXXX）
-- 激活码实例可以覆盖类型定义中的属性，未指定则继承
+- 激活码实例可以覆盖类型定义中的属性（会员等级、激活时长），未指定则继承
+- 激活信息中包含 C 端用户标识（user_id）
+- C 端用户接口：/api/v1/user/auth/license/activate、/api/v1/user/auth/license/status、/api/v1/user/auth/license/restore、/api/v1/user/auth/license/history
+- 管理端接口：/api/v1/admin/license/codes（列表、创建）、/api/v1/admin/license/cancel、/api/v1/admin/license/records（所有激活记录）
 **Acceptance**:
-- 可以创建激活码实例，指定类型和覆盖属性
+- 管理端可以创建激活码实例，指定类型和覆盖属性
+- 管理端可以查看激活码列表
 - 有效激活码可以成功激活
-- 已使用的激活码不能再次使用，提示"激活码已使用"
+- 已激活的激活码不能再次使用，提示"激活码已激活，请使用恢复功能"
+- 已取消的激活码不能用于激活，提示"激活码已取消"
 - 同一用户多次激活时间正确顺延
-- 可以恢复之前用过的激活码
+- 原始激活用户可以恢复之前用过的激活码
+- 非原始用户不能使用他人的激活码恢复
 - 激活码恢复次数超过 3 次时返回错误"激活码恢复次数已达上限"
-- 用户可以查看自己的激活记录列表
+- C 端用户可以查看自己的激活记录列表
+- 管理端可以查看所有激活记录列表
 - 用户可同时拥有多个会员类型（叠加）
 - /status API 返回用户当前所有有效会员身份列表
+- 激活响应中包含 user_id
 - 取消激活码后，用 Replay 算法正确计算会员剩余时间（叠加场景下验证正确性）
 
 ### Task 6b: 到期提醒
@@ -93,12 +108,17 @@
 - /status 接口在会员剩余 > 7 天时返回 warning_days_left: null
 - 无有效会员时返回 warning_days_left: null
 
-### Task 7: 会员等级 API
-**Scope**: 实现 /levels API
+### Task 7: 会员等级管理 API
+**Scope**: 实现会员等级管理 API（管理端）
 **Constraints**:
 - 返回所有会员等级列表
+- 支持创建、更新、删除会员等级
+- 管理端接口：/api/v1/admin/license/levels（列表、创建、更新、删除）
 **Acceptance**:
-- 可以获取会员等级列表
+- 管理端可以获取会员等级列表
+- 管理端可以创建会员等级
+- 管理端可以更新会员等级
+- 管理端可以删除会员等级
 
 ## Phase 2: 客户端开发（Retro/phoenixui/mjarch）
 
@@ -128,19 +148,21 @@
 **Scope**: 创建 MembershipActivationActivity
 **Constraints**:
 - 输入激活码
-- 调用后端激活 API
+- 调用后端激活 API（/api/v1/user/auth/license/activate）
 - 显示激活结果和会员状态
+- 支持恢复激活（调用 /api/v1/user/auth/license/restore）
 **Acceptance**:
 - 用户可以输入激活码激活会员
 - 显示会员等级和过期时间
+- 用户可以恢复之前用过的激活码
 
 ### Task 11: 会员状态和设备管理页面
 **Scope**: 创建 MembershipStatusActivity
 **Constraints**:
-- 显示当前会员状态
-- 显示激活记录列表（调用 /activation-history API）
-- 显示已登录设备列表
-- 支持踢出设备
+- 显示当前会员状态（调用 /api/v1/user/auth/license/status）
+- 显示激活记录列表（调用 /api/v1/user/auth/license/history）
+- 显示已登录设备列表（调用 /api/v1/user/auth/license/devices）
+- 支持踢出设备（调用 /api/v1/user/auth/license/devices/logout）
 **Acceptance**:
 - 用户可以查看会员状态
 - 用户可以查看激活记录
