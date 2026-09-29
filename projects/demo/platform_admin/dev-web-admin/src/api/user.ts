@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 用户管理 API
  * 后端路由前缀：/api/v1/users
  */
@@ -107,12 +107,32 @@ export function removeUserTenant(userId: string, tenantId: string): Promise<void
   return request.delete(`/api/v1/admin/users/${userId}/tenants/${tenantId}`)
 }
 
-/** 分配用户角色（当前租户下） */
+/** 获取用户角色列表（指定租户） */
+export function getUserRoles(userId: string, tenantId: string): Promise<string[]> {
+  return request.get(`/api/v1/admin/users/${userId}/roles`, { params: { tenant_id: tenantId } })
+}
+
+/** 分配用户角色（追加模式） */
 export function assignUserRoles(userId: string, data: UserRoleParams): Promise<void> {
   return request.post(`/api/v1/admin/users/${userId}/roles`, data)
+}
+
+/** 全量替换用户角色 */
+export function replaceUserRoles(userId: string, data: UserRoleParams): Promise<void> {
+  return request.put(`/api/v1/admin/users/${userId}/roles`, data)
 }
 
 /** 强制下线 */
 export function forceOfflineUser(userId: string): Promise<void> {
   return request.post(`/api/v1/admin/users/${userId}/force-offline`)
+}
+
+/** 管理员修改指定用户密码 */
+export function changeUserPassword(userId: string, password: string): Promise<void> {
+  return request.put(`/api/v1/admin/users/${userId}/password`, { password })
+}
+
+/** 用户修改自己的密码 */
+export function changeOwnPassword(oldPassword: string, newPassword: string): Promise<void> {
+  return request.put('/api/v1/common/password', { old_password: oldPassword, new_password: newPassword })
 }

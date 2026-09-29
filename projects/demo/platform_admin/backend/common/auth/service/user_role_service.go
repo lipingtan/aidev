@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"go-admin/common/auth/config"
@@ -174,6 +175,22 @@ func (s *UserRoleService) validateRoleBelongsToTenant(roleID, tenantID int64) er
 		return errors.NewAuthError(errors.ErrEntityNotFound, "角色不存在或不属于当前租户")
 	}
 	return nil
+}
+
+// ListUserRoles 查询用户在指定租户下的角色 ID 列表（返回字符串避免 JS 大数精度问题）
+func (s *UserRoleService) ListUserRoles(userID, tenantID int64) ([]string, error) {
+	var roleIDs []int64
+	err := s.db.Model(&model.UserRole{}).
+		Where("user_id = ? AND tenant_id = ?", userID, tenantID).
+		Pluck("role_id", &roleIDs).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, 0, len(roleIDs))
+	for _, id := range roleIDs {
+		result = append(result, fmt.Sprintf("%d", id))
+	}
+	return result, nil
 }
 
 // isSuperAdminUser 检查用户是否在指定租户下拥有 SUPER_ADMIN 角色

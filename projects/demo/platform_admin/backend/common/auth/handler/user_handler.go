@@ -36,9 +36,11 @@ func (h *UserHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		users.POST("/:id/tenants", h.AssociateTenant)
 		users.DELETE("/:id/tenants/:tenantId", h.DissociateTenant)
 		users.GET("/:id/tenants", h.ListUserTenants)
+		users.GET("/:id/roles", h.ListUserRoles)
 		users.POST("/:id/roles", h.AssignRoles)
 		users.PUT("/:id/roles", h.ReplaceRoles)
 		users.POST("/:id/force-offline", h.ForceOffline)
+		users.PUT("/:id/password", h.ChangePassword)
 	}
 }
 
@@ -198,6 +200,34 @@ func (h *UserHandler) ListUserTenants(c *gin.Context) {
 	Success(c, list)
 }
 
+// ListUserRoles 查询用户在指定租户下的角色列表
+// GET /api/v1/users/:id/roles?tenant_id=1
+func (h *UserHandler) ListUserRoles(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		Error(c, errors.NewAuthError(errors.ErrEntityNotFound, "无效的用户 ID"))
+		return
+	}
+
+	tenantIDStr := c.Query("tenant_id")
+	if tenantIDStr == "" {
+		Error(c, errors.NewAuthError(errors.ErrInvalidParam, "缺少 tenant_id 参数"))
+		return
+	}
+	tenantID, err := strconv.ParseInt(tenantIDStr, 10, 64)
+	if err != nil {
+		Error(c, errors.NewAuthError(errors.ErrInvalidParam, "无效的 tenant_id"))
+		return
+	}
+
+	roleIDs, err := h.roleSvc.ListUserRoles(id, tenantID)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+	Success(c, roleIDs)
+}
+
 // AssignRoles 为用户分配角色（追加模式）
 // POST /api/v1/users/:id/roles
 func (h *UserHandler) AssignRoles(c *gin.Context) {
@@ -217,7 +247,8 @@ func (h *UserHandler) AssignRoles(c *gin.Context) {
 		Error(c, err)
 		return
 	}
-	Success(c, nil)
+	roleIDs, _ := h.roleSvc.ListUserRoles(id, req.TenantID)
+	Success(c, roleIDs)
 }
 
 // ReplaceRoles 全量替换用户角色
@@ -239,7 +270,8 @@ func (h *UserHandler) ReplaceRoles(c *gin.Context) {
 		Error(c, err)
 		return
 	}
-	Success(c, nil)
+	roleIDs, _ := h.roleSvc.ListUserRoles(id, req.TenantID)
+	Success(c, roleIDs)
 }
 
 // ForceOffline 强制下线用户（禁用账户）
@@ -252,6 +284,28 @@ func (h *UserHandler) ForceOffline(c *gin.Context) {
 	}
 
 	if err := h.svc.ForceOffline(id); err != nil {
+		Error(c, err)
+		return
+	}
+	Success(c, nil)
+}
+
+// ChangePassword 管理员修改指定用户密码
+// PUT /api/v1/admin/users/:id/password
+func (h *UserHandler) ChangePassword(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		Error(c, errors.NewAuthError(errors.ErrEntityNotFound, "无效的用户 ID"))
+		return
+	}
+
+	var req service.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		Error(c, errors.NewAuthError(errors.ErrDuplicateEntity, "请求参数无效: "+err.Error()))
+		return
+	}
+
+	if err := h.svc.ChangePassword(id, &req); err != nil {
 		Error(c, err)
 		return
 	}

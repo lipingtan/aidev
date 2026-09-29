@@ -55,6 +55,7 @@
                   <el-dropdown-menu>
                     <el-dropdown-item @click="handleTenantManage(row)">租户关联</el-dropdown-item>
                     <el-dropdown-item @click="handleRoleAssign(row)">角色分配</el-dropdown-item>
+                    <el-dropdown-item @click="handleChangePassword(row)">修改密码</el-dropdown-item>
                     <el-dropdown-item @click="handleForceOffline(row)">强制下线</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -130,6 +131,22 @@
         <el-button type="primary" :loading="roleSaving" @click="handleRoleSave">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 修改密码对话框 -->
+    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="400px" :close-on-click-modal="false">
+      <div v-if="passwordTargetUser">
+        <p style="margin-bottom: 16px;">为用户「{{ passwordTargetUser.username }}」设置新密码：</p>
+        <el-form label-width="90px">
+          <el-form-item label="新密码">
+            <el-input v-model="newPassword" type="password" show-password placeholder="请输入新密码（至少6位）" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="passwordSaving" @click="handlePasswordSave">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -143,8 +160,10 @@ import {
   getUserTenants,
   addUserTenants,
   removeUserTenant,
-  assignUserRoles,
-  forceOfflineUser
+  getUserRoles,
+  replaceUserRoles,
+  forceOfflineUser,
+  changeUserPassword
 } from '@/api/user'
 import type { UserPageItem, UserTenant } from '@/api/user'
 import { listTenants } from '@/api/tenant'
@@ -210,6 +229,40 @@ async function handleForceOffline(row: UserPageItem) {
   await ElMessageBox.confirm(`确认强制下线用户「${row.username}」？`, '提示', { type: 'warning' })
   await forceOfflineUser(row.id)
   ElMessage.success('已强制下线')
+}
+
+// ==================== 修改密码 ====================
+
+const passwordDialogVisible = ref(false)
+const passwordSaving = ref(false)
+const passwordTargetUser = ref<UserPageItem | null>(null)
+const newPassword = ref('')
+
+function handleChangePassword(row: UserPageItem) {
+  passwordTargetUser.value = row
+  newPassword.value = ''
+  passwordDialogVisible.value = true
+}
+
+async function handlePasswordSave() {
+  if (!passwordTargetUser.value || !newPassword.value) {
+    ElMessage.warning('请输入新密码')
+    return
+  }
+  if (newPassword.value.length < 6) {
+    ElMessage.warning('密码至少 6 位')
+    return
+  }
+  passwordSaving.value = true
+  try {
+    await changeUserPassword(passwordTargetUser.value.id, newPassword.value)
+    ElMessage.success(`用户「${passwordTargetUser.value.username}」密码修改成功`)
+    passwordDialogVisible.value = false
+  } catch (e: any) {
+    ElMessage.error(e.message || '修改失败')
+  } finally {
+    passwordSaving.value = false
+  }
 }
 
 // ==================== 租户关联管理 ====================
@@ -283,13 +336,21 @@ async function handleRoleAssign(row: UserPageItem) {
   }
   flatten(roles)
   currentTenantRoles.value = flat
+  // 加载用户已有角色并选中
+  try {
+    const tenantId = localStorage.getItem('current_tenant_id') || ''
+    const userRoleIds = await getUserRoles(row.id, tenantId)
+    selectedRoleIds.value = userRoleIds || []
+  } catch (e) {
+    console.error('加载用户角色失败:', e)
+  }
 }
 
 async function handleRoleSave() {
   roleSaving.value = true
   try {
     const tenantId = localStorage.getItem('current_tenant_id') || ''
-    await assignUserRoles(roleUserId.value, {
+    await replaceUserRoles(roleUserId.value, {
       tenant_id: tenantId,
       roles: selectedRoleIds.value.map(id => ({ role_id: id }))
     })

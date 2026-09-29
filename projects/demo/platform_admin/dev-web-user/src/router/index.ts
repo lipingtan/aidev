@@ -34,6 +34,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/bulletin/index.vue'),
     meta: { title: '公告栏', requiresAuth: false }
   },
+  {
+    path: '/recommend',
+    name: 'Recommend',
+    component: () => import('@/views/recommend/index.vue'),
+    meta: { title: '应用推荐', requiresAuth: false, standalone: true }
+  },
   // 强制登录路由 — 无 token 直接跳登录页
   {
     path: '/profile',

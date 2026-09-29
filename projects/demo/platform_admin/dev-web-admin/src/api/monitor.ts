@@ -13,5 +13,5 @@ export interface ServerMonitorData {
 
 /** 获取服务器监控数据 */
 export function getServerMonitor() {
-  return request.get<ServerMonitorData>('/server-monitor')
+  return request.get<ServerMonitorData>('/api/v1/admin/server-monitor')
 }

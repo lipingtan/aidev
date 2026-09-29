@@ -22,6 +22,9 @@ type UserRepository interface {
 	FindUserTenant(db *gorm.DB, userID, tenantID int64) (*model.UserTenant, error)
 
 	DeleteUserRolesByTenant(db *gorm.DB, userID, tenantID int64) error
+
+	// UpdatePassword 更新用户密码
+	UpdatePassword(db *gorm.DB, userID int64, hashedPassword string) error
 }
 
 // UserListParams 用户列表查询参数
@@ -169,4 +172,16 @@ func (r *userRepo) FindUserTenant(db *gorm.DB, userID, tenantID int64) (*model.U
 // DeleteUserRolesByTenant 级联删除用户在指定租户下的角色绑定
 func (r *userRepo) DeleteUserRolesByTenant(db *gorm.DB, userID, tenantID int64) error {
 	return db.Where("user_id = ? AND tenant_id = ?", userID, tenantID).Delete(&model.UserRole{}).Error
+}
+
+// UpdatePassword 更新用户密码
+func (r *userRepo) UpdatePassword(db *gorm.DB, userID int64, hashedPassword string) error {
+	result := db.Model(&model.User{}).Where("id = ?", userID).Update("password", hashedPassword)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.NewAuthError(errors.ErrEntityNotFound, "用户不存在")
+	}
+	return nil
 }

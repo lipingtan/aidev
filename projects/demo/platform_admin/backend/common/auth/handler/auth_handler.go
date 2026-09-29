@@ -3,6 +3,7 @@ package handler
 import (
 	"strings"
 
+	"go-admin/common/auth/middleware"
 	"go-admin/common/auth/service"
 	"go-admin/common/auth/strategy"
 
@@ -13,6 +14,7 @@ import (
 // AuthHandler 认证 HTTP Handler
 type AuthHandler struct {
 	authSvc     *service.AuthService
+	userSvc     *service.UserService
 	router      *strategy.StrategyRouter
 	loginLogSvc *service.LoginLogService
 }
@@ -34,6 +36,11 @@ func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
 // SetLoginLogService 注入登录日志服务（用于写入登录记录）
 func (h *AuthHandler) SetLoginLogService(svc *service.LoginLogService) {
 	h.loginLogSvc = svc
+}
+
+// SetUserService 注入用户服务（用于修改密码）
+func (h *AuthHandler) SetUserService(svc *service.UserService) {
+	h.userSvc = svc
 }
 
 // GetStrategyRouter 返回策略路由器（供外部注册新策略）
@@ -221,6 +228,29 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
+	Success(c, nil)
+}
+
+// ChangeOwnPassword 用户修改自己的密码
+// PUT /api/v1/common/password
+func (h *AuthHandler) ChangeOwnPassword(c *gin.Context) {
+	// 从认证上下文获取当前用户 ID
+	authCtx := middleware.GetAuthContext(c)
+	if authCtx == nil || authCtx.UserID == 0 {
+		Error(c, &errUnauthorized{message: "缺少用户信息"})
+		return
+	}
+
+	var req service.ChangeOwnPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		Error(c, &errBadRequest{message: "请求参数无效: " + err.Error()})
+		return
+	}
+
+	if err := h.userSvc.ChangeOwnPassword(authCtx.UserID, &req); err != nil {
+		Error(c, err)
+		return
+	}
 	Success(c, nil)
 }
 

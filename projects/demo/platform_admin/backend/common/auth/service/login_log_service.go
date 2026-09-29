@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"go-admin/common/auth/model"
 
 	"gorm.io/gorm"
@@ -81,9 +83,10 @@ func (s *LoginLogService) Delete(id int64) error {
 func (s *LoginLogService) CreateAsync(userID int64, username, ip, userAgent string, status int, message string) {
 	go func() {
 		// 用 Exec raw SQL 避免 GORM 零值跳过问题（status=0 时 GORM Create 会用 default:1）
+		// 显式写入 login_time：原生 SQL 会绕过模型的 autoCreateTime，必须手动赋值
 		s.db.Exec(
-			"INSERT INTO admin_login_log (id, user_id, username, ip, browser, status, message) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			model.NextID(), userID, username, ip, userAgent, status, message,
+			"INSERT INTO admin_login_log (id, user_id, username, ip, browser, status, message, login_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			model.NextID(), userID, username, ip, userAgent, status, message, time.Now(),
 		)
 	}()
 }

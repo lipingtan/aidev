@@ -5,14 +5,15 @@
   - 右侧：当前租户名称 + 切换租户按钮 + 主题切换 + 用户头像 + 登出
 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/store/modules/app'
 import { useUserStore } from '@/store/modules/user'
 import { useAuthStore } from '@/store/modules/auth'
 import { useMenuStore } from '@/store/modules/menu'
-import { ElMessageBox } from 'element-plus'
-import { Fold, Expand, UserFilled, Brush, SwitchButton, Switch } from '@element-plus/icons-vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
+import { Fold, Expand, UserFilled, Brush, SwitchButton, Switch, Key } from '@element-plus/icons-vue'
+import { changeOwnPassword } from '@/api/user'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -48,6 +49,48 @@ function handleLogout() {
 
 function switchTheme(mode: 'business' | 'luxury-dark' | 'aurora-local') {
   appStore.applyTheme(mode)
+}
+
+// 修改密码
+const passwordDialogVisible = ref(false)
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const passwordLoading = ref(false)
+
+function openPasswordDialog() {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordDialogVisible.value = true
+}
+
+async function handlePasswordChange() {
+  if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+    ElMessage.warning('请填写所有字段')
+    return
+  }
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    ElMessage.warning('两次输入的新密码不一致')
+    return
+  }
+  if (passwordForm.newPassword.length < 6) {
+    ElMessage.warning('新密码至少 6 位')
+    return
+  }
+
+  passwordLoading.value = true
+  try {
+    await changeOwnPassword(passwordForm.oldPassword, passwordForm.newPassword)
+    ElMessage.success('密码修改成功')
+    passwordDialogVisible.value = false
+  } catch (e: any) {
+    ElMessage.error(e.message || '修改失败')
+  } finally {
+    passwordLoading.value = false
+  }
 }
 </script>
 
@@ -113,6 +156,9 @@ function switchTheme(mode: 'business' | 'luxury-dark' | 'aurora-local') {
             <el-dropdown-item @click="handleSwitchTenant">
               <el-icon><Switch /></el-icon>切换租户
             </el-dropdown-item>
+            <el-dropdown-item @click="openPasswordDialog">
+              <el-icon><Key /></el-icon>修改密码
+            </el-dropdown-item>
             <el-dropdown-item divided @click="handleLogout">
               <el-icon><SwitchButton /></el-icon>退出登录
             </el-dropdown-item>
@@ -121,6 +167,30 @@ function switchTheme(mode: 'business' | 'luxury-dark' | 'aurora-local') {
       </el-dropdown>
     </div>
   </el-header>
+
+  <!-- 修改密码对话框 -->
+  <el-dialog
+    v-model="passwordDialogVisible"
+    title="修改密码"
+    width="400px"
+    :close-on-click-modal="false"
+  >
+    <el-form label-width="90px">
+      <el-form-item label="旧密码">
+        <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入旧密码" />
+      </el-form-item>
+      <el-form-item label="新密码">
+        <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码（至少6位）" />
+      </el-form-item>
+      <el-form-item label="确认新密码">
+        <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="passwordDialogVisible = false">取消</el-button>
+      <el-button type="primary" :loading="passwordLoading" @click="handlePasswordChange">确定</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>

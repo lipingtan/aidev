@@ -30,6 +30,7 @@ var skipPaths = map[string]bool{
 	"/api/v1/admin/dashboard/trend/workorder":  true,
 	"/api/v1/admin/dashboard/trend/billing":    true,
 	"/api/v1/admin/monitor/server":             true,
+	"/api/v1/admin/server-monitor":             true,
 	"/api/v1/admin/sys-apis":                   true,
 	"/api/v1/admin/app-catalog":                true,
 	"/api/v1/admin/app-subscriptions":          true,

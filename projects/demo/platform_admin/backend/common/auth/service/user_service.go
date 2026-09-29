@@ -301,6 +301,73 @@ func (s *UserService) ListUserTenants(userID int64) ([]UserTenantInfo, error) {
 	return result, nil
 }
 
+// ChangePasswordRequest 修改他人密码请求
+type ChangePasswordRequest struct {
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+// ChangeOwnPasswordRequest 修改自己密码请求
+type ChangeOwnPasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+
+// ChangePassword 管理员修改指定用户密码（admin 用户只能自己改）
+func (s *UserService) ChangePassword(targetUserID int64, req *ChangePasswordRequest) error {
+	user, err := s.userRepo.FindByID(s.db, targetUserID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errors.NewAuthError(errors.ErrEntityNotFound, "用户不存在")
+	}
+
+	// 保护：admin 用户的密码只能由本人修改
+	if user.Username == "admin" {
+		return errors.NewAuthError(errors.ErrProtectedEntity, "admin 用户密码只能由本人修改")
+	}
+
+	hashedPwd, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.UpdatePassword(s.db, targetUserID, string(hashedPwd)); err != nil {
+		return err
+	}
+
+	s.logger.Log(0, "change_password", "user", targetUserID, "管理员修改用户密码")
+	return nil
+}
+
+// ChangeOwnPassword 用户修改自己的密码（需验证旧密码）
+func (s *UserService) ChangeOwnPassword(userID int64, req *ChangeOwnPasswordRequest) error {
+	user, err := s.userRepo.FindByID(s.db, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errors.NewAuthError(errors.ErrEntityNotFound, "用户不存在")
+	}
+
+	// 验证旧密码
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
+		return errors.NewAuthError(errors.ErrWrongOldPassword, "旧密码错误")
+	}
+
+	hashedPwd, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.UpdatePassword(s.db, userID, string(hashedPwd)); err != nil {
+		return err
+	}
+
+	s.logger.Log(userID, "change_own_password", "user", userID, "用户修改自己的密码")
+	return nil
+}
+
 // ForceOffline 强制下线用户（设置状态为禁用）
 func (s *UserService) ForceOffline(userID int64) error {
 	user, err := s.userRepo.FindByID(s.db, userID)

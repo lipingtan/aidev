@@ -20,7 +20,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/qiniu/go-sdk/v7 v7.25.3
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
+	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/spf13/cobra v1.9.1
 	github.com/swaggo/swag v1.16.4
 	github.com/unrolled/secure v1.17.0
@@ -111,7 +111,6 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/redis/go-redis/v9 v9.22.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/shamsher31/goimgext v1.0.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
@@ -149,6 +148,7 @@ require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/stretchr/testify v1.10.0
 	gorm.io/datatypes v1.2.7
 	platform-admin/plugin-sdk v0.0.0

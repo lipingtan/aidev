@@ -118,6 +118,7 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 	common.Use(middleware.AuthMiddleware(deps.AuthService))
 	{
 		common.GET("/user-menu", deps.ResourceHandler.GetUserMenu)
+		common.PUT("/password", deps.AuthHandler.ChangeOwnPassword)
 	}
 
 	// 管理端业务路由（认证 + 应用解析 + 动态权限检查）
@@ -253,9 +254,7 @@ func registerSysApiStub(api *gin.RouterGroup) {
 	})
 }
 
-// registerMonitorStub 注册监控占位路由
+// registerMonitorStub 注册服务器监控接口（管理端「服务监控」页面）
 func registerMonitorStub(api *gin.RouterGroup) {
-	api.GET("/monitor/server", func(c *gin.Context) {
-		handler.Success(c, gin.H{"status": "EMPTY", "message": "服务监控模块尚未实现"})
-	})
+	api.GET("/server-monitor", handler.ServerMonitorInfo)
 }

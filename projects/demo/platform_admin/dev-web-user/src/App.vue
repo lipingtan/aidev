@@ -31,8 +31,11 @@ onUnmounted(() => mq.removeEventListener('change', onMQChange))
 const route = useRoute()
 const userStore = useUserStore()
 
-// 登录页不套 layout
-const noLayout = computed(() => route.meta.requiresAuth === false && route.path === '/login')
+// 登录页 或 standalone 页面不套 layout
+const noLayout = computed(() =>
+  (route.meta.requiresAuth === false && route.path === '/login') ||
+  route.meta.standalone === true
+)
 </script>
 
 <template>

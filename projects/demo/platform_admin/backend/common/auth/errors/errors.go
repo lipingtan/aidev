@@ -33,6 +33,7 @@ const (
 	ErrExceedsParentPermission  = 40009
 	ErrInvalidParam             = 40010
 	ErrQuotaExceeded            = 40011
+	ErrWrongOldPassword         = 40012
 )
 
 // 未实现错误码 (501xx)
