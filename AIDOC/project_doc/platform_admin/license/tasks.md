@@ -1,8 +1,19 @@
 # License 插件 - 任务列表
 
-## Phase 1: 后端开发（platform_admin/license 插件）
+## 执行进度
 
-### Task 1: 插件工程搭建
+| 指标 | 值 |
+|------|-----|
+| 总任务数 | 16 |
+| 已完成 | 10 |
+| 进行中 | 0 |
+| 未开始 | 6 |
+| 完成率 | 10/16 (62.5%) |
+| 当前阶段 | Phase 2: 客户端开发 |
+
+## Phase 1: 后端开发（platform_admin/license 插件） ✅
+
+### Task 1: 插件工程搭建 ✅
 **Scope**: 创建 license 插件工程结构，包含 main.go、handler.go、db.go、models.go、crypto.go
 **Constraints**: 
 - 遵循 platform_admin 插件开发规范（RegisterDirect 内嵌方式）
@@ -10,10 +21,10 @@
 - 使用 JWT 进行认证
 - 实现 RSA 加密解密（RSA/ECB/PKCS1Padding，2048位）
 **Acceptance**:
-- 插件可以成功通过 RegisterDirect 方式加载到 platform_admin
-- RSA 加密解密功能正常工作
+- ✅ 插件可以成功通过 RegisterDirect 方式加载到 platform_admin
+- ✅ RSA 加密解密功能正常工作
 
-### Task 2: RSA 加密解密模块
+### Task 2: RSA 加密解密模块 ✅
 **Scope**: 实现 RSA 加密解密模块（crypto.go），支持请求解密和响应加密
 **Constraints**:
 - 算法：RSA/ECB/PKCS1Padding
@@ -22,11 +33,11 @@
 - 请求解密：`rsa.DecryptPKCS1v15(rand.Reader, priv, encryptedData)`
 - 响应加密：`rsa.EncryptPKCS1v15(rand.Reader, pub, plainData)`
 **Acceptance**:
-- 可以正确解密客户端加密的请求参数
-- 可以正确加密响应数据供客户端解密
-- 与客户端 RSAUtils 兼容
+- ✅ 可以正确解密客户端加密的请求参数
+- ✅ 可以正确加密响应数据供客户端解密
+- ✅ 与客户端 RSAUtils 兼容
 
-### Task 3: 数据模型和数据库初始化
+### Task 3: 数据模型和数据库初始化 ✅
 **Scope**: 定义 activation_code_types、activation_codes、activation_records、user_memberships、user_devices、membership_levels 表模型，创建数据库初始化逻辑
 **Constraints**:
 - 使用 GORM AutoMigrate
@@ -34,11 +45,11 @@
 - activation_code_types 表插入初始数据（standard_yearly、trial）
 - 激活码实例（activation_codes）和激活记录（activation_records）分开刻画
 **Acceptance**:
-- 启动插件时自动创建/迁移数据库表
-- membership_levels 表有3条初始记录
-- activation_code_types 表有2条初始记录
+- ✅ 启动插件时自动创建/迁移数据库表
+- ✅ membership_levels 表有3条初始记录
+- ✅ activation_code_types 表有2条初始记录
 
-### Task 4: 设备管理 API
+### Task 4: 设备管理 API ✅
 **Scope**: 实现设备管理 API（C 端用户和管理端）
 **Constraints**:
 - 复用 user_auth 模块的登录流程
@@ -47,22 +58,22 @@
 - C 端用户接口：/api/v1/user/auth/license/devices、/api/v1/user/auth/license/devices/logout
 - 管理端接口：/api/v1/admin/license/all-devices（可按 user_id 筛选）
 **Acceptance**:
-- 同一用户超出 license.max_devices 限制时登录失败
-- C 端用户可以查看自己的设备列表
-- C 端用户可以踢出指定设备
-- 管理端可以查看所有设备列表（可按 user_id 筛选）
+- ✅ 同一用户超出 license.max_devices 限制时登录失败
+- ✅ C 端用户可以查看自己的设备列表
+- ✅ C 端用户可以踢出指定设备
+- ✅ 管理端可以查看所有设备列表（可按 user_id 筛选）
 
-### Task 5: 激活码类型管理 API
+### Task 5: 激活码类型管理 API ✅
 **Scope**: 实现激活码类型管理 API（管理端）
 **Constraints**:
 - 激活码类型包含：名称、代码、默认会员等级、默认时长、逻辑类型
 - 初始数据包含 VIP年会员（standard_yearly）和体验卡（trial）两种类型
 - 管理端接口：/api/v1/admin/license/code-types（列表、创建）
 **Acceptance**:
-- 管理端可以创建激活码类型
-- 管理端可以获取激活码类型列表
+- ✅ 管理端可以创建激活码类型
+- ✅ 管理端可以获取激活码类型列表
 
-### Task 6: 激活码实例管理 API
+### Task 6: 激活码实例管理 API ✅
 **Scope**: 实现激活码实例管理 API（管理端和 C 端用户）
 **Constraints**:
 - 激活码一次性使用，重复使用提示"激活码已激活，请使用恢复功能"
@@ -72,53 +83,47 @@
 - 恢复激活检查激活码归属（只有原始激活用户才能恢复）
 - 激活记录按时间倒序排列
 - 会员身份可叠加，不同会员类型独立计算过期时间
-- 取消激活码时使用 **Replay 重算**方式计算剩余会员时间（不是简单减法）：查询该用户该等级所有仍有效的激活记录（排除被取消的），按 activated_at 升序累加，得出正确的 expires_at
-- 未使用的激活码取消时直接取消，已使用的激活码取消时 Replay 重算
-- 每个激活码恢复次数上限为 3 次（activation_codes.restore_count 字段控制），超过限制返回错误"激活码恢复次数已达上限"
-- 创建激活码时生成随机字符串（16位，格式 XXXX-XXXX-XXXX）
-- 激活码实例可以覆盖类型定义中的属性（会员等级、激活时长），未指定则继承
+- 取消激活码时使用 **Replay 重算**方式计算剩余会员时间
+- 每个激活码恢复次数上限为 3 次
+- 创建激活码时生成随机字符串（16位，格式 XXXX-XXXX-XXXX-XXXX）
+- 激活码实例可以覆盖类型定义中的属性（会员等级、激活时长）
 - 激活信息中包含 C 端用户标识（user_id）
-- C 端用户接口：/api/v1/user/auth/license/activate、/api/v1/user/auth/license/status、/api/v1/user/auth/license/restore、/api/v1/user/auth/license/history
-- 管理端接口：/api/v1/admin/license/codes（列表、创建）、/api/v1/admin/license/cancel、/api/v1/admin/license/records（所有激活记录）
 **Acceptance**:
-- 管理端可以创建激活码实例，指定类型和覆盖属性
-- 管理端可以查看激活码列表
-- 有效激活码可以成功激活
-- 已激活的激活码不能再次使用，提示"激活码已激活，请使用恢复功能"
-- 已取消的激活码不能用于激活，提示"激活码已取消"
-- 同一用户多次激活时间正确顺延
-- 原始激活用户可以恢复之前用过的激活码
-- 非原始用户不能使用他人的激活码恢复
-- 激活码恢复次数超过 3 次时返回错误"激活码恢复次数已达上限"
-- C 端用户可以查看自己的激活记录列表
-- 管理端可以查看所有激活记录列表
-- 用户可同时拥有多个会员类型（叠加）
-- /status API 返回用户当前所有有效会员身份列表
-- 激活响应中包含 user_id
-- 取消激活码后，用 Replay 算法正确计算会员剩余时间（叠加场景下验证正确性）
+- ✅ 管理端可以创建激活码实例，指定类型和覆盖属性
+- ✅ 管理端可以查看激活码列表
+- ✅ 有效激活码可以成功激活
+- ✅ 已激活的激活码不能再次使用
+- ✅ 已取消的激活码不能用于激活
+- ✅ 同一用户多次激活时间正确顺延
+- ✅ 原始激活用户可以恢复之前用过的激活码
+- ✅ 激活码恢复次数超过 3 次时返回错误
+- ✅ C 端用户可以查看自己的激活记录列表
+- ✅ 管理端可以查看所有激活记录列表
+- ✅ /status API 返回用户当前所有有效会员身份列表
+- ✅ 激活响应中包含 user_id
+- ✅ 取消激活码后正确计算会员剩余时间
 
-### Task 6b: 到期提醒
+### Task 6b: 到期提醒 ✅
 **Scope**: 实现到期提醒逻辑，在 /status API 响应中新增 `warning_days_left` 字段
 **Constraints**:
 - 基于用户所有有效会员中最近到期的那个计算剩余天数
 - 剩余天数 ≤ 7 时返回具体剩余天数（整数），否则返回 `null`
-- 客户端收到 `warning_days_left` 非 null 时，在启动时展示提醒 Toast
 **Acceptance**:
-- /status 接口在会员剩余 ≤ 7 天时返回 warning_days_left（具体天数）
-- /status 接口在会员剩余 > 7 天时返回 warning_days_left: null
-- 无有效会员时返回 warning_days_left: null
+- ✅ /status 接口在会员剩余 ≤ 7 天时返回 warning_days_left（具体天数）
+- ✅ /status 接口在会员剩余 > 7 天时返回 warning_days_left: null
+- ✅ 无有效会员时返回 warning_days_left: null
 
-### Task 7: 会员等级管理 API
+### Task 7: 会员等级管理 API ✅
 **Scope**: 实现会员等级管理 API（管理端）
 **Constraints**:
 - 返回所有会员等级列表
 - 支持创建、更新、删除会员等级
 - 管理端接口：/api/v1/admin/license/levels（列表、创建、更新、删除）
 **Acceptance**:
-- 管理端可以获取会员等级列表
-- 管理端可以创建会员等级
-- 管理端可以更新会员等级
-- 管理端可以删除会员等级
+- ✅ 管理端可以获取会员等级列表
+- ✅ 管理端可以创建会员等级
+- ✅ 管理端可以更新会员等级
+- ✅ 管理端可以删除会员等级
 
 ## Phase 2: 客户端开发（Retro/phoenixui/mjarch）
 
