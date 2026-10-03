@@ -31,6 +31,9 @@ const loginForm = reactive({
   captchaKey: ''
 })
 
+// 记住登录（默认勾选，选择持久化）
+const rememberMe = ref(localStorage.getItem('remember_me') !== '0')
+
 const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
@@ -60,8 +63,10 @@ async function handleLogin() {
       loginForm.username,
       loginForm.password,
       loginForm.captchaKey,
-      loginForm.captchaCode
+      loginForm.captchaCode,
+      rememberMe.value
     )
+    localStorage.setItem('remember_me', rememberMe.value ? '1' : '0')
 
     if (result.tenants.length === 1) {
       ElMessage.success('登录成功')
@@ -108,6 +113,11 @@ onMounted(loadCaptcha)
           </div>
         </el-form-item>
         <el-form-item>
+          <div class="login-options">
+            <el-checkbox v-model="rememberMe">记住登录（30 天）</el-checkbox>
+          </div>
+        </el-form-item>
+        <el-form-item>
           <el-button type="primary" :loading="loading" class="login-btn" @click="handleLogin">登录</el-button>
         </el-form-item>
       </el-form>
@@ -144,6 +154,11 @@ onMounted(loadCaptcha)
   margin-bottom: var(--spacing-xxl);
 }
 .login-btn { width: 100%; }
+.login-options {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
 .captcha-row {
   display: flex;
   gap: 8px;

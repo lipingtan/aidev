@@ -171,6 +171,7 @@ INSERT INTO membership_levels (id, name, code, privileges, sort_order) VALUES
 | id | bigint | PK, AUTO_INCREMENT | 套餐ID |
 | tenant_id | bigint | NOT NULL, INDEX | 租户ID |
 | name | varchar(50) | NOT NULL | 套餐名称（如"年卡"） |
+| price_code | varchar(50) | NOT NULL, UNIQUE | 套餐定价唯一编码（FR-26）：下单快照进订单行项，履约回查时长用 |
 | code_type_id | bigint | NOT NULL, FK | 关联激活码类型（购买后生成激活码用） |
 | level_code | varchar(20) | NOT NULL | 会员等级 code（用于展示） |
 | duration_days | int | NULL | 激活时长（天，覆盖 type 默认值，NULL 则用 type 默认值） |
@@ -189,6 +190,25 @@ INSERT INTO membership_levels (id, name, code, privileges, sort_order) VALUES
 ### 2.9 orders（订单表，复用现有）
 
 复用现有 orders 表，如字段不够后续补充。
+
+### 2.10 order_items（订单行项表，2026-10-03 FR-26 新增）
+一单可多行，记录购买的每个套餐定价快照。履约/对账按 order_no 查行项，用 price_code 回查套餐时长。
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | bigint | PK, AUTO_INCREMENT | 行项ID |
+| order_id | bigint | NOT NULL, IDX(order_id,order_no) | 关联 orders.id |
+| order_no | varchar(64) | NOT NULL | 订单号 |
+| price_code | varchar(50) | NOT NULL | 套餐定价编码（快照） |
+| price_config_id | bigint | NOT NULL | 套餐定价 ID（快照） |
+| code_type_id | bigint | NOT NULL | 激活码类型 ID（快照） |
+| name | varchar(50) | NULL | 下单时套餐名称快照 |
+| duration_days | int | NULL | 下单时套餐时长快照（NULL=用类型默认） |
+| price | int | NOT NULL | 单价（分） |
+| quantity | int | NOT NULL, DEFAULT 1 | 数量（下单 1~10） |
+| amount | int | NOT NULL | 行小计（分）= price × quantity |
+| extra | text | NULL | 扩展字段（JSON，未来新属性落这里避免加列） |
+| created_at | datetime | DEFAULT NOW() | 创建时间 |
 
 ## 3. API 设计
 
@@ -676,6 +696,25 @@ ON DUPLICATE KEY UPDATE expires_at = GREATEST(expires_at, NOW()) + INTERVAL ? DA
 - 回调全链路日志：入口 IP → 微信签名头（Timestamp/Nonce/Serial）→ 验签结果 → 解密出订单号/交易状态/金额 → 落账结果
 - 验签失败返回 HTTP 400 + `{"code":"FAIL"}`（微信按衰减频率重试）；成功返回 `{"code":"SUCCESS"}`
 - 每笔回调落库：`RecordPaymentCallback`（原始报文+请求头，管理端可查）+ `RecordPaymentTransaction`（交易流水）
+
+### 4.12 履约时长回查（2026-10-03 FR-26）
+修复"同类型多套餐不同时长，回调履约恒用类型默认时长"的 bug：
+
+```
+FulfillOrder(tx, order):
+  durationDays = codeType.DefaultDurationDays          // 默认兜底
+  item = order_items WHERE order_no = order.OrderNo     // 查行项
+  if item 存在:
+    pc = price_configs WHERE price_code = item.PriceCode
+    if pc 存在且 pc.duration_days != nil 且 > 0:
+      durationDays = pc.duration_days                   // 套餐定价优先
+  激活码 DurationDays = durationDays
+```
+
+- 优先级：套餐定价 duration_days（存在且>0）> 激活码类型默认
+- 无行项（旧接口 activation_code_type_id 下单）直接用类型默认，向后兼容
+- 微信下单同时带 attach=price_code（H5/Native），回调解密报文原样返回（备用核对链路；主回查以本地 order_items 为准，不依赖微信透传）
+- 下单链路：CreateOrder 校验 App 传的 price_code 与所选套餐一致（不符拒绝）、quantity 1~10，行项随订单落库
 
 ## 5. 客户端设计（mjarch flavor）
 

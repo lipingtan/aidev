@@ -32,7 +32,9 @@ func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
 		router:  strategy.NewStrategyRouter(),
 	}
 	// 注册密码策略
-	h.router.Register(strategy.NewPasswordStrategy(authSvc.Login))
+	h.router.Register(strategy.NewPasswordStrategy(func(username, password, ip, userAgent string, rememberMe bool) (*strategy.LoginResponse, error) {
+		return authSvc.LoginWithRememberMe(username, password, ip, userAgent, rememberMe)
+	}))
 	// 注册 OAuth2/LDAP 骨架策略（CR-8）
 	h.router.Register(&strategy.OAuth2Strategy{})
 	h.router.Register(&strategy.LDAPStrategy{})
@@ -115,6 +117,7 @@ type LoginRequest struct {
 	CaptchaKey  string `json:"captcha_key"`
 	CaptchaCode string `json:"captcha_code"`
 	GrantType   string `json:"grant_type"`
+	RememberMe  bool   `json:"remember_me"` // 记住登录：refresh_token 延长至 30 天（默认 7 天；用户级 TTL 配置仍优先）
 }
 
 // Login 用户登录
@@ -190,7 +193,7 @@ func (h *AuthHandler) handlePasswordLogin(c *gin.Context, req *LoginRequest) {
 		}
 	}
 
-	resp, err := h.authSvc.Login(req.Username, req.Password, clientIP, c.Request.UserAgent())
+	resp, err := h.authSvc.LoginWithRememberMe(req.Username, req.Password, clientIP, c.Request.UserAgent(), req.RememberMe)
 
 	// 写登录日志
 	if h.loginLogSvc != nil {

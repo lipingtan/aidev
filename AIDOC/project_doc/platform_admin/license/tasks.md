@@ -411,3 +411,35 @@
 - 效果：购买未登录跳转、我的Tab登录、注册失败跳回等普通入口，登录框自动带出上次账号，不再依赖「登录过期弹窗」才有预填
 - 涉及：仅 `app/src/mjarch/.../membership/LoginActivity.java`（flavor 内，无共享代码改动）
 - 文档：requirements.md FR-01.2a（同轮新增）
+
+---
+
+## 2026-10-03 FR-26 套餐定价编码 price_code 与订单行项履约回查
+
+> 需求：同激活码类型可设多个不同时长/价格的套餐定价；支付回调履约时按下单所选套餐定价回查时长（原实现恒用类型默认时长，属资损级 bug）。套餐定价增加唯一编码 price_code，创建支付单时快照进订单行项，微信下单同时透传 attach。
+
+### Bug 根因
+`fulfillment.go` 生成激活码时 `DurationDays: &codeType.DefaultDurationDays` —— 订单虽有 `price_config_id` 但履约链路从未使用，183 天套餐按 365 天类型默认激活。
+
+### 改动 ✅（后端编译过 / webadmin build 过 / App javac 过 / 真机端到端实测通过）
+**后端 platform_admin**
+- `models/models.go`：PriceConfig 加 PriceCode（uk_price_code）；新增 OrderItem 模型（order_items 表，含 extra 扩展字段）
+- `service/game_price_service.go`：PriceInput 加 price_code（创建必填+唯一校验、更新排除自身）；PublicPriceItem 下发 price_code
+- `service/license_service.go`：CreateOrderRequest 加 price_code（一致性校验拒绝错套餐下单）+ quantity（1~10）；下单写 order_items 快照；AutoMigrate 加 OrderItem；微信下单 attach=行项 price_code
+- `service/fulfillment.go`：**核心修复**——履约按订单行项 price_code 回查套餐时长（存在且>0），否则回退类型默认；无行项（旧接口）用类型默认
+- `service/payment_service.go` + `wechat_pay.go`：CreatePayment 签名加 attach（接口+PaymentService+H5/Native 适配器）；回调解密报文解析 Attach 透传
+- `scripts/20261003_add_price_code.sql`：存量迁移（加列、回填 `pc_{类型ID}_{主键}`、唯一索引、建 order_items、回填未完结订单行项）；已执行，验证 prices_missing_code=0
+
+**管理端 webadmin**
+- `api/license.ts`：PriceConfig/PriceInput 加 price_code
+- `views/license/Prices.vue`：表单「定价编码」必填（正则限字母数字下划线中划线、编辑锁定）、列表加列、新增/编辑回填
+
+**App mjarch**
+- `PriceInfo.java`：加 priceCode 字段
+- `MembershipApi.java`：createOrder 加 priceCode/quantity 参数
+- `PurchaseActivity.java`：下单回传 price.getPriceCode()
+
+### 端到端实测（2026-10-03 20:00，真机）
+- 下单报文 `"attach":"pc_1_3"`，微信回调解密报文原样返回 attach
+- `履约时长: 订单 ORD202610032000237994 按 price_code=pc_1_3 回查套餐时长 183 天`
+- `自动激活成功`，会员即时生效（无对账重试延迟）

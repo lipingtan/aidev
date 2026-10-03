@@ -55,10 +55,10 @@ export const useAuthStore = defineStore('auth', () => {
    * 登录：调用 POST /auth/login
    * 返回 platform_token 和租户列表
    */
-  async function login(username: string, password: string, captchaKey?: string, captchaCode?: string): Promise<LoginResponse> {
-    const payload: Record<string, string> = { username, password }
-    if (captchaKey) payload.captcha_key = captchaKey
-    if (captchaCode) payload.captcha_code = captchaCode
+  async function login(username: string, password: string, captchaKey?: string, captchaCode?: string, rememberMe = true): Promise<LoginResponse> {
+      const payload: Record<string, unknown> = { username, password, remember_me: rememberMe }
+      if (captchaKey) payload.captcha_key = captchaKey
+      if (captchaCode) payload.captcha_code = captchaCode
     const res = await request.post<any, LoginResponse>('/auth/login', payload)
     platformToken.value = res.platform_token
     tenants.value = res.tenants

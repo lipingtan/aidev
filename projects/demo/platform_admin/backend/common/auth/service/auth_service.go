@@ -110,7 +110,7 @@ func (s *AuthService) GetUserIDByUsername(username string) int64 {
 }
 
 // Login 用户登录
-func (s *AuthService) Login(username, password, ip, userAgent string) (*strategy.LoginResponse, error) {
+func (s *AuthService) LoginWithRememberMe(username, password, ip, userAgent string, rememberMe bool) (*strategy.LoginResponse, error) {
 	// 查询用户
 	var user model.User
 	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
@@ -200,8 +200,11 @@ func (s *AuthService) Login(username, password, ip, userAgent string) (*strategy
 			return nil, err
 		}
 
-		// 计算 refresh token 过期时间（秒）：优先使用用户自定义，否则使用全局配置
+		// 计算 refresh token 过期时间（秒）：优先用户自定义 > 记住登录30天 > 全局配置
 		refreshExpiresIn := int64(s.cfg.JWT.RefreshTokenTTL.Seconds())
+		if rememberMe {
+			refreshExpiresIn = int64((30 * 24 * time.Hour).Seconds())
+		}
 		if user.RefreshTokenExpireMinutes != nil && *user.RefreshTokenExpireMinutes > 0 {
 			refreshExpiresIn = int64(*user.RefreshTokenExpireMinutes * 60)
 		}

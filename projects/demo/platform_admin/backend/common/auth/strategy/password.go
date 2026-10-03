@@ -6,7 +6,7 @@ import (
 )
 
 // LoginFunc 密码登录执行函数（由外部注入，避免循环依赖）
-type LoginFunc func(username, password, ip, userAgent string) (*LoginResponse, error)
+type LoginFunc func(username, password, ip, userAgent string, rememberMe bool) (*LoginResponse, error)
 
 // PasswordStrategy 管理端密码登录策略
 type PasswordStrategy struct {
@@ -29,6 +29,7 @@ type passwordLoginRequest struct {
 	Password    string `json:"password" binding:"required"`
 	CaptchaKey  string `json:"captcha_key"`
 	CaptchaCode string `json:"captcha_code"`
+	RememberMe  bool   `json:"remember_me"` // 记住登录：refresh_token 延长至 30 天
 }
 
 // Authenticate 执行密码认证
@@ -49,7 +50,7 @@ func (s *PasswordStrategy) Authenticate(c *gin.Context) (*AuthResult, error) {
 	}
 
 	// 调用注入的登录函数
-	resp, err := s.loginFn(req.Username, req.Password, c.ClientIP(), c.Request.UserAgent())
+	resp, err := s.loginFn(req.Username, req.Password, c.ClientIP(), c.Request.UserAgent(), req.RememberMe)
 	if err != nil {
 		return nil, err
 	}
