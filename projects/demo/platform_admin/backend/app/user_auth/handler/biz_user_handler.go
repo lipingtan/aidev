@@ -159,7 +159,7 @@ func (h *BizUserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	user, err := h.bizUserSvc.UpdateBizUser(id, &req)
+	user, ttlChanged, err := h.bizUserSvc.UpdateBizUser(id, &req)
 	if err != nil {
 		switch err {
 		case service.ErrUserNotFound:
@@ -172,9 +172,11 @@ func (h *BizUserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// 如果修改了 token TTL，清 Redis 缓存让下次登录生效
-	if (req.AccessTokenExpireMinutes != nil || req.RefreshTokenExpireMinutes != nil) && h.licenseSvc != nil {
+	// TTL 真正变化时：清 Redis 缓存 + 递增 token_version 强制下线，
+	// 使新 TTL 立即生效（重新登录/刷新即按新值签发）；仅编辑其他字段不影响在线会话
+	if ttlChanged && h.licenseSvc != nil {
 		h.licenseSvc.InvalidateUserTTLCache(authCtx.TenantID, id)
+		_ = h.licenseSvc.ForceLogout(authCtx.TenantID, id)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": user, "message": "ok"})
@@ -201,6 +203,7 @@ func (h *BizUserHandler) Delete(c *gin.Context) {
 }
 
 // ResetPassword POST /api/v1/admin/biz-users/:id/reset-password — 重置密码
+// body 可选 {"password": "..."}：指定密码（≥6 位，与 C 端注册规则一致）；空/缺省则生成随机密码
 func (h *BizUserHandler) ResetPassword(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {
@@ -208,7 +211,16 @@ func (h *BizUserHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	plainPassword, err := h.bizUserSvc.ResetPassword(id)
+	var req struct {
+		Password string `json:"password"`
+	}
+	_ = c.ShouldBindJSON(&req) // body 可选
+	if req.Password != "" && len(req.Password) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "data": nil, "message": "密码长度不能少于 6 位"})
+		return
+	}
+
+	plainPassword, err := h.bizUserSvc.ResetPassword(id, req.Password)
 	if err != nil {
 		if err == service.ErrUserNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"code": 40002, "data": nil, "message": "用户不存在"})

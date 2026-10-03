@@ -298,8 +298,26 @@ const resetPwdResult = ref('')
 
 async function handleResetPassword(row: BizUser) {
   const name = row.nickname || row.phone || row.email || '该用户'
-  await ElMessageBox.confirm(`确认重置用户「${name}」的密码？`, '提示', { type: 'warning' })
-  const res = await resetPassword(row.id)
+  // 弹框输入新密码，默认 888888；清空则由服务端生成随机密码
+  let input: { value: string }
+  try {
+    input = await ElMessageBox.prompt(
+      `为用户「${name}」设置新密码（留空则随机生成，至少 6 位）：`,
+      '重置密码',
+      {
+        inputValue: '888888',
+        inputPlaceholder: '留空则随机生成',
+        inputPattern: /^.{0,}$|^.{6,}$/,
+        inputErrorMessage: '密码长度不能少于 6 位',
+        confirmButtonText: '重置',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch {
+    return // 用户取消
+  }
+  const res = await resetPassword(row.id, input.value.trim())
   resetPwdResult.value = res.password
   resetPwdVisible.value = true
 }

@@ -124,8 +124,9 @@ async function handleSubmit() {
         nickname: form.nickname || undefined,
         avatar: form.avatar || undefined,
         version: form.version,
-        accessTokenExpireMinutes: form.accessTokenExpireMinutes,
-        refreshTokenExpireMinutes: form.refreshTokenExpireMinutes
+        // 后端 DTO json tag 为 snake_case，键名必须一致（驼峰会被丢弃落 NULL）
+        access_token_expire_minutes: form.accessTokenExpireMinutes,
+        refresh_token_expire_minutes: form.refreshTokenExpireMinutes
       })
     } else {
       await createBizUser({
@@ -133,8 +134,8 @@ async function handleSubmit() {
         email: form.email || undefined,
         nickname: form.nickname || undefined,
         password: form.password || undefined,
-        accessTokenExpireMinutes: form.accessTokenExpireMinutes,
-        refreshTokenExpireMinutes: form.refreshTokenExpireMinutes
+        access_token_expire_minutes: form.accessTokenExpireMinutes,
+        refresh_token_expire_minutes: form.refreshTokenExpireMinutes
       })
     }
     ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')

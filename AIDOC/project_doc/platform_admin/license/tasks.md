@@ -366,3 +366,48 @@
 - 前端 Members.vue 从占位页改为完整列表
 
 **待部署**：以上全部为服务端改动，App 端无需重新发布。部署重启后验证一笔真实支付的全链路。
+
+---
+
+## 2026-10-03 FR-25 双 token 链路补完修复（追加记录）
+
+> 背景：FR-25（C端 access_token + refresh_token 双 token）在代码层落地（未立独立 FR 章节），
+> 本次 review 发现服务端交付不完整导致刷新链路断裂，全部修复。
+
+### Fix-A: `/refresh` 公开路由未注册 ✅（P0）
+- **症状**：`LicenseHandler.RefreshTokens` 已实现但无路由绑定，App 端 401 后调 `POST /public/license/refresh` 得 404 → `clearSession`，access_token 一过期用户直接被登出
+- **修复**：`plugin.go` RegisterPublicUserRoutes 补 `g.POST("/refresh", p.handler.RefreshTokens)`
+
+### Fix-B: 登录/刷新响应未下发 refresh_token ✅（P0）
+- **症状**：`authResultResponse` 组装 data 时漏了 `r.RefreshToken`，服务层签发了但响应丢弃 → App 永远拿不到 refresh_token
+- **修复**：authResultResponse 的 MErrOK 分支补 `data["refresh_token"]`（登录/注册/一步激活/刷新四入口统一生效）
+
+### Fix-C: 管理端强制登出后 refresh_token 仍有效 ✅（P1）
+- **修复**：`ForceLogout` 增加 `token_version = token_version + 1`（gorm.Expr）——access 被 C 端中间件拒、refresh 被 RefreshTokens 的版本校验拒，踢下线彻底生效
+
+### Fix-D（App 端）: 并发 401 刷新等待方误清 session ✅（P1）
+- **修复**：`MembershipApi.refreshTokens` CAS 抢锁失败的线程改为等待（≤6s）并发刷新结果后复用新 token 重放；Authenticator 失败分支同样先复核本地 token 是否已被并发线程更新
+
+### Fix-E（App 端）: 双 token 均失效的兜底引导 ✅
+- **行为**：双 token 失效 → 清 session（email 转存 `last_email` 不清除）→ `MembershipApi.notifySessionExpired` 主线程回调 → MjarchGameListActivity 弹「登录已过期」对话框（不可点外关闭，重新登录/稍后再说）→ 拉起 LoginActivity 预填 last_email
+- token 或 refresh 任一有效时全程无感（透明刷新），不弹窗
+- 涉及：MembershipApi（listener 机制）、MembershipStorage（last_email）、MjarchGameListActivity（onResume 注册/onStop 反注册 + showReloginDialog）、LoginActivity（relogin_email 预填）
+
+### 用户级 token TTL 验证方法（AC 参考）
+1. 管理端「C端用户管理」编辑用户：ac=1 分钟、rc=3 分钟（走 UpdateBizUser 自动清 Redis TTL 缓存；直改数据库需等 5 分钟缓存过期或手动 DEL `pa_license:userttl:{tenant}:{user}`）
+2. 重新登录拿短命 token（TTL 只对新签发 token 生效）
+3. 60s 后触发任一认证请求 → logcat 见 `401 received, attempting token refresh` → `Token refreshed successfully`（ac 刷新链路通）
+4. 再过 3 分钟触发请求 → `Token refresh failed, clearing session` → 主界面弹「登录已过期」→ 点重新登录进登录页且邮箱已预填
+5. 注意：App 切后台不杀进程再回来不触发刷新（syncOnAppStart 只在 onCreate）；测试场景需杀进程冷启动
+
+---
+
+## 2026-10-03 FR-01.2a 登录框历史账号预填（追加记录）
+
+> 需求：用户登录过（SharedPreferences 有账号）后，再次进入登录框默认预填该账号。
+
+### 改动（App 端）✅
+- `LoginActivity.initViews`：预填逻辑改为三级优先级 —— ①`relogin_email` extra（登录过期弹窗传入）②`getUserEmail()`（当前登录态）③新增回退 `getLastEmail()`（last_email 为 FR-25 的 clearSession 转存字段，登出/token 失效后仍保留）
+- 效果：购买未登录跳转、我的Tab登录、注册失败跳回等普通入口，登录框自动带出上次账号，不再依赖「登录过期弹窗」才有预填
+- 涉及：仅 `app/src/mjarch/.../membership/LoginActivity.java`（flavor 内，无共享代码改动）
+- 文档：requirements.md FR-01.2a（同轮新增）

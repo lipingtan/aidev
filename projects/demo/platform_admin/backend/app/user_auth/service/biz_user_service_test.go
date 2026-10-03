@@ -131,7 +131,7 @@ func TestResetPassword_Success(t *testing.T) {
 	}
 
 	// 重置密码
-	plainPwd, err := svc.ResetPassword(user.ID)
+	plainPwd, err := svc.ResetPassword(user.ID, "")
 	if err != nil {
 		t.Fatalf("ResetPassword 应成功: %v", err)
 	}

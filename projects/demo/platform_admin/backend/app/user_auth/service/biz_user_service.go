@@ -253,19 +253,23 @@ func (s *BizUserService) ListBizUsersWithStatus(tenantID int64, page, pageSize i
 }
 
 // UpdateBizUser 更新C端用户（乐观锁）
-func (s *BizUserService) UpdateBizUser(id int64, req *dto.UpdateBizUserRequest) (*model.BizUser, error) {
+func (s *BizUserService) UpdateBizUser(id int64, req *dto.UpdateBizUserRequest) (*model.BizUser, bool, error) {
 	user, err := s.repo.FindByID(s.db, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrUserNotFound
+			return nil, false, ErrUserNotFound
 		}
-		return nil, err
+		return nil, false, err
 	}
 
 	// 乐观锁校验
 	if user.Version != req.Version {
-		return nil, ErrVersionConflict
+		return nil, false, ErrVersionConflict
 	}
+
+	// 记录 TTL 是否真正变化（旧值 vs 新值，nil 视为 0=用全局默认），
+	// 仅变化时才清 Redis 缓存 + 踢下线（避免编辑昵称等无关字段误伤在线会话）
+	oldAccess, oldRefresh := ttlOrZero(user.AccessTokenExpireMinutes), ttlOrZero(user.RefreshTokenExpireMinutes)
 
 	// 更新字段
 	if req.Phone != "" {
@@ -286,12 +290,22 @@ func (s *BizUserService) UpdateBizUser(id int64, req *dto.UpdateBizUserRequest) 
 
 	if err := s.repo.Update(s.db, user); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrVersionConflict
+			return nil, false, ErrVersionConflict
 		}
-		return nil, err
+		return nil, false, err
 	}
 
-	return user, nil
+	ttlChanged := ttlOrZero(user.AccessTokenExpireMinutes) != oldAccess ||
+		ttlOrZero(user.RefreshTokenExpireMinutes) != oldRefresh
+	return user, ttlChanged, nil
+}
+
+// ttlOrZero nil 视为 0（= 用全局默认）
+func ttlOrZero(v *int) int {
+	if v == nil {
+		return 0
+	}
+	return *v
 }
 
 // DeleteBizUser 软删除C端用户
@@ -307,8 +321,9 @@ func (s *BizUserService) DeleteBizUser(id int64) error {
 }
 
 // ResetPassword 重置密码
-// 生成 8 位随机字符串（含大小写字母+数字），bcrypt 存储，明文返回
-func (s *BizUserService) ResetPassword(id int64) (string, error) {
+// body 可选 {"password": "..."}：传了用管理员指定密码（≥6 位），不传生成 8 位随机密码
+// bcrypt 存储，明文返回
+func (s *BizUserService) ResetPassword(id int64, specifiedPassword string) (string, error) {
 	user, err := s.repo.FindByID(s.db, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -317,10 +332,13 @@ func (s *BizUserService) ResetPassword(id int64) (string, error) {
 		return "", err
 	}
 
-	// 生成 8 位随机密码
-	plainPassword, err := generateRandomPassword(8)
-	if err != nil {
-		return "", err
+	// 管理员指定密码 or 生成 8 位随机密码
+	plainPassword := specifiedPassword
+	if plainPassword == "" {
+		plainPassword, err = generateRandomPassword(8)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// bcrypt 哈希存储

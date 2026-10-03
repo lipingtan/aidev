@@ -142,16 +142,18 @@ func (r *bizUserRepo) Update(db *gorm.DB, user *model.BizUser) error {
 	result := db.Model(user).
 		Where("id = ? AND version = ? AND deleted_at IS NULL", user.ID, oldVersion).
 		Updates(map[string]interface{}{
-			"phone":         user.Phone,
-			"email":         user.Email,
-			"password":      user.Password,
-			"nickname":      user.Nickname,
-			"avatar":        user.Avatar,
-			"status":        user.Status,
-			"last_login_at": user.LastLoginAt,
-			"last_login_ip": user.LastLoginIP,
-			"update_by":     user.UpdateBy,
-			"version":       user.Version,
+			"phone":                        user.Phone,
+			"email":                        user.Email,
+			"password":                     user.Password,
+			"nickname":                     user.Nickname,
+			"avatar":                       user.Avatar,
+			"status":                       user.Status,
+			"last_login_at":                user.LastLoginAt,
+			"last_login_ip":                user.LastLoginIP,
+			"update_by":                    user.UpdateBy,
+			"version":                      user.Version,
+			"access_token_expire_minutes":  user.AccessTokenExpireMinutes,
+			"refresh_token_expire_minutes": user.RefreshTokenExpireMinutes,
 		})
 	if result.Error != nil {
 		return result.Error

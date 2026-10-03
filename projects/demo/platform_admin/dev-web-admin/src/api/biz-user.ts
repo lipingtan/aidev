@@ -45,8 +45,9 @@ export interface BizUserCreateParams {
   email?: string
   nickname?: string
   password?: string
-  accessTokenExpireMinutes?: number | null
-  refreshTokenExpireMinutes?: number | null
+  // 键名 = 后端 DTO json tag（snake_case），驼峰会被 gin 丢弃
+  access_token_expire_minutes?: number | null
+  refresh_token_expire_minutes?: number | null
 }
 
 /** C端用户编辑参数 */
@@ -56,8 +57,9 @@ export interface BizUserUpdateParams {
   nickname?: string
   avatar?: string
   version: number
-  accessTokenExpireMinutes?: number | null
-  refreshTokenExpireMinutes?: number | null
+  // 键名 = 后端 DTO json tag（snake_case），驼峰会被 gin 丢弃
+  access_token_expire_minutes?: number | null
+  refresh_token_expire_minutes?: number | null
 }
 
 /** C端用户分页响应 */
@@ -100,9 +102,9 @@ export function deleteBizUser(id: string): Promise<void> {
   return request.delete(`/api/v1/admin/biz-users/${id}`)
 }
 
-/** 重置密码（返回明文密码） */
-export function resetPassword(id: string): Promise<ResetPasswordResult> {
-  return request.post(`/api/v1/admin/biz-users/${id}/reset-password`)
+/** 重置密码（可指定密码，留空由服务端随机生成；返回明文密码） */
+export function resetPassword(id: string, password = ''): Promise<ResetPasswordResult> {
+  return request.post(`/api/v1/admin/biz-users/${id}/reset-password`, password ? { password } : {})
 }
 
 /** 强制登出 */
