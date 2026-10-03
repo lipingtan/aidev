@@ -24,7 +24,9 @@ type JWTConfig struct {
 	Secret             string        `yaml:"secret"`
 	PlatformTokenTTL   time.Duration `yaml:"platform-token-ttl"`
 	AccessTokenTTL     time.Duration `yaml:"access-token-ttl"`
-	UserAccessTokenTTL time.Duration `yaml:"user-access-token-ttl"` // C端 token 有效期，默认 7 天
+	UserAccessTokenTTL time.Duration `yaml:"user-access-token-ttl"` // C端 access_token 有效期，默认 30 天
+	UserRefreshTokenTTL time.Duration `yaml:"user-refresh-token-ttl"` // C端 refresh_token 有效期，默认 365 天（FR-25）
+	RefreshTokenTTL    time.Duration `yaml:"refresh-token-ttl"`    // 管理端 Refresh token 有效期，默认 7 天
 	Issuer             string        `yaml:"issuer"`
 }
 
@@ -93,7 +95,9 @@ func DefaultConfig() *Config {
 			Secret:             "change-me-in-production",
 			PlatformTokenTTL:   168 * time.Hour,
 			AccessTokenTTL:     2 * time.Hour,
-			UserAccessTokenTTL: 7 * 24 * time.Hour,
+			UserAccessTokenTTL: 30 * 24 * time.Hour,
+			UserRefreshTokenTTL: 365 * 24 * time.Hour,
+			RefreshTokenTTL:    3 * time.Hour,
 			Issuer:             "auth-rbac",
 		},
 		Permission: PermConfig{

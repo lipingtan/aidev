@@ -115,6 +115,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/system/log/OperationLogList.vue'),
         meta: { title: '操作日志', icon: 'Notebook', permission: 'user:log:list' }
       },
+      // v2-cr11: 登录黑名单
+      {
+        path: 'log/login-blacklist',
+        name: 'login-blacklist',
+        component: () => import('@/views/system/log/LoginBlacklistList.vue'),
+        meta: { title: '登录黑名单', icon: 'Lock', permission: 'log:blacklist:list' }
+      },
       // 个人中心
       {
         path: 'profile',
@@ -223,6 +230,30 @@ export const asyncRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/license/Levels.vue'),
         meta: { title: '会员等级', icon: 'Star', permission: 'license:levels' }
       },
+      {
+        path: 'license/orders',
+        name: 'license-orders',
+        component: () => import('@/views/license/Orders.vue'),
+        meta: { title: '订单管理', icon: 'ShoppingCart', permission: 'license:orders' }
+      },
+      {
+        path: 'license/tb-orders',
+        name: 'license-tb-orders',
+        component: () => import('@/views/license/TaobaoOrders.vue'),
+        meta: { title: '淘宝订单', icon: 'Goods', permission: 'license:tb-orders' }
+      },
+      {
+        path: 'license/games',
+        name: 'license-games',
+        component: () => import('@/views/license/Games.vue'),
+        meta: { title: '游戏管理', icon: 'GamePad', permission: 'license:games' }
+      },
+      {
+        path: 'license/prices',
+        name: 'license-prices',
+        component: () => import('@/views/license/Prices.vue'),
+        meta: { title: '套餐定价', icon: 'PriceTag', permission: 'license:prices' }
+      },
 
       // 应用目录
       {
@@ -267,6 +298,12 @@ export const asyncRoutes: RouteRecordRaw[] = [
         name: 'system-tenant-domain',
         component: () => import('@/views/system/tenant-domain/index.vue'),
         meta: { title: '域名管理', icon: 'Link', permission: 'system:tenant-domain:list' }
+      },
+      {
+        path: 'system/tokens',
+        name: 'system-tokens',
+        component: () => import('@/views/system/token-management/index.vue'),
+        meta: { title: 'Token 管理', icon: 'Key', permission: 'system:token:list' }
       },
 
       // 审批管理

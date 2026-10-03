@@ -4,220 +4,365 @@
 
 | 指标 | 值 |
 |------|-----|
-| 总任务数 | 16 |
-| 已完成 | 10 |
+| 总任务数 | 37 |
+| 已完成 | 35 |
 | 进行中 | 0 |
-| 未开始 | 6 |
-| 完成率 | 10/16 (62.5%) |
-| 当前阶段 | Phase 2: 客户端开发 |
+| 未开始 | 2 |
+| 完成率 | 35/37 (95%) |
+| 当前阶段 | Phase 3: 测试和部署 |
 
-## Phase 1: 后端开发（platform_admin/license 插件） ✅
+## Phase 1: 后端开发（已完成） ✅
 
 ### Task 1: 插件工程搭建 ✅
-**Scope**: 创建 license 插件工程结构，包含 main.go、handler.go、db.go、models.go、crypto.go
-**Constraints**: 
-- 遵循 platform_admin 插件开发规范（RegisterDirect 内嵌方式）
-- 使用 GORM 作为 ORM
-- 使用 JWT 进行认证
-- 实现 RSA 加密解密（RSA/ECB/PKCS1Padding，2048位）
-**Acceptance**:
-- ✅ 插件可以成功通过 RegisterDirect 方式加载到 platform_admin
-- ✅ RSA 加密解密功能正常工作
-
 ### Task 2: RSA 加密解密模块 ✅
-**Scope**: 实现 RSA 加密解密模块（crypto.go），支持请求解密和响应加密
-**Constraints**:
-- 算法：RSA/ECB/PKCS1Padding
-- 密钥长度：2048 位
-- 私钥从插件配置中读取
-- 请求解密：`rsa.DecryptPKCS1v15(rand.Reader, priv, encryptedData)`
-- 响应加密：`rsa.EncryptPKCS1v15(rand.Reader, pub, plainData)`
-**Acceptance**:
-- ✅ 可以正确解密客户端加密的请求参数
-- ✅ 可以正确加密响应数据供客户端解密
-- ✅ 与客户端 RSAUtils 兼容
-
 ### Task 3: 数据模型和数据库初始化 ✅
-**Scope**: 定义 activation_code_types、activation_codes、activation_records、user_memberships、user_devices、membership_levels 表模型，创建数据库初始化逻辑
-**Constraints**:
-- 使用 GORM AutoMigrate
-- membership_levels 表插入初始数据（normal/vip/premium）
-- activation_code_types 表插入初始数据（standard_yearly、trial）
-- 激活码实例（activation_codes）和激活记录（activation_records）分开刻画
-**Acceptance**:
-- ✅ 启动插件时自动创建/迁移数据库表
-- ✅ membership_levels 表有3条初始记录
-- ✅ activation_code_types 表有2条初始记录
-
 ### Task 4: 设备管理 API ✅
-**Scope**: 实现设备管理 API（C 端用户和管理端）
-**Constraints**:
-- 复用 user_auth 模块的登录流程
-- 登录时检查设备数量限制（最多 N 台，由 license.max_devices 配置项控制，默认 2）
-- 支持踢出指定设备
-- C 端用户接口：/api/v1/user/auth/license/devices、/api/v1/user/auth/license/devices/logout
-- 管理端接口：/api/v1/admin/license/all-devices（可按 user_id 筛选）
-**Acceptance**:
-- ✅ 同一用户超出 license.max_devices 限制时登录失败
-- ✅ C 端用户可以查看自己的设备列表
-- ✅ C 端用户可以踢出指定设备
-- ✅ 管理端可以查看所有设备列表（可按 user_id 筛选）
-
 ### Task 5: 激活码类型管理 API ✅
-**Scope**: 实现激活码类型管理 API（管理端）
-**Constraints**:
-- 激活码类型包含：名称、代码、默认会员等级、默认时长、逻辑类型
-- 初始数据包含 VIP年会员（standard_yearly）和体验卡（trial）两种类型
-- 管理端接口：/api/v1/admin/license/code-types（列表、创建）
-**Acceptance**:
-- ✅ 管理端可以创建激活码类型
-- ✅ 管理端可以获取激活码类型列表
-
 ### Task 6: 激活码实例管理 API ✅
-**Scope**: 实现激活码实例管理 API（管理端和 C 端用户）
-**Constraints**:
-- 激活码一次性使用，重复使用提示"激活码已激活，请使用恢复功能"
-- 已取消的激活码不能用于激活，激活时提示"激活码已取消"
-- 已激活的激活码不能重新激活，只能由原始用户恢复
-- 同一用户多次激活时顺延时间：new_expiry = max(now, old_expiry) + duration_days
-- 恢复激活检查激活码归属（只有原始激活用户才能恢复）
-- 激活记录按时间倒序排列
-- 会员身份可叠加，不同会员类型独立计算过期时间
-- 取消激活码时使用 **Replay 重算**方式计算剩余会员时间
-- 每个激活码恢复次数上限为 3 次
-- 创建激活码时生成随机字符串（16位，格式 XXXX-XXXX-XXXX-XXXX）
-- 激活码实例可以覆盖类型定义中的属性（会员等级、激活时长）
-- 激活信息中包含 C 端用户标识（user_id）
-**Acceptance**:
-- ✅ 管理端可以创建激活码实例，指定类型和覆盖属性
-- ✅ 管理端可以查看激活码列表
-- ✅ 有效激活码可以成功激活
-- ✅ 已激活的激活码不能再次使用
-- ✅ 已取消的激活码不能用于激活
-- ✅ 同一用户多次激活时间正确顺延
-- ✅ 原始激活用户可以恢复之前用过的激活码
-- ✅ 激活码恢复次数超过 3 次时返回错误
-- ✅ C 端用户可以查看自己的激活记录列表
-- ✅ 管理端可以查看所有激活记录列表
-- ✅ /status API 返回用户当前所有有效会员身份列表
-- ✅ 激活响应中包含 user_id
-- ✅ 取消激活码后正确计算会员剩余时间
-
 ### Task 6b: 到期提醒 ✅
-**Scope**: 实现到期提醒逻辑，在 /status API 响应中新增 `warning_days_left` 字段
-**Constraints**:
-- 基于用户所有有效会员中最近到期的那个计算剩余天数
-- 剩余天数 ≤ 7 时返回具体剩余天数（整数），否则返回 `null`
-**Acceptance**:
-- ✅ /status 接口在会员剩余 ≤ 7 天时返回 warning_days_left（具体天数）
-- ✅ /status 接口在会员剩余 > 7 天时返回 warning_days_left: null
-- ✅ 无有效会员时返回 warning_days_left: null
-
 ### Task 7: 会员等级管理 API ✅
-**Scope**: 实现会员等级管理 API（管理端）
-**Constraints**:
-- 返回所有会员等级列表
-- 支持创建、更新、删除会员等级
-- 管理端接口：/api/v1/admin/license/levels（列表、创建、更新、删除）
-**Acceptance**:
-- ✅ 管理端可以获取会员等级列表
-- ✅ 管理端可以创建会员等级
-- ✅ 管理端可以更新会员等级
-- ✅ 管理端可以删除会员等级
+### Task 8: 微信支付集成 ✅
+- 创建订单 POST /api/v1/user/auth/license/purchase
+- 查询订单 GET /api/v1/user/auth/license/order/:order_no
+- 订单列表 GET /api/v1/user/auth/license/orders
+- 支付回调 POST /api/v1/user/public/license/payment/callback
+- 退款回调 POST /api/v1/user/public/license/refund/callback
+- 管理端订单管理、退款、支付流水查询
 
-## Phase 2: 客户端开发（Retro/phoenixui/mjarch）
+---
 
-> **重要**：Phase 2 的所有改动**仅针对 mjarch flavor**。禁止修改其他 flavor（mjguoguan1、tcb1、jdgamespace 等）的任何代码或配置。
+## Phase 2a: 后端新增接口（已完成） ✅
 
-### Task 8: MembershipAccessControl 类
-**Scope**: 创建 MembershipAccessControl 类，实现 IAccessControl 接口
-**Constraints**:
-- 检查本地缓存的会员状态
-- 过期则弹出登录/激活对话框
-- device_id 基于 Android ID 做 SHA-256 哈希生成（首次启动时计算并持久化到 SharedPreferences）
-**Acceptance**:
-- mjarch flavor 使用新的准入控制逻辑
-- 其他 flavor 不受影响
+> 2024-10-02 核对代码确认完成
 
-### Task 9: 登录页面
-**Scope**: 创建 LoginActivity（手机号+验证码登录）
-**Constraints**:
-- 调用 /api/v1/user/auth/send-code 发送验证码
-- 调用 /api/v1/user/auth/login 登录
-- 本地存储 token 和用户信息
-**Acceptance**:
-- 用户可以登录
-- 登录状态持久化
+### Task 2a-1: 数据库表结构调整 ✅
 
-### Task 10: 会员激活页面
-**Scope**: 创建 MembershipActivationActivity
-**Constraints**:
-- 输入激活码
-- 调用后端激活 API（/api/v1/user/auth/license/activate）
-- 显示激活结果和会员状态
-- 支持恢复激活（调用 /api/v1/user/auth/license/restore）
-**Acceptance**:
-- 用户可以输入激活码激活会员
-- 显示会员等级和过期时间
-- 用户可以恢复之前用过的激活码
+#### Task 2a-1a: biz_user 表增加 email/password 字段 ✅
+**代码位置**: `backend/app/user_auth/model/biz_user.go`
+- [x] `Email *string` 字段已添加，含唯一索引 `uk_tenant_email`
+- [x] `Password string` 字段已添加
 
-### Task 11: 会员状态和设备管理页面
-**Scope**: 创建 MembershipStatusActivity
-**Constraints**:
-- 显示当前会员状态（调用 /api/v1/user/auth/license/status）
-- 显示激活记录列表（调用 /api/v1/user/auth/license/history）
-- 显示已登录设备列表（调用 /api/v1/user/auth/license/devices）
-- 支持踢出设备（调用 /api/v1/user/auth/license/devices/logout）
-**Acceptance**:
-- 用户可以查看会员状态
-- 用户可以查看激活记录
-- 用户可以管理登录设备
+#### Task 2a-1b: activation_code_types 表增加 default_level_code 字段 ✅
+**代码位置**: `backend/app/license/models/models.go`
+- [x] `DefaultLevelCode string` 字段已添加
 
-### Task 12: mjarch flavor 配置
-**Scope**: 修改 mjarch flavor 的 strings.xml，配置新的 access_control_class 和独立 RSA 密钥
-**Constraints**:
-- 只修改 mjarch flavor，其他 flavor 的 strings.xml 不得改动
-- 新增 `license_rsa_key` 字段存放 license 插件专用 RSA 公钥（2048位）
-- 不复用、不覆盖旧激活机制的 `key1` 字段
-- 旧激活机制的 PHP 后端无需任何改动
-**Acceptance**:
-- mjarch flavor 使用 MembershipAccessControl
-- mjarch flavor 的 `license_rsa_key` 与旧 `key1` 是不同的密钥
-- 其他 flavor 使用原来的 ActivationAccessControl，激活功能回归测试通过
-- 旧 PHP 后端不受影响，其接口和密钥与 license 插件完全独立
+#### Task 2a-1c: activation_codes 表调整 ✅
+- [x] `LevelCode string` 字段已添加
+- [x] `Source string` 字段已添加（default: manual）
+- [x] `Version int` 字段已添加（乐观锁）
+
+#### Task 2a-1d: activation_records 表调整 ✅
+- [x] `LevelCode string` 字段已添加
+- [x] `StartsAt *time.Time` 字段已添加
+- [x] `RestoreCount int` 字段已添加
+
+#### Task 2a-1e: user_memberships 表调整 ✅
+- [x] `LevelCode string` 字段已添加
+
+#### Task 2a-1f: user_devices 表增加 is_logged_in 字段 ✅
+- [x] `IsLoggedIn int` 字段已添加
+
+#### Task 2a-1g: 新建 games 表 ✅
+**代码位置**: `backend/app/license/models/models.go` - `Game` 结构体
+
+#### Task 2a-1h: 新建 price_configs 表 ✅
+**代码位置**: `backend/app/license/models/models.go` - `PriceConfig` 结构体
+
+#### Task 2a-1i: 更新 Go Model 定义 ✅
+- [x] 所有 Model 已更新，AutoMigrate 可正常运行
+
+#### Task 2a-1j: 更新业务逻辑使用 level_code ✅
+**代码位置**: `backend/app/license/service/license_service.go`
+- [x] `resolveCodeLevelDuration()` 方法实现优先级逻辑
+- [x] `activateCodeTx()` 使用 level_code
+
+### Task 2a-2: 注册接口 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `Register()`
+**路由**: `POST /api/v1/user/public/license/register`
+- [x] 租户识别逻辑 `ResolveTenantByHost()`
+- [x] 邮箱格式验证、密码长度验证
+- [x] 邮箱查重（按 tenant_id + email）
+- [x] 密码 bcrypt 加密存储
+
+### Task 2a-3: 登录接口 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `Login()`
+**路由**: `POST /api/v1/user/public/license/login`
+- [x] 单设备登录检查 `checkSingleDeviceLogin()`
+- [x] JWT Token 签发
+- [x] Redis 登录状态缓存 `setLoginState()`
+- [x] 返回 token、user_id、memberships
+
+### Task 2a-4: 登出接口 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `Logout()`
+**路由**: `POST /api/v1/user/public/license/logout`
+- [x] 更新 user_devices.is_logged_in = 0
+- [x] 删除 Redis 登录状态缓存 `delLoginState()`
+
+### Task 2a-5: 一步激活接口（公开） ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `OneStepActivate()`
+**路由**: `POST /api/v1/user/public/license/activate`
+- [x] 激活码验证逻辑（乐观锁）`validateAndConsumeCode()`
+- [x] level_code/duration_days 获取逻辑 `resolveCodeLevelDuration()`
+- [x] 新用户自动注册
+- [x] 老用户密码验证
+- [x] 创建激活记录 + 更新会员身份（顺延逻辑）
+
+### Task 2a-6: 会员状态查询接口 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `GetStatus()`
+**路由**: `GET /api/v1/user/auth/license/status`
+- [x] 从 Redis 获取会员状态，未命中查库
+- [x] 返回 memberships 列表（含 warning_days_left）
+
+### Task 2a-7: 用户会员身份管理 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `upsertMembershipTx()`
+- [x] 使用 level_code 而非 level_id
+- [x] 支持顺延逻辑：`expires_at = GREATEST(NOW(), old_expires_at) + duration_days`
+- [x] 支持多等级集合
+
+### Task 2a-8: 激活记录查询接口 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `GetRecords()`
+**路由**: `GET /api/v1/user/auth/license/records`
+- [x] 返回当前用户的激活记录列表
+- [x] 包含 can_restore 字段（restore_count < 3）
+
+### Task 2a-9: 激活码恢复接口 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `RestoreRecord()`
+**路由**: `POST /api/v1/user/auth/license/restore`
+- [x] 只有原激活用户可以恢复
+- [x] 每个激活记录最多恢复 3 次
+- [x] 恢复时更新 user_memberships（顺延逻辑）
+- [x] 清除 Redis 会员状态缓存
+
+### Task 2a-10: 已登录用户激活接口 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `ActivateByUser()`
+**路由**: `POST /api/v1/user/auth/license/activate`
+- [x] 需要登录（JWT token）+ X-Device-ID Header
+- [x] 激活码验证 + 创建激活记录 + 更新会员身份
+- [x] 清除 Redis 会员状态缓存
+
+### Task 2a-11: 游戏管理接口 ✅
+**代码位置**: `backend/app/license/service/game_price_service.go` - `GameService`
+**路由**:
+- `GET /api/v1/admin/license/games` → `AdminListGames`
+- `POST /api/v1/admin/license/games` → `AdminCreateGame`
+- `PUT /api/v1/admin/license/games/:id` → `AdminUpdateGame`
+- `DELETE /api/v1/admin/license/games/:id` → `AdminDeleteGame`
+- `GET /api/v1/user/public/license/games` → `PublicGames`
+
+### Task 2a-12: 套餐价格管理接口 ✅
+**代码位置**: `backend/app/license/service/game_price_service.go` - `GameService`
+**路由**:
+- `GET /api/v1/admin/license/prices` → `AdminListPrices`
+- `POST /api/v1/admin/license/prices` → `AdminCreatePrice`
+- `PUT /api/v1/admin/license/prices/:id` → `AdminUpdatePrice`
+- `DELETE /api/v1/admin/license/prices/:id` → `AdminDeletePrice`
+- `GET /api/v1/user/public/license/price` → `PublicPrice`
+
+### Task 2a-13: Redis 缓存实现 ✅
+**代码位置**: `backend/app/license/service/membership_service.go`
+- [x] `membershipCacheKey()` - 会员状态缓存 key
+- [x] `loginCacheKey()` - 登录状态缓存 key
+- [x] `getLoginState()` / `setLoginState()` / `delLoginState()` - 登录状态读写
+- [x] `delMembershipCache()` - 清除会员状态缓存
+
+### Task 2a-14: 被踢设备检测中间件 ✅
+**代码位置**: `backend/app/license/apis/membership_api.go` - `deviceCheck()`
+- [x] 从 Header `X-Device-ID` 获取 device_id
+- [x] 查 Redis 登录状态（未命中查库回写）
+- [x] is_logged_in = 0 或 device_id 不匹配 → 返回 401 + DEVICE_KICKED
+- [x] 在 `StatusMembership`, `ActivateMembership`, `RestoreMembership`, `Records` 中调用
+
+### Task 2a-15: 管理端强制登出 ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `ForceLogout()`
+**路由**: `POST /api/v1/admin/license/users/:id/force-logout`
+- [x] 更新 user_devices.is_logged_in = 0
+- [x] 删除 Redis 登录状态缓存
+
+### Task 2a-16: 微信支付回调调整支持 level_code ✅
+**代码位置**: `backend/app/license/service/membership_service.go` - `resolveCodeLevelDuration()`
+- [x] 从 activation_codes.level_code 或 activation_code_types.default_level_code 获取
+- [x] 激活记录和会员身份使用 level_code
+
+### Task 2a-17: orders 表字段检查 ✅
+**代码位置**: `backend/app/license/models/models.go` - `Order` 结构体
+- [x] 确认字段满足设计需求，无需额外字段
+
+---
+
+## Phase 2b: 客户端开发（mjarch flavor）（已完成） ✅
+
+> 2024-10-02 核对代码确认完成
+> 代码路径: `app/src/main/java/com/seleuco/mame4droid/membership/`
+
+> **重要**：Phase 2b 的所有改动**仅针对 mjarch flavor**。
+
+### Task 2b-1: 网络请求基础类 ✅
+**代码位置**: `MembershipApi.java`
+- [x] OkHttpClient 封装，自动添加 X-Device-ID 和 Authorization header
+- [x] 处理 401 DEVICE_KICKED（自动清除 session）
+- [x] 处理 403 ALREADY_LOGGED_IN
+- [x] API 方法: register, login, logout, oneStepActivate, getPrice, getGames, getStatus, getRecords, activate, restore
+
+### Task 2b-2: 本地存储管理 ✅
+**代码位置**: `MembershipStorage.java`
+- [x] SharedPreferences name: "membership"
+- [x] isLoggedIn(), getToken(), saveToken()
+- [x] getUserId(), saveUserId(), getUserEmail(), saveUserEmail()
+- [x] getMemberships(), saveMemberships(), hasLevel(), hasAnyLevel()
+- [x] getGamesConfig(), saveGamesConfig(), getGameConfig()
+- [x] needsSyncGames() - 6小时同步检查
+- [x] clearSession(), saveLoginInfo()
+
+### Task 2b-3: 会员状态同步 ✅
+**代码位置**: `MembershipSyncManager.java`
+- [x] syncOnAppStart() - App 启动时调用
+- [x] syncMembershipStatus() - 同步会员状态（已登录时）
+- [x] forceRefresh() - 强制刷新
+
+### Task 2b-4: 游戏列表同步 ✅
+**代码位置**: `MembershipSyncManager.java`
+- [x] syncGamesConfig() - 同步游戏配置
+- [x] needsSyncGames() - 6小时同步检查（在 MembershipStorage）
+- [x] 网络失败时使用本地缓存
+
+### Task 2b-5: MembershipAccessControl 完善 ✅
+**代码位置**: `com.seleuco.mame4droid.access.MembershipAccessControl`
+- [x] canAccessGame(context, romName) - 按 rom_name 检查准入
+- [x] 免费游戏（required_levels 为空或 null）直接放行
+- [x] 会员游戏检查 hasAnyLevel()
+- [x] 未满足条件时弹出 MembershipDialogFragment
+- [x] syncOnAppStart() 静态方法
+
+### Task 2b-6: MembershipDialogFragment ✅
+**代码位置**: `MembershipDialogFragment.java`
+**布局**: `fragment_membership_dialog.xml`（实际使用 AlertDialog）
+- [x] 显示"该游戏需要会员权限"提示
+- [x] [输入激活码] 按钮 → 已登录显示 InputCodeDialogFragment，未登录跳转 MembershipActivationActivity
+- [x] [购买会员] 按钮 → 已登录跳转 PurchaseActivity，未登录跳转 LoginActivity（带 pending_action）
+- [x] 取消按钮
+
+### Task 2b-7: MembershipActivationActivity ✅
+**代码位置**: `MembershipActivationActivity.java`
+**布局**: `activity_membership_activation.xml`
+- [x] 邮箱/密码/激活码输入框
+- [x] 调用 oneStepActivate API
+- [x] 成功后保存登录信息，返回游戏
+- [x] 错误处理（ALREADY_LOGGED_IN, DEVICE_KICKED）
+
+### Task 2b-8: InputCodeDialogFragment ✅
+**代码位置**: `InputCodeDialogFragment.java`
+**布局**: `fragment_input_code_dialog.xml`
+- [x] 激活码输入框
+- [x] 调用 activate API（需要 token）
+- [x] 成功后更新本地会员状态
+
+### Task 2b-9: LoginActivity ✅
+**代码位置**: `LoginActivity.java`
+**布局**: `activity_login.xml`
+- [x] 邮箱/密码输入框
+- [x] 调用 login API
+- [x] 成功后保存登录信息
+- [x] 支持 pending_action（如 purchase）
+- [x] 跳转注册页面链接
+
+### Task 2b-10: RegisterActivity ✅
+**代码位置**: `RegisterActivity.java`
+**布局**: `activity_register.xml`
+- [x] 邮箱/密码/确认密码输入框
+- [x] 本地验证两次密码一致、长度 ≥ 6
+- [x] 调用 register API
+- [x] 成功后跳转登录页面
+
+### Task 2b-11: PurchaseActivity ✅
+**代码位置**: `PurchaseActivity.java`, `PaymentWebActivity.java`
+**布局**: `activity_purchase.xml`, `activity_payment_web.xml`
+- [x] 套餐列表展示（调用 getPrice API）
+- [x] 价格/原价/时长显示
+- [x] 创建订单（调用 createOrder API）
+- [x] WebView 加载微信 H5 支付链接
+- [x] 处理微信 App 跳转
+- [x] 轮询订单状态（2秒间隔，最多3分钟）
+- [x] 支付成功后刷新会员状态
+
+### Task 2b-12: MembershipStatusActivity ✅
+**代码位置**: `MembershipStatusActivity.java`
+**布局**: `activity_membership_status.xml`
+- [x] 显示用户邮箱
+- [x] 会员等级列表（含过期时间、剩余天数）
+- [x] 激活记录列表（可恢复的显示点击恢复）
+- [x] 调用 getStatus/getRecords API
+- [x] 恢复功能（调用 restore API）
+- [x] 登出功能（调用 logout API + clearSession）
+
+### Task 2b-13: mjarch flavor 配置 ✅
+**代码位置**: `app/src/mjarch/res/values/strings.xml`
+- [x] `access_control_class` = `com.seleuco.mame4droid.access.MembershipAccessControl`
+- [x] `server_url` = `https://app.btcola.com`
+
+---
 
 ## Phase 3: 测试和部署
 
-### Task 13: 后端单元测试
-**Scope**: 编写核心业务逻辑的单元测试
-**Constraints**:
-- 覆盖激活、顺延、恢复、多设备登录等场景
-**Acceptance**:
-- 所有测试通过
-- 核心逻辑覆盖率 > 80%
+### Task 3-1: 后端单元测试
+- [ ] 密码加密验证
+- [ ] 一步激活逻辑（新用户/老用户）
+- [ ] 乐观锁并发测试
+- [ ] 会员等级集合访问控制
+- [ ] 单设备登录限制
+- [ ] level_code/duration_days 获取优先级
+- [ ] 顺延逻辑
 
-### Task 14: 集成测试
-**Scope**: 编写端到端集成测试
-**Constraints**:
-- 覆盖注册 → 登录 → 激活 → 查询状态完整流程
-**Acceptance**:
-- 所有集成测试通过
+### Task 3-2: 集成测试
+- [ ] 注册 → 登录 → 激活 完整流程
+- [ ] 一步激活流程（新用户/老用户）
+- [ ] 单设备登录限制测试
+- [ ] 同设备重新登录测试
+- [ ] 显式登出 → 另一设备登录
+- [ ] 强制登出 → 被踢设备返回 DEVICE_KICKED
+- [ ] 微信支付 → 自动激活
+- [ ] 激活码恢复流程
+- [ ] Redis 缓存正确性
 
-### Task 15: 客户端测试
-**Scope**: 测试 mjarch flavor 的新激活逻辑，并回归验证其他 flavor 不受影响
-**Constraints**:
-- 验证其他 flavor 激活逻辑不受影响
-- 验证旧 PHP 后端无需改动且仍正常工作
-- 验证 mjarch 使用独立 RSA 密钥，不影响旧激活逻辑的 key1
-**Acceptance**:
-- mjarch flavor 激活流程正常（MembershipAccessControl + license 插件）
-- mjguoguan1 / tcb1 / jdgamespace 等其他 flavor 激活功能回归测试全部通过
-- 旧 PHP 后端未做任何改动，接口功能正常
+### Task 3-3: 客户端测试
+- [ ] 免费游戏无需登录
+- [ ] 会员游戏根据等级集合判断
+- [ ] 游戏列表同步（启动时 + 6 小时）
+- [ ] 会员状态同步（启动时）
+- [ ] 激活流程
+- [ ] 购买流程
+- [ ] 单设备登录限制 UI 提示
+- [ ] X-Device-ID Header 正确传递
 
-### Task 16: 部署
-**Scope**: 构建和部署 license 插件
-**Constraints**:
-- 遵循 platform_admin 插件部署规范
-**Acceptance**:
-- 插件成功部署到 production
-- API 可以正常访问
+### Task 3-4: 部署
+- [ ] 后端部署
+- [ ] 数据库迁移
+- [ ] tenant_domain 配置（app.btcola.com）
+- [ ] Redis 配置
+---
+
+## 2026-10-02 支付链路修复与履约架构（追加记录）
+
+### Fix-1: 微信支付回调链路修复 ✅
+- **根因 1**：notify_url 路径错误（缺 `/public` 段）→ 微信回调 404，订单永远待支付
+- **根因 2**：PaymentCallback handler 按普通 JSON 解析，而微信 V3 回调是 AES-GCM 加密报文
+- **修复**：settings-prd.yml 路径修正；PaymentCallback/RefundCallback 重写走 WeChatPayAdapter.HandleCallback（验签+解密）；全链路日志
+- **配置**：`settings-prd.yml` notify_url = `https://btcola.com/api/v1/user/public/license/payment/callback`
+
+### Fix-2: 管理端订单列表空白 ✅
+- **根因**：前端读 `data.orders`，后端只输出 `data.items`
+- **修复**：GetAllOrdersAdmin 输出双键；OrderInfo 补齐 user_id/类型名/等级名/激活码/微信单号/时间；支持订单号/用户ID/状态筛选
+
+### Feature-1: 商品履约策略架构 ✅
+- **设计**：见 design.md 4.9 —— 按 activation_code_types.logic_type 路由履约策略（注册表模式）
+- **代码**：`service/fulfillment.go`（Fulfiller 接口 + FulfillOrder 统一入口 + StandardFulfiller）
+- **收益**：新增商品类型只需注册新策略，回调主流程零改动
+
+### Feature-2: 支付对账兜底 ✅
+- **设计**：见 design.md 4.10 —— 挂在每分钟定时任务上：待支付订单查微信补发货 + 激活失败自动重试（≤5次）
+- **双保险**：GetOrder/订单列表在 paid/activated 状态均返回激活码
+
+### Feature-3: 管理端会员身份列表 ✅（FR-06.9）
+- 后端 `GET /api/v1/admin/license/memberships`（分页/搜索/筛选）
+- 前端 Members.vue 从占位页改为完整列表
+
+**待部署**：以上全部为服务端改动，App 端无需重新发布。部署重启后验证一笔真实支付的全链路。

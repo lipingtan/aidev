@@ -1,39 +1,40 @@
 <template>
-  <div class="page-container">
-    <!-- 搜索栏 -->
-    <el-card shadow="never" class="search-card">
-      <el-form :model="queryParams" inline>
-        <el-form-item label="用户名">
-          <el-input v-model="queryParams.username" placeholder="请输入用户名" clearable @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="queryParams.email" placeholder="请输入邮箱" clearable @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="手机号">
-          <el-input v-model="queryParams.phone" placeholder="请输入手机号" clearable @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 操作栏 + 表格 -->
-    <el-card shadow="never" class="table-card">
-      <template #header>
+  <div class="page-container" :class="{ 'mobile-layout': isMobile }">
+    <el-card shadow="never" class="main-card">
+      <!-- 固定头部区域（手机端） -->
+      <div class="sticky-header">
         <div class="card-header">
           <span>用户列表</span>
-          <el-button type="primary" @click="handleAdd">新增用户</el-button>
+          <el-button type="primary" size="small" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            <span v-if="!isMobile">新增用户</span>
+          </el-button>
         </div>
-      </template>
 
-      <!-- 移动端水平滚动容器（仅包裹表格，不包裹分页，避免 popper 被裁剪） -->
-      <div class="table-scroll-wrapper">
-        <el-table v-loading="loading" :data="tableData" row-key="id" style="min-width: 700px;">
-          <template #empty>
-            <el-empty description="暂无数据" />
-          </template>
+        <!-- 搜索栏 -->
+        <el-form :model="queryParams" :inline="!isMobile" class="search-form">
+          <el-form-item label="用户名">
+            <el-input v-model="queryParams.username" placeholder="请输入用户名" clearable @keyup.enter="handleSearch" />
+          </el-form-item>
+          <el-form-item label="邮箱">
+            <el-input v-model="queryParams.email" placeholder="请输入邮箱" clearable @keyup.enter="handleSearch" />
+          </el-form-item>
+          <el-form-item label="手机号">
+            <el-input v-model="queryParams.phone" placeholder="请输入手机号" clearable @keyup.enter="handleSearch" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">查询</el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 可滚动的列表区域 -->
+      <div class="scrollable-content">
+        <!-- 响应式列表 -->
+        <ResponsiveList :data="tableData" :loading="loading" :table-props="{ style: 'min-width: 700px;' }">
+        <!-- 桌面端表格 -->
+        <template #table>
           <el-table-column prop="username" label="用户名" width="140" />
           <el-table-column prop="email" label="邮箱" min-width="180" />
           <el-table-column prop="phone" label="手机号" width="140" />
@@ -45,10 +46,9 @@
             </template>
           </el-table-column>
           <el-table-column prop="created_at" label="创建时间" width="180" />
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
               <el-dropdown trigger="click">
                 <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
                 <template #dropdown>
@@ -57,31 +57,77 @@
                     <el-dropdown-item @click="handleRoleAssign(row)">角色分配</el-dropdown-item>
                     <el-dropdown-item @click="handleChangePassword(row)">修改密码</el-dropdown-item>
                     <el-dropdown-item @click="handleForceOffline(row)">强制下线</el-dropdown-item>
+                    <el-dropdown-item divided @click="handleDelete(row)">
+                      <span style="color: var(--el-color-danger)">删除</span>
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
             </template>
           </el-table-column>
-        </el-table>
-      </div>
+        </template>
 
-      <el-pagination
-        class="pagination"
-        v-model:current-page="queryParams.page"
-        v-model:page-size="queryParams.page_size"
-        :total="total"
-        :page-sizes="[20, 50, 100]"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="fetchData"
-        @current-change="fetchData"
-      />
+        <!-- 手机端卡片 -->
+        <template #card="{ row }">
+          <div class="card-title">
+            {{ row.username }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" class="card-tag">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </div>
+          <div class="card-row">
+            <span class="card-label">邮箱</span>
+            <span class="card-value">{{ row.email || '-' }}</span>
+          </div>
+          <div class="card-row">
+            <span class="card-label">手机号</span>
+            <span class="card-value">{{ row.phone || '-' }}</span>
+          </div>
+          <div class="card-row">
+            <span class="card-label">创建时间</span>
+            <span class="card-value">{{ row.created_at }}</span>
+          </div>
+        </template>
+
+        <!-- 手机端操作按钮 -->
+        <template #actions="{ row }">
+          <el-button size="small" type="primary" @click="handleEdit(row)">编辑</el-button>
+          <el-dropdown trigger="click">
+            <el-button size="small">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="handleTenantManage(row)">租户关联</el-dropdown-item>
+                <el-dropdown-item @click="handleRoleAssign(row)">角色分配</el-dropdown-item>
+                <el-dropdown-item @click="handleChangePassword(row)">修改密码</el-dropdown-item>
+                <el-dropdown-item @click="handleForceOffline(row)">强制下线</el-dropdown-item>
+                <el-dropdown-item divided @click="handleDelete(row)">
+                  <span style="color: var(--el-color-danger)">删除</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
+      </ResponsiveList>
+
+        <el-pagination
+          class="pagination"
+          v-model:current-page="queryParams.page"
+          v-model:page-size="queryParams.page_size"
+          :total="total"
+          :page-sizes="[20, 50, 100]"
+          :layout="isMobile ? 'total, prev, pager, next' : 'total, sizes, prev, pager, next, jumper'"
+          :small="isMobile"
+          @size-change="fetchData"
+          @current-change="fetchData"
+        />
+      </div>
     </el-card>
 
     <!-- 新增/编辑对话框 -->
     <UserForm ref="formRef" @success="fetchData" />
 
     <!-- 租户关联管理对话框 -->
-    <el-dialog v-model="tenantDialogVisible" title="租户关联管理" width="700px" destroy-on-close>
+    <el-dialog v-model="tenantDialogVisible" title="租户关联管理" :width="isMobile ? '95%' : '700px'" destroy-on-close>
       <el-transfer
         v-model="userTenantIds"
         :data="allTenantOptions"
@@ -97,7 +143,7 @@
     </el-dialog>
 
     <!-- 角色分配对话框 -->
-    <el-dialog v-model="roleDialogVisible" title="角色分配" width="560px" destroy-on-close>
+    <el-dialog v-model="roleDialogVisible" title="角色分配" :width="isMobile ? '95%' : '560px'" destroy-on-close>
       <div style="max-height: 400px; overflow-y: auto;">
         <h4 style="margin: 0 0 8px;">角色</h4>
         <el-checkbox-group v-model="selectedRoleIds">
@@ -133,7 +179,7 @@
     </el-dialog>
 
     <!-- 修改密码对话框 -->
-    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="400px" :close-on-click-modal="false">
+    <el-dialog v-model="passwordDialogVisible" title="修改密码" :width="isMobile ? '95%' : '400px'" :close-on-click-modal="false">
       <div v-if="passwordTargetUser">
         <p style="margin-bottom: 16px;">为用户「{{ passwordTargetUser.username }}」设置新密码：</p>
         <el-form label-width="90px">
@@ -151,9 +197,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { ArrowDown, Plus } from '@element-plus/icons-vue'
 import {
   listUsers,
   deleteUser,
@@ -171,6 +217,21 @@ import type { TenantItem } from '@/api/tenant'
 import { getRoleList } from '@/api/role'
 import type { RoleItem } from '@/api/role'
 import UserForm from './UserForm.vue'
+import ResponsiveList from '@/components/ResponsiveList.vue'
+
+// 响应式检测
+const isMobile = ref(false)
+const MOBILE_BREAKPOINT = 768
+function checkMobile() {
+  isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
+}
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 const loading = ref(false)
 const tableData = ref<UserPageItem[]>([])
@@ -366,13 +427,73 @@ onMounted(fetchData)
 
 <style scoped>
 .page-container { padding: 16px; }
-.search-card { margin-bottom: 16px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
+.search-form { margin-bottom: 0; }
 .pagination { margin-top: 16px; justify-content: flex-end; }
 
-/* 表格横向滚动（仅包裹表格，分页在外部不受裁剪影响） */
-.table-scroll-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* 手机端布局 - 固定头部 */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .page-container .main-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .page-container .main-card :deep(.el-card__body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sticky-header {
+    flex-shrink: 0;
+    background: var(--el-bg-color);
+    z-index: 10;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .sticky-header .card-header {
+    padding: 12px;
+    border-bottom: 1px solid var(--el-border-color-light);
+  }
+
+  .scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .search-form {
+    padding: 12px;
+  }
+
+  .search-form :deep(.el-form-item) {
+    margin-bottom: 12px;
+    margin-right: 0;
+    width: 100%;
+  }
+
+  .search-form :deep(.el-input),
+  .search-form :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .pagination {
+    justify-content: center;
+    padding-bottom: 12px;
+  }
 }
 </style>

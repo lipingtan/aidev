@@ -21,6 +21,7 @@ type Resource struct {
 	ModuleCode     string         `gorm:"type:varchar(64)" json:"module_code"`                       // 所属功能模块
 	SortOrder      int            `gorm:"default:0" json:"sort_order"`                               // 排序号
 	Status         int            `gorm:"default:1" json:"status"`                                   // 状态：1-启用 0-禁用
+	RequiresLogin  bool           `gorm:"default:false" json:"requires_login"`                       // 是否需要登录后才能看到
 	Version        int            `gorm:"default:1" json:"version"`                                  // 乐观锁版本号
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 	CreatedAt      *time.Time     `gorm:"autoCreateTime" json:"created_at"`

@@ -47,34 +47,56 @@ func InvalidateBizUserCache(userID int64) {
 	// 清本进程内存缓存
 	bizUserCacheMap.Delete(userID)
 	// 写 Redis 失效标记（跨 Pod 通知）
-	if adapter := sdk.Runtime.GetCacheAdapter(); adapter != nil {
-		_ = adapter.Set(bizUserInvalidateKey(userID), "1", int(bizUserCacheTTL.Seconds()))
-	}
+	// 使用 recover 防止测试环境或 cache adapter 未初始化时 panic
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// 缓存写入失败不影响主流程，忽略
+			}
+		}()
+		if sdk.Runtime != nil {
+			if adapter := sdk.Runtime.GetCacheAdapter(); adapter != nil {
+				_ = adapter.Set(bizUserInvalidateKey(userID), "1", int(bizUserCacheTTL.Seconds()))
+			}
+		}
+	}()
 }
 
 // getBizUserCached 带缓存查询C端用户信息
 // 有 Redis 失效标记时强制穿透查库，保证跨 Pod 强制下线的实时性
 func getBizUserCached(checker BizUserChecker, userID int64) (status int, tokenVersion int, err error) {
 	// 检查 Redis 失效标记（跨 Pod 强制下线）
-	if adapter := sdk.Runtime.GetCacheAdapter(); adapter != nil {
-		if val, e := adapter.Get(bizUserInvalidateKey(userID)); e == nil && val != "" {
-			// 有失效标记：清本地缓存，穿透查库
+	// 使用 recover 防止测试环境或 cache adapter 未初始化时 panic
+	invalidated := false
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// 缓存检查失败不影响主流程，忽略并继续
+			}
+		}()
+		if sdk.Runtime != nil {
+			if adapter := sdk.Runtime.GetCacheAdapter(); adapter != nil {
+				if val, e := adapter.Get(bizUserInvalidateKey(userID)); e == nil && val != "" {
+					// 有失效标记：清本地缓存，穿透查库
+					bizUserCacheMap.Delete(userID)
+					invalidated = true
+				}
+			}
+		}
+	}()
+
+	if !invalidated {
+		// 尝试从进程内缓存获取
+		if val, ok := bizUserCacheMap.Load(userID); ok {
+			entry := val.(*bizUserCacheEntry)
+			if time.Since(entry.CachedAt) < bizUserCacheTTL {
+				return entry.Status, entry.TokenVersion, nil
+			}
+			// 过期，删除缓存
 			bizUserCacheMap.Delete(userID)
-			goto queryDB
 		}
 	}
 
-	// 尝试从进程内缓存获取
-	if val, ok := bizUserCacheMap.Load(userID); ok {
-		entry := val.(*bizUserCacheEntry)
-		if time.Since(entry.CachedAt) < bizUserCacheTTL {
-			return entry.Status, entry.TokenVersion, nil
-		}
-		// 过期，删除缓存
-		bizUserCacheMap.Delete(userID)
-	}
-
-queryDB:
 	// 缓存 miss 或失效，查库
 	status, tokenVersion, err = checker.CheckBizUser(userID)
 	if err != nil {

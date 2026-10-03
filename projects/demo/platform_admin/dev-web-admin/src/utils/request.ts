@@ -10,6 +10,7 @@ import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import type { ApiResponse } from '@/types'
 import { showLoading, hideLoading } from './loading'
+import { refreshTokenWithRetry, broadcastTokenCleared } from './token-manager'
 
 /** 创建 Axios 实例 */
 const service = axios.create({
@@ -23,32 +24,13 @@ let isRefreshing = false
 /** 等待刷新完成的请求队列 */
 let refreshQueue: Array<(token: string) => void> = []
 
-/** 执行 token 刷新 */
-async function doRefreshToken(): Promise<string> {
-  const platformToken = localStorage.getItem('platform_token')
-  if (!platformToken) {
-    throw new Error('无 platform_token')
-  }
-  const tenantId = localStorage.getItem('current_tenant_id') || ''
-  const res = await axios.post(
-    `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
-    { tenant_id: tenantId },
-    { headers: { Authorization: `Bearer ${platformToken}` } }
-  )
-  const body = res.data
-  if (body.code !== 0 && body.code !== 200) {
-    throw new Error(body.message || '刷新失败')
-  }
-  const newToken = body.data.access_token
-  localStorage.setItem('access_token', newToken)
-  return newToken
-}
-
 /** 跳转登录页并清除所有 token */
 function redirectToLogin(): void {
   localStorage.removeItem('access_token')
   localStorage.removeItem('platform_token')
+  localStorage.removeItem('refresh_token')
   localStorage.removeItem('current_tenant_id')
+  broadcastTokenCleared()
   if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/init')) {
     window.location.href = '/login'
   }
@@ -96,11 +78,11 @@ service.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // 401 处理：尝试用 platform_token 刷新 access_token
-    const platformToken = localStorage.getItem('platform_token')
+    // 401 处理：尝试用 refresh_token 刷新 access_token
+    const refreshToken = localStorage.getItem('refresh_token')
 
-    // 无 platform_token 或刷新接口本身返回 401，直接跳登录
-    if (!platformToken || originalConfig._isRetry) {
+    // 无 refresh_token 或刷新接口本身返回 401，直接跳登录
+    if (!refreshToken || originalConfig._isRetry) {
       redirectToLogin()
       return Promise.reject(error)
     }
@@ -121,7 +103,7 @@ service.interceptors.response.use(
     isRefreshing = true
     showLoading('正在刷新认证...')
     try {
-      const newToken = await doRefreshToken()
+      const newToken = await refreshTokenWithRetry()
       // 刷新成功，执行队列中的请求
       refreshQueue.forEach((cb) => cb(newToken))
       refreshQueue = []

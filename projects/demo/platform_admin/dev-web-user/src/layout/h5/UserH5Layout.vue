@@ -23,17 +23,28 @@ const tabMenus = computed(() =>
   }))
 )
 
+// 是否显示底部 Tab 栏：已登录且不在首页
+const showTabbar = computed(() => {
+  return userStore.isLoggedIn && route.path !== '/home'
+})
+
+// 是否显示顶部 Logo（未登录或首页）
+const showTopbarLogo = computed(() => {
+  return !userStore.isLoggedIn || route.path === '/home'
+})
+
 const pageTitle = computed(() => (route.meta.title as string) || '工作台')
 </script>
 
 <template>
-  <div class="h5-layout">
+  <div class="h5-layout" :class="{ 'h5-layout--full': !showTabbar }">
 
-    <!-- 顶部导航栏 -->
+    <!-- 顶部导航栏 - 黑色风格 -->
     <header class="h5-topbar">
       <div class="topbar-left">
-        <div class="topbar-logo">U</div>
-        <span class="topbar-title">{{ pageTitle }}</span>
+        <router-link to="/home" class="topbar-brand">
+          <img src="@/assets/logo.png" alt="千分软件" class="brand-logo" />
+        </router-link>
       </div>
       <div class="topbar-right">
         <div class="user-menu-wrap">
@@ -56,8 +67,8 @@ const pageTitle = computed(() => (route.meta.title as string) || '工作台')
       <router-view />
     </main>
 
-    <!-- 底部 Tab 栏 -->
-    <nav v-if="tabMenus.length > 0" class="h5-tabbar" aria-label="主导航">
+    <!-- 底部 Tab 栏（仅登录后且非首页显示） -->
+    <nav v-if="showTabbar && tabMenus.length > 0" class="h5-tabbar" aria-label="主导航">
       <router-link
         v-for="item in tabMenus"
         :key="item.path"
@@ -76,19 +87,21 @@ const pageTitle = computed(() => (route.meta.title as string) || '工作台')
         </span>
         <span class="tab-label">{{ item.title }}</span>
       </router-link>
-
-      <!-- 无菜单时固定显示首页 + 退出 -->
-      <template v-if="tabMenus.length === 0">
-        <router-link to="/home" class="tab-item tab-item--active">
-          <span class="tab-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
-            </svg>
-          </span>
-          <span class="tab-label">首页</span>
-        </router-link>
-      </template>
     </nav>
+
+    <!-- 底部备案信息（首页或无 Tab 栏时显示） -->
+    <footer v-if="!showTabbar" class="h5-footer">
+      <div class="footer-content">
+        <span class="copyright">© 2019. All Rights Reserved. 千分软件</span>
+        <div class="beian-links">
+          <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">渝ICP备19013468号-1</a>
+          <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=50010502001858" target="_blank" rel="noopener noreferrer">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADfSURBVDhPY2AYBYMeMDIy/oeygAAggJgImf3//78BkO0PhCxQGhCALGRkZBQA0v8ZGRn/AwVAYiC5/4yMDEA1DFAaLgcSBwJGRsYGIP0fJAbSA9ULkgMCBqgaoCRYHCQGFAPLQeVAciB9QDYDVAzEBwJQQqDKQPKgwAPxQeIgsv8/AwMQg8RA4kAxIJ8BKgaig+RAhgDlQBgUyCAxEA0KdJAcSA5Eg+RA8kAaJAfCIL0gDFIHsoFqQYYB1TFA+WA+SA4kD8IgDJIDqQOxQfJAPogPlAMZCpQDsUFskNwoGOIAALOgU+fv0HdAAAAAAElFTkSuQmCC" alt="公安备案" class="beian-icon"/>
+            渝公网安备 50010502001858号
+          </a>
+        </div>
+      </div>
+    </footer>
 
     <!-- 退出确认 Toast（点击头像提示） -->
     <Teleport to="body">
@@ -114,46 +127,36 @@ const pageTitle = computed(() => (route.meta.title as string) || '工作台')
   --primary-rgb: 79,70,229;
 }
 
-/* ── 顶部导航栏 ── */
+/* ── 顶部导航栏 - 黑色风格 ── */
 .h5-topbar {
-  height: 56px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f5;
+  height: 50px;
+  background: #222;
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   flex-shrink: 0;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   /* iOS safe area */
   padding-top: env(safe-area-inset-top);
-  height: calc(56px + env(safe-area-inset-top));
+  height: calc(50px + env(safe-area-inset-top));
 }
 
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 10px;
 }
 
-.topbar-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--primary), #7c3aed);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+.topbar-brand {
   display: flex;
   align-items: center;
-  justify-content: center;
+  text-decoration: none;
 }
 
-.topbar-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #111827;
-  letter-spacing: -0.2px;
+.brand-logo {
+  height: 26px;
+  width: auto;
 }
 
 .topbar-right {
@@ -163,12 +166,12 @@ const pageTitle = computed(() => (route.meta.title as string) || '工作台')
 }
 
 .topbar-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -184,7 +187,7 @@ const pageTitle = computed(() => (route.meta.title as string) || '工作台')
   position: absolute;
   bottom: -28px;
   right: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.8);
   color: #fff;
   font-size: 11px;
   padding: 3px 7px;
@@ -200,13 +203,23 @@ const pageTitle = computed(() => (route.meta.title as string) || '工作台')
 
 /* 未登录顶栏登录按钮 */
 .topbar-login-btn {
-  height: 32px; padding: 0 14px;
-  border: 1.5px solid #4f46e5; border-radius: 8px;
-  background: #fff; color: #4f46e5;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: background 0.15s;
+  height: 30px;
+  padding: 0 14px;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
-.topbar-login-btn:hover { background: #f0effe; }
+
+.topbar-login-btn:hover,
+.topbar-login-btn:active {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.8);
+}
 
 /* ── 页面内容 ── */
 .h5-main {
@@ -269,6 +282,53 @@ const pageTitle = computed(() => (route.meta.title as string) || '工作台')
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
+}
+
+/* ── 底部备案信息 ── */
+.h5-footer {
+  background: #fff;
+  border-top: 1px solid #f0f0f5;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.copyright {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.beian-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+
+.beian-links a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.beian-links a:hover {
+  color: #6b7280;
+}
+
+.beian-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* ── 底部弹出退出确认 ── */

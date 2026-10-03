@@ -1,44 +1,49 @@
 <template>
-  <div class="role-page">
-    <el-card shadow="never" class="role-tree-card">
-      <template #header>
+  <div class="role-page" :class="{ 'mobile-layout': isMobile }">
+    <el-card shadow="never" class="role-tree-card main-card">
+      <!-- 固定头部区域（手机端） -->
+      <div class="sticky-header">
         <div class="card-header">
           <span>角色管理</span>
           <el-button type="primary" size="small" @click="handleAdd">新增</el-button>
         </div>
-      </template>
 
-      <!-- Tab 切换：角色 / 权限集 -->
-      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="角色" name="role" />
-        <el-tab-pane label="权限集" name="permission_set" />
-      </el-tabs>
+        <!-- Tab 切换：角色 / 权限集 -->
+        <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+          <el-tab-pane label="角色" name="role" />
+          <el-tab-pane label="权限集" name="permission_set" />
+        </el-tabs>
 
-      <el-input v-model="filterText" placeholder="搜索角色" clearable style="margin-bottom: 12px" />
-      <el-tree
-        ref="roleTreeRef"
-        v-loading="treeLoading"
-        :data="roleTree"
-        :props="{ label: 'role_name', children: 'children' }"
-        node-key="id"
-        highlight-current
-        :expand-on-click-node="false"
-        :filter-node-method="filterNode"
-        default-expand-all
-        @node-click="handleNodeClick"
-      >
-        <template #default="{ node, data }">
-          <div class="tree-node">
-            <el-tooltip :content="node.label" placement="top" :disabled="node.label.length < 12">
-              <span class="tree-node-label">{{ node.label }}</span>
-            </el-tooltip>
-            <span class="tree-node-actions">
-              <el-button link type="primary" size="small" @click.stop="handleEdit(data)">编辑</el-button>
-              <el-button link type="danger" size="small" @click.stop="handleDelete(data)">删除</el-button>
-            </span>
-          </div>
-        </template>
-      </el-tree>
+        <el-input v-model="filterText" placeholder="搜索角色" clearable style="margin-bottom: 12px" />
+      </div>
+
+      <!-- 可滚动的列表区域 -->
+      <div class="scrollable-content">
+        <el-tree
+          ref="roleTreeRef"
+          v-loading="treeLoading"
+          :data="roleTree"
+          :props="{ label: 'role_name', children: 'children' }"
+          node-key="id"
+          highlight-current
+          :expand-on-click-node="false"
+          :filter-node-method="filterNode"
+          default-expand-all
+          @node-click="handleNodeClick"
+        >
+          <template #default="{ node, data }">
+            <div class="tree-node">
+              <el-tooltip :content="node.label" placement="top" :disabled="node.label.length < 12">
+                <span class="tree-node-label">{{ node.label }}</span>
+              </el-tooltip>
+              <span class="tree-node-actions">
+                <el-button link type="primary" size="small" @click.stop="handleEdit(data)">编辑</el-button>
+                <el-button link type="danger" size="small" @click.stop="handleDelete(data)">删除</el-button>
+              </span>
+            </div>
+          </template>
+        </el-tree>
+      </div>
     </el-card>
 
     <!-- 右侧：权限概览 -->
@@ -53,36 +58,65 @@
           <span class="role-code">{{ currentRole.role_code }}</span>
         </div>
 
-        <!-- 应用权限汇总表格 -->
-        <el-table v-loading="summaryLoading" :data="permissionSummary" row-key="app_code" size="small">
-          <el-table-column prop="app_name" label="应用" min-width="120">
-            <template #default="{ row }">
-              <span>{{ row.app_name }}</span>
-              <span v-if="isPluginStopped(row.app_code)" class="plugin-stopped-hint">(插件已停止)</span>
-              <el-tag v-if="row.bound" type="success" size="small" style="margin-left: 8px">已绑定</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="菜单权限" width="100" align="center">
-            <template #default="{ row }">
-              <span :class="{ 'count-zero': row.menu_count === 0 }">{{ row.menu_count }} 项</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="接口权限" width="100" align="center">
-            <template #default="{ row }">
-              <span :class="{ 'count-zero': row.api_count === 0 }">{{ row.api_count }} 项</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="数据权限" width="100" align="center">
-            <template #default="{ row }">
-              <span :class="{ 'count-zero': row.data_scope_count === 0 }">{{ row.data_scope_count }} 维度</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80" align="center" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" link @click="openPermDrawer(row)">配置</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+        <!-- 应用权限汇总 - 响应式列表 -->
+        <ResponsiveList :data="permissionSummary" :loading="summaryLoading" :row-key="'app_code'" :table-props="{ size: 'small' }">
+          <!-- 桌面端表格 -->
+          <template #table>
+            <el-table-column prop="app_name" label="应用" min-width="120">
+              <template #default="{ row }">
+                <span>{{ row.app_name }}</span>
+                <span v-if="isPluginStopped(row.app_code)" class="plugin-stopped-hint">(插件已停止)</span>
+                <el-tag v-if="row.bound" type="success" size="small" style="margin-left: 8px">已绑定</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="菜单权限" width="100" align="center">
+              <template #default="{ row }">
+                <span :class="{ 'count-zero': row.menu_count === 0 }">{{ row.menu_count }} 项</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="接口权限" width="100" align="center">
+              <template #default="{ row }">
+                <span :class="{ 'count-zero': row.api_count === 0 }">{{ row.api_count }} 项</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="数据权限" width="100" align="center">
+              <template #default="{ row }">
+                <span :class="{ 'count-zero': row.data_scope_count === 0 }">{{ row.data_scope_count }} 维度</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" link @click="openPermDrawer(row)">配置</el-button>
+              </template>
+            </el-table-column>
+          </template>
+
+          <!-- 手机端卡片 -->
+          <template #card="{ row }">
+            <div class="card-title">
+              {{ row.app_name }}
+              <el-tag v-if="row.bound" type="success" size="small" class="card-tag">已绑定</el-tag>
+              <el-tag v-if="isPluginStopped(row.app_code)" type="danger" size="small" class="card-tag">插件已停止</el-tag>
+            </div>
+            <div class="card-row">
+              <span class="card-label">菜单权限</span>
+              <span class="card-value" :class="{ 'count-zero': row.menu_count === 0 }">{{ row.menu_count }} 项</span>
+            </div>
+            <div class="card-row">
+              <span class="card-label">接口权限</span>
+              <span class="card-value" :class="{ 'count-zero': row.api_count === 0 }">{{ row.api_count }} 项</span>
+            </div>
+            <div class="card-row">
+              <span class="card-label">数据权限</span>
+              <span class="card-value" :class="{ 'count-zero': row.data_scope_count === 0 }">{{ row.data_scope_count }} 维度</span>
+            </div>
+          </template>
+
+          <!-- 手机端操作按钮 -->
+          <template #actions="{ row }">
+            <el-button size="small" type="primary" @click="openPermDrawer(row)">配置</el-button>
+          </template>
+        </ResponsiveList>
       </template>
       <template v-else>
         <el-empty description="请从左侧选择一个角色" />
@@ -90,7 +124,7 @@
     </el-card>
 
     <!-- 权限配置 Drawer -->
-    <el-drawer v-model="drawerVisible" :title="drawerTitle" size="60%" destroy-on-close>
+    <el-drawer v-model="drawerVisible" :title="drawerTitle" :size="isMobile ? '95%' : '60%'" destroy-on-close>
       <el-tabs v-model="drawerTab">
         <el-tab-pane label="菜单权限" name="menu">
           <MenuPermTab :role-id="currentRole!.id" :app-code="drawerAppCode" :parent-id="currentRole!.parent_id" />
@@ -113,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ElTree } from 'element-plus'
 import { getRoleList, deleteRole, getRolePermissionSummary } from '@/api/role'
@@ -125,6 +159,21 @@ import MenuPermTab from './MenuPermTab.vue'
 import ApiPermTab from './ApiPermTab.vue'
 import DataScopeTab from './DataScopeTab.vue'
 import FieldPermTab from './FieldPermTab.vue'
+import ResponsiveList from '@/components/ResponsiveList.vue'
+
+// 响应式检测
+const isMobile = ref(false)
+const MOBILE_BREAKPOINT = 768
+function checkMobile() {
+  isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
+}
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 const treeLoading = ref(false)
 const roleTree = ref<RoleItem[]>([])
@@ -291,19 +340,67 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-/* 窄屏（< 768px）：上下堆叠 */
+.search-form {
+  margin-bottom: 0;
+}
+
+/* 窄屏（< 768px）：固定头部 + 可滚动内容 */
 @media (max-width: 767px) {
   .role-page {
     flex-direction: column;
-    height: auto;
+    gap: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
   }
-  .role-tree-card {
+
+  .role-tree-card.main-card {
     width: 100%;
-    overflow-y: visible;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
   }
+
+  .role-tree-card.main-card :deep(.el-card__body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .sticky-header {
+    flex-shrink: 0;
+    background: var(--el-bg-color);
+    z-index: 10;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .sticky-header .card-header {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--el-border-color-light);
+  }
+
+  .scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+  }
+
   .role-detail-card {
-    overflow-y: visible;
+    flex-shrink: 0;
+    overflow-y: auto;
+    max-height: 40vh;
+    border-top: 8px solid var(--el-fill-color-light);
   }
+
   /* 移动端树节点操作按钮始终显示 */
   .tree-node-actions {
     opacity: 1 !important;

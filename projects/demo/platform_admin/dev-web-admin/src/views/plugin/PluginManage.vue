@@ -1,66 +1,85 @@
 <template>
-  <div class="plugin-manage">
-    <!-- 顶部操作栏 -->
-    <div class="toolbar">
-      <el-upload
-        :auto-upload="false"
-        :show-file-list="false"
-        accept=".zip,.tar.gz"
-        :on-change="handleInstallFile"
-      >
-        <el-button type="primary" :icon="Upload">安装插件</el-button>
-      </el-upload>
-      <el-button :icon="Refresh" @click="fetchList">刷新</el-button>
-    </div>
+  <div class="plugin-container" :class="{ 'mobile-layout': isMobile }">
+    <el-card class="main-card">
+      <!-- 固定头部区域（手机端） -->
+      <div class="sticky-header">
+        <div class="card-header">
+          <span>插件管理</span>
+          <div class="header-actions">
+            <el-upload
+              :auto-upload="false"
+              :show-file-list="false"
+              accept=".zip,.tar.gz"
+              :on-change="handleInstallFile"
+            >
+              <el-button type="primary" size="small" :icon="Upload">
+                <span v-if="!isMobile">安装插件</span>
+              </el-button>
+            </el-upload>
+            <el-button size="small" :icon="Refresh" @click="fetchList">
+              <span v-if="!isMobile">刷新</span>
+            </el-button>
+          </div>
+        </div>
+      </div>
 
-    <!-- 插件列表表格 -->
-    <el-table :data="pluginList" v-loading="loading" border stripe>
-      <el-table-column prop="name" label="名称" min-width="120" />
-      <el-table-column prop="version" label="版本" width="100" />
-      <el-table-column prop="description" label="描述" min-width="200" />
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="statusTagType(row.runStatus)">
-            {{ statusLabel(row.runStatus) }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
-        <template #default="{ row }">
-          <!-- 已停止/已安装：启动 -->
-          <el-button
-            v-if="row.runStatus === 'stopped' || row.status === 0"
-            size="small"
-            type="success"
-            @click="handleStart(row)"
-          >启动</el-button>
-          <!-- 运行中：停止 -->
-          <el-button
-            v-if="row.runStatus === 'running'"
-            size="small"
-            type="warning"
-            @click="handleStop(row)"
-          >停止</el-button>
-          <!-- 运行中/已停止：升级 -->
-          <el-button
-            v-if="row.runStatus === 'running' || row.runStatus === 'stopped'"
-            size="small"
-            type="primary"
-            @click="openUpgradeDialog(row)"
-          >升级</el-button>
-          <!-- 已停止/已安装：卸载 -->
-          <el-button
-            v-if="row.runStatus === 'stopped' || row.status === 0"
-            size="small"
-            type="danger"
-            @click="handleUninstall(row)"
-          >卸载</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+      <!-- 可滚动的列表区域 -->
+      <div class="scrollable-content">
+        <!-- 响应式列表 -->
+        <ResponsiveList ref="listRef" :data="pluginList" :loading="loading" row-key="name" :table-props="{ border: true, stripe: true }">
+          <!-- 桌面端表格 -->
+          <template #table>
+            <el-table-column prop="name" label="名称" min-width="120" />
+            <el-table-column prop="version" label="版本" width="100" />
+            <el-table-column prop="description" label="描述" min-width="200" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="statusTagType(row.runStatus)">
+                  {{ statusLabel(row.runStatus) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right">
+              <template #default="{ row }">
+                <el-button v-if="row.runStatus === 'stopped' || row.status === 0" size="small" type="success" @click="handleStart(row)">启动</el-button>
+                <el-button v-if="row.runStatus === 'running'" size="small" type="warning" @click="handleStop(row)">停止</el-button>
+                <el-button v-if="row.runStatus === 'running' || row.runStatus === 'stopped'" size="small" type="primary" @click="openUpgradeDialog(row)">升级</el-button>
+                <el-button v-if="row.runStatus === 'stopped' || row.status === 0" size="small" type="danger" @click="handleUninstall(row)">卸载</el-button>
+              </template>
+            </el-table-column>
+          </template>
+
+          <!-- 手机端卡片 -->
+          <template #card="{ row }">
+            <div class="card-title">
+              {{ row.name }}
+              <el-tag :type="statusTagType(row.runStatus)" size="small" class="card-tag">
+                {{ statusLabel(row.runStatus) }}
+              </el-tag>
+            </div>
+            <div class="card-row">
+              <span class="card-label">版本</span>
+              <span class="card-value">{{ row.version }}</span>
+            </div>
+            <div class="card-row">
+              <span class="card-label">描述</span>
+              <span class="card-value">{{ row.description || '-' }}</span>
+            </div>
+          </template>
+
+          <!-- 手机端操作按钮 -->
+          <template #actions="{ row }">
+            <el-button v-if="row.runStatus === 'stopped' || row.status === 0" size="small" type="success" @click="handleStart(row)">启动</el-button>
+            <el-button v-if="row.runStatus === 'running'" size="small" type="warning" @click="handleStop(row)">停止</el-button>
+            <el-button v-if="row.runStatus === 'running' || row.runStatus === 'stopped'" size="small" type="primary" @click="openUpgradeDialog(row)">升级</el-button>
+            <el-button v-if="row.runStatus === 'stopped' || row.status === 0" size="small" type="danger" @click="handleUninstall(row)">卸载</el-button>
+          </template>
+        </ResponsiveList>
+      </div>
+    </el-card>
 
     <!-- 升级对话框 -->
-    <el-dialog v-model="upgradeDialogVisible" title="升级插件" width="500px">
+    <el-dialog v-model="upgradeDialogVisible" title="升级插件" :width="isMobile ? '95%' : '500px'">
       <div v-if="!upgradeNeedConfirm">
         <p>请选择升级包文件：</p>
         <el-upload
@@ -104,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Upload, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadFile } from 'element-plus'
@@ -118,6 +137,16 @@ import {
   getPluginHealth,
   type PluginItem
 } from '@/api/plugin'
+import ResponsiveList from '@/components/ResponsiveList.vue'
+
+// 响应式检测
+const isMobile = ref(false)
+const MOBILE_BREAKPOINT = 768
+const listRef = ref()
+
+function checkMobile() {
+  isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
+}
 
 const loading = ref(false)
 const pluginList = ref<PluginItem[]>([])
@@ -278,31 +307,93 @@ async function pollHealth(name: string, retries = 10) {
 }
 
 onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
   fetchList()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
 })
 </script>
 
 <style scoped>
-.plugin-manage {
-  padding: 20px;
+.plugin-container {
+  padding: 16px;
 }
-.toolbar {
+
+.card-header {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--el-border-color-light);
 }
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.scrollable-content {
+  padding: 0 16px 16px;
+}
+
 .upgrade-confirm {
   padding: 8px 0;
 }
+
 .migration-notes {
   margin-top: 12px;
   padding: 12px;
   background: #f5f7fa;
   border-radius: 4px;
 }
+
 .migration-notes pre {
   white-space: pre-wrap;
   word-break: break-all;
   margin: 8px 0 0;
+}
+
+/* 手机端布局 - 固定头部 */
+@media (max-width: 768px) {
+  .plugin-container {
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .plugin-container .main-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .plugin-container .main-card :deep(.el-card__body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sticky-header {
+    flex-shrink: 0;
+    background: var(--el-bg-color);
+    z-index: 10;
+  }
+
+  .scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 </style>

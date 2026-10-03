@@ -153,7 +153,7 @@ func (h *ApiPermissionHandler) ToggleVisible(c *gin.Context) {
 		Error(c, err)
 		return
 	}
-	Success(c, gin.H{"id": id, "visible": v})
+	Success(c, gin.H{"id": strconv.FormatInt(id, 10), "visible": v})
 }
 
 // ListUnassigned 获取未分组 ENDPOINT 列表

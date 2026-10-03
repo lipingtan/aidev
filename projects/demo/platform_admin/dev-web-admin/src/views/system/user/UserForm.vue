@@ -13,6 +13,26 @@
       <el-form-item label="手机号" prop="phone">
         <el-input v-model="form.phone" placeholder="请输入手机号" />
       </el-form-item>
+      <el-form-item label="Access Token过期时间(分钟)" prop="access_token_expire_minutes">
+        <el-input-number
+          v-model="form.access_token_expire_minutes"
+          :min="1"
+          :max="10080"
+          :step="1"
+          placeholder="留空使用全局默认值(60分钟)"
+          style="width: 100%;"
+        />
+      </el-form-item>
+      <el-form-item label="Refresh Token过期时间(分钟)" prop="refresh_token_expire_minutes">
+        <el-input-number
+          v-model="form.refresh_token_expire_minutes"
+          :min="1"
+          :max="10080"
+          :step="1"
+          placeholder="留空使用全局默认值(10080分钟)"
+          style="width: 100%;"
+        />
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
@@ -41,6 +61,8 @@ const form = reactive({
   password: '',
   email: '',
   phone: '',
+  access_token_expire_minutes: null as number | null,
+  refresh_token_expire_minutes: null as number | null,
   version: 1
 })
 
@@ -66,6 +88,8 @@ async function open(row?: UserPageItem) {
     form.password = ''
     form.email = row.email || ''
     form.phone = row.phone || ''
+    form.access_token_expire_minutes = row.access_token_expire_minutes ?? null
+    form.refresh_token_expire_minutes = row.refresh_token_expire_minutes ?? null
     form.version = row.version || 1
   } else {
     editId.value = ''
@@ -73,6 +97,8 @@ async function open(row?: UserPageItem) {
     form.password = ''
     form.email = ''
     form.phone = ''
+    form.access_token_expire_minutes = null
+    form.refresh_token_expire_minutes = null
     form.version = 1
   }
 }
@@ -85,6 +111,8 @@ async function handleSubmit() {
       await updateUser(editId.value, {
         email: form.email || undefined,
         phone: form.phone || undefined,
+        access_token_expire_minutes: form.access_token_expire_minutes ?? undefined,
+        refresh_token_expire_minutes: form.refresh_token_expire_minutes ?? undefined,
         version: form.version
       })
     } else {
@@ -92,7 +120,9 @@ async function handleSubmit() {
         username: form.username,
         password: form.password,
         email: form.email || undefined,
-        phone: form.phone || undefined
+        phone: form.phone || undefined,
+        access_token_expire_minutes: form.access_token_expire_minutes ?? undefined,
+        refresh_token_expire_minutes: form.refresh_token_expire_minutes ?? undefined
       })
     }
     ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')

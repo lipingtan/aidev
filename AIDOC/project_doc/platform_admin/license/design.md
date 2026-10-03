@@ -6,13 +6,21 @@
 
 ```
 App (mjarch flavor)                    platform_admin (license 插件)
-┌─────────────────────┐               ┌──────────────────────────┐
-│ RegistrationActivity│──HTTP POST──▶ │ /api/license/register    │
-│ LoginActivity       │──HTTP POST──▶ │ /api/license/login       │
-│ MembershipActivation│──HTTP POST──▶ │ /api/license/activate    │
-│ MembershipStatus    │──HTTP GET───▶ │ /api/license/status      │
-│ DeviceManager       │──HTTP GET───▶ │ /api/license/devices     │
-└─────────────────────┘               └──────────────────────────┘
+┌─────────────────────┐               ┌──────────────────────────────┐
+│ 游戏列表（免费/会员）  │               │                              │
+│         ↓            │               │  公开接口（无需登录）          │
+│ 点击会员游戏          │               │  ├─ /register    注册         │
+│         ↓            │               │  ├─ /login       登录         │
+│ [输入激活码][购买会员] │               │  ├─ /logout      登出         │
+│         ↓            │               │  ├─ /activate    一步激活     │
+│ ActivationActivity   │──HTTP POST──▶ │  ├─ /price       套餐价格     │
+│ LoginActivity        │──HTTP POST──▶ │  └─ /games       游戏列表     │
+│ PurchaseActivity     │──HTTP POST──▶ │                              │
+│ MembershipStatus     │──HTTP GET───▶ │  认证接口（需要登录）          │
+└─────────────────────┘               │  ├─ /status      会员状态     │
+                                      │  ├─ /purchase    创建订单     │
+                                      │  └─ /records     激活记录     │
+                                      └──────────────────────────────┘
 
 App (其他 flavor: mjguoguan1/tcb1/jdgamespace 等)
 ┌─────────────────────┐               ┌──────────────────────────┐
@@ -22,22 +30,22 @@ App (其他 flavor: mjguoguan1/tcb1/jdgamespace 等)
 
 ## 2. 数据模型
 
-### 2.0 复用 platform_admin 现有能力
+### 2.0 biz_user 扩展
 
-| 能力 | 现有模块 | 说明 |
-|------|----------|------|
-| 用户管理 | `user_auth` (biz_user 表) | 复用手机号+验证码登录，不需要新建 users 表 |
-| JWT 认证 | `common/auth` | 复用现有的 JWT token 生成和认证中间件 |
-| 租户管理 | `tenant` | mjarch 作为一个租户（tenant_code: mjarch） |
-| 短信验证码 | `user_auth/sms_service` | 复用现有的短信验证码服务 |
+在现有 `biz_user` 表基础上，增加字段：
 
-### 2.1 biz_user（复用，不新建）
-platform_admin 已有的用户表，license 插件直接复用。
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| email | varchar(255) | UNIQUE, NULL | 用户邮箱（登录凭证，允许 NULL 兼容手机号用户） |
+| password | varchar(255) | NULL | bcrypt 加密的密码（允许 NULL 兼容手机号用户） |
 
-### 2.2 membership_levels（会员等级表）
+> **注意**：字段允许 NULL 是为了兼容现有手机号用户，但 mjarch 注册接口强制必填。
+
+### 2.1 membership_levels（会员等级表）
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | int | PK, AUTO_INCREMENT | 等级ID |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
 | name | varchar(50) | NOT NULL | 等级名称（普通会员/VIP/至尊） |
 | code | varchar(20) | UNIQUE, NOT NULL | 等级代码（normal/vip/premium） |
 | privileges | json | NULL | 特权列表 |
@@ -45,456 +53,880 @@ platform_admin 已有的用户表，license 插件直接复用。
 
 初始数据：
 ```sql
-INSERT INTO membership_levels (name, code, privileges, sort_order) VALUES
-('普通会员', 'normal', '{"games": "basic"}', 1),
-('VIP会员', 'vip', '{"games": "all", "quality": "hd"}', 2),
-('至尊会员', 'premium', '{"games": "all", "quality": "4k", "priority_update": true}', 3);
+INSERT INTO membership_levels (id, name, code, privileges, sort_order) VALUES
+(1, '普通会员', 'normal', '{"games": "basic"}', 1),
+(2, 'VIP会员', 'vip', '{"games": "all", "quality": "hd"}', 2),
+(3, '至尊会员', 'premium', '{"games": "all", "quality": "4k", "priority_update": true}', 3);
 ```
 
-### 2.3 activation_code_types（激活码类型定义表）
-定义激活码的模板，不同类型的激活码可以有不同的逻辑和默认属性。
-
+### 2.2 activation_code_types（激活码类型定义表）
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | int | PK, AUTO_INCREMENT | 类型ID |
-| name | varchar(50) | NOT NULL | 类型名称（如：标准年费、体验卡） |
-| code | varchar(20) | UNIQUE, NOT NULL | 类型代码（如：standard_yearly、trial） |
-| default_level_id | int | NOT NULL, FK | 默认会员等级ID |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
+| name | varchar(50) | NOT NULL | 类型名称 |
+| code | varchar(20) | UNIQUE, NOT NULL | 类型代码 |
+| default_level_code | varchar(20) | NOT NULL | 默认会员等级 code |
 | default_duration_days | int | NOT NULL | 默认激活时长（天） |
-| logic_type | varchar(20) | DEFAULT 'standard' | 逻辑类型（standard/custom） |
+| logic_type | varchar(20) | DEFAULT 'standard' | 逻辑类型 |
 | description | varchar(255) | NULL | 描述 |
 | created_at | datetime | DEFAULT NOW() | 创建时间 |
 
-初始数据：
-```sql
-INSERT INTO activation_code_types (name, code, default_level_id, default_duration_days, logic_type, description) VALUES
-('标准年费', 'standard_yearly', 2, 365, 'standard', '标准VIP年费激活码'),
-('体验卡', 'trial', 1, 7, 'standard', '7天普通会员体验卡');
-```
-
-### 2.4 activation_codes（激活码实例表）
-激活码实例，可以覆盖类型定义中的某些属性，默认继承类型定义。
-
+### 2.3 activation_codes（激活码实例表）
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | bigint | PK, AUTO_INCREMENT | 激活码ID |
-| code | varchar(32) | UNIQUE, NOT NULL | 激活码（原码，建议同时维护 code_hash 索引列） |
-| code_hash | varchar(64) | NULL | 激活码的 SHA-256 哈希，用于快速查找（可选，后续可升级为只存 hash） |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
+| code | varchar(64) | UNIQUE, NOT NULL | 激活码（支持淘宝订单号长度） |
 | type_id | int | NOT NULL, FK | 激活码类型ID |
-| level_id | int | NULL, FK | 会员等级ID（NULL则继承类型定义） |
-| duration_days | int | NULL | 激活时长（天）（NULL则继承类型定义） |
-| status | tinyint | DEFAULT 0 | 状态：0=未使用 1=已激活 2=已恢复 3=已取消 |
-| restore_count | int | DEFAULT 0 | 恢复次数计数 |
-| used_by | bigint | NULL, FK | 使用者用户ID |
-| used_at | datetime | NULL | 使用时间 |
-| expires_at | datetime | NULL | 激活码自身过期时间（可选） |
+| level_code | varchar(20) | NULL | 会员等级 code（NULL则继承类型定义） |
+| duration_days | int | NULL | 激活时长（天，NULL则继承类型定义） |
+| status | tinyint | DEFAULT 0 | 状态：0=可用 1=已用完 2=已恢复 3=已取消 |
+| max_activations | int | DEFAULT 1 | 最大激活次数 |
+| used_activations | int | DEFAULT 0 | 已使用次数 |
+| expires_at | datetime | NULL | 激活码自身过期时间 |
+| source | varchar(20) | DEFAULT 'manual' | 来源：manual/taobao/app_purchase |
+| taobao_order_id | varchar(64) | NULL | 淘宝订单号（source=taobao 时） |
 | created_at | datetime | DEFAULT NOW() | 创建时间 |
+| version | int | DEFAULT 0 | 乐观锁版本号 |
 
-> **安全说明**：`code` 字段在数据库中存储原码，同时建议维护 `code_hash`（SHA-256）索引列用于快速查找。如有更高安全需求，可仅存储 `code_hash`，通过 hash 查找激活码，原码不落库。
+索引：`idx_taobao_order (taobao_order_id)`
 
-### 2.5 activation_records（激活记录表）
-记录用户激活激活码的行为，每次激活创建一条记录。与激活码实例分开刻画。
+**状态变化规则**：
+- 状态保持为 0（可用），直到 `used_activations == max_activations` 才变为 1（已用完）
+- 判断是否可激活：`status != 3（已取消） && used_activations < max_activations`
 
+**level_code 获取逻辑**：
+1. 优先从 activation_codes.level_code 获取
+2. 如果为空，从 activation_code_types.default_level_code 获取
+
+### 2.4 activation_records（激活记录表）
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | bigint | PK, AUTO_INCREMENT | 记录ID |
-| user_id | bigint | NOT NULL, FK | 用户ID（biz_user.id） |
-| code_id | bigint | NOT NULL, FK | 激活码实例ID（activation_codes.id） |
-| code | varchar(32) | NOT NULL | 激活码（冗余存储，便于查询） |
-| level_id | int | NOT NULL, FK | 会员等级ID |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
+| user_id | bigint | NOT NULL, FK | 用户ID |
+| code_id | bigint | NOT NULL, FK | 激活码实例ID |
+| code | varchar(64) | NOT NULL | 激活码（冗余） |
+| level_code | varchar(20) | NOT NULL | 会员等级 code |
 | activated_at | datetime | NOT NULL | 激活时间 |
+| starts_at | datetime | NOT NULL | 生效开始时间 |
 | expires_at | datetime | NOT NULL | 过期时间 |
 | duration_days | int | NOT NULL | 激活时长（天） |
 | status | tinyint | DEFAULT 1 | 状态：1=有效 0=已过期 2=已取消 |
+| restore_count | int | DEFAULT 0 | 恢复次数计数（最多 3 次） |
 
-索引：`idx_user_id (user_id)`, `idx_code_id (code_id)`, `idx_expires_at (expires_at)`, `idx_user_level (user_id, level_id)`
-
-### 2.6 user_memberships（用户会员身份表）
-记录用户当前拥有的会员身份，会员身份可叠加（用户可同时拥有多个会员类型）。每次激活或取消时更新此表。设备数量由 `license.max_devices` 配置项控制（不在本表中硬编码设备限制）。
-
+### 2.5 user_memberships（用户会员身份表）
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | bigint | PK, AUTO_INCREMENT | 记录ID |
-| user_id | bigint | NOT NULL, FK | 用户ID（biz_user.id） |
-| level_id | int | NOT NULL, FK | 会员等级ID |
-| activated_at | datetime | NOT NULL | 首次激活时间 |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
+| user_id | bigint | NOT NULL, FK | 用户ID |
+| level_code | varchar(20) | NOT NULL | 会员等级 code |
 | expires_at | datetime | NOT NULL | 过期时间 |
-| status | tinyint | DEFAULT 1 | 状态：1=有效 0=已过期 |
+| created_at | datetime | DEFAULT NOW() | 创建时间 |
+| updated_at | datetime | DEFAULT NOW() ON UPDATE NOW() | 更新时间 |
 
-唯一索引：`uk_user_level (user_id, level_id)`（每个用户每个会员等级只有一条记录）
+唯一索引：`uk_user_level (user_id, level_code)`
 
-### 2.7 user_devices（用户设备表）
+> **设计说明**：使用 `level_code` 而非 `level_id`，与游戏的 `required_levels` 保持一致，查询时无需 JOIN。
+
+### 2.6 user_devices（用户设备表）
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | bigint | PK, AUTO_INCREMENT | 设备ID |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
 | user_id | bigint | NOT NULL, FK | 用户ID |
-| tenant_id | bigint | NOT NULL | 租户ID |
-| device_id | varchar(64) | UNIQUE, NOT NULL | 设备标识（基于 Android ID 的 SHA-256 哈希，防止任意伪造） |
+| device_id | varchar(64) | NOT NULL | 设备标识（SHA-256(Android ID)） |
 | device_name | varchar(100) | NULL | 设备名称 |
+| is_logged_in | tinyint | DEFAULT 1 | 是否已登录（0=已登出） |
 | last_login_at | datetime | DEFAULT NOW() | 最后登录时间 |
 | created_at | datetime | DEFAULT NOW() | 首次登录时间 |
 
-> **安全说明**：`device_id` 应由客户端基于 Android ID 做 SHA-256 哈希生成（而非纯 UUID），防止任意伪造。
+唯一索引：`uk_user_device (user_id, device_id)`
+
+### 2.7 games（游戏表，后端管理）
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | bigint | PK, AUTO_INCREMENT | 游戏ID |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
+| rom_name | varchar(50) | NOT NULL | ROM 名称 |
+| display_name | varchar(100) | NULL | 显示名称 |
+| required_levels | json | NULL | 会员等级要求（code 数组，如 ["normal", "vip"]） |
+| sort_order | int | DEFAULT 0 | 排序 |
+| status | tinyint | DEFAULT 1 | 状态：1=上架 0=下架 |
+| created_at | datetime | DEFAULT NOW() | 创建时间 |
+| updated_at | datetime | DEFAULT NOW() ON UPDATE NOW() | 更新时间 |
+
+唯一索引：`uk_tenant_rom (tenant_id, rom_name)`
+
+> **设计说明**：
+> - 只存储有配置的游戏（需要会员的游戏）
+> - 不存在于 games 表的游戏默认为免费
+> - `required_levels` 为空数组或 NULL 也表示免费
+
+### 2.8 price_configs（套餐价格表）
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | bigint | PK, AUTO_INCREMENT | 套餐ID |
+| tenant_id | bigint | NOT NULL, INDEX | 租户ID |
+| name | varchar(50) | NOT NULL | 套餐名称（如"年卡"） |
+| code_type_id | bigint | NOT NULL, FK | 关联激活码类型（购买后生成激活码用） |
+| level_code | varchar(20) | NOT NULL | 会员等级 code（用于展示） |
+| duration_days | int | NULL | 激活时长（天，覆盖 type 默认值，NULL 则用 type 默认值） |
+| price | int | NOT NULL | 价格（分） |
+| original_price | int | NULL | 原价（划线价，分） |
+| status | tinyint | DEFAULT 1 | 状态：1=上架 0=下架 |
+| sort_order | int | DEFAULT 0 | 排序 |
+| created_at | datetime | DEFAULT NOW() | 创建时间 |
+| updated_at | datetime | DEFAULT NOW() ON UPDATE NOW() | 更新时间 |
+
+> **设计说明**：
+> - `code_type_id`：购买后生成激活码时使用
+> - `level_code` + `duration_days`：用于 C 端展示
+> - `duration_days` 可覆盖 activation_code_types.default_duration_days
+
+### 2.9 orders（订单表，复用现有）
+
+复用现有 orders 表，如字段不够后续补充。
 
 ## 3. API 设计
 
-### 3.0 复用 platform_admin 现有 API
+### 3.0 通用约定
 
-| API | 说明 |
-|-----|------|
-| POST /api/v1/user/auth/send-code | 发送短信验证码（复用） |
-| POST /api/v1/user/auth/login | 手机号+验证码登录（复用） |
-| POST /api/v1/user/auth/logout | 退出登录（复用） |
+**租户识别**：
+- 公开接口从 Host header 识别租户（复用 resolveTenantCode 方法）
+- 认证接口从 JWT token 中获取 tenant_id
 
-### 3.1 设备管理（C 端用户）
+**设备标识**：
+- 客户端每次请求在 Header 中传 `X-Device-ID`
+- JWT token 只存 user_id，不存 device_id
 
-#### GET /api/v1/user/auth/license/devices
-获取当前用户的设备列表。
-```json
-// Response
-{ "code": 0, "msg": "ok", "data": { "devices": [ { "device_id": "uuid-1", "device_name": "Phone A", "last_login_at": "..." } ] } }
-```
+### 3.1 公开接口（无需登录）
 
-#### POST /api/v1/user/auth/license/devices/logout
-踢出指定设备。
+> **路径规则**：新建接口放到 `/api/v1/user/public/license/` 下。
+
+#### POST /api/v1/user/public/license/register
+用户注册（邮箱+密码）。
 ```json
 // Request
-{ "device_id": "uuid-1" }
-
-// Response
-{ "code": 0, "msg": "踢出成功" }
-```
-
-### 3.2 激活码类型管理（管理端）
-
-#### GET /api/v1/admin/license/code-types
-获取所有激活码类型列表。
-```json
-// Response
-{ "code": 0, "msg": "ok", "data": { "types": [ { "id": 1, "name": "VIP年会员", "code": "standard_yearly", "default_level_id": 2, "default_duration_days": 365 } ] } }
-```
-
-#### POST /api/v1/admin/license/code-types
-创建激活码类型。
-```json
-// Request
-{ "name": "VIP年会员", "code": "standard_yearly", "default_level_id": 2, "default_duration_days": 365, "logic_type": "standard" }
-
-// Response
-{ "code": 0, "msg": "创建成功", "data": { "id": 1 } }
-```
-
-### 3.3 激活码实例管理
-
-#### POST /api/v1/admin/license/codes
-创建激活码实例（管理端操作）。可以指定类型和覆盖属性，未指定的属性继承类型定义。
-```json
-// Request（使用类型默认属性）
-{ "type_id": 1 }
-
-// Request（覆盖时长和等级）
-{ "type_id": 1, "duration_days": 400, "level_id": 3 }
+{ "email": "user@example.com", "password": "pass123" }
 
 // Response (success)
-{ "code": 0, "msg": "创建成功", "data": { "code": "ABC123-DEF456", "level_id": 2, "duration_days": 365 } }
+{ "code": 0, "msg": "注册成功", "data": { "user_id": "123" } }
+
+// Response (error: email exists)
+{ "code": 400, "msg": "该邮箱已注册，请更换邮箱或直接登录" }
+
+// Response (error: password too short)
+{ "code": 400, "msg": "密码长度不能少于6位" }
 ```
 
-#### GET /api/v1/admin/license/codes
-获取激活码列表（管理端）。
-
-#### GET /api/v1/user/auth/license/history
-查询当前用户的激活记录列表（按激活时间倒序）。
-```json
-// Response
-{ "code": 0, "msg": "ok", "data": { "records": [ { "code": "ABC123-DEF456", "level": "vip", "level_name": "VIP会员", "activated_at": "2025-01-01 10:00:00", "duration_days": 365, "expires_at": "2025-12-31 23:59:59", "status": "active" }, { "code": "XYZ789-UVW012", "level": "premium", "level_name": "至尊会员", "activated_at": "2025-03-01 10:00:00", "duration_days": 180, "expires_at": "2025-08-28 23:59:59", "status": "active" } ] } }
-```
-
-#### GET /api/v1/admin/license/records
-查询所有激活记录列表（管理端，可按 user_id 筛选）。
-
-#### POST /api/v1/user/auth/license/activate
-激活会员（C 端用户）。
+#### POST /api/v1/user/public/license/login
+用户登录（邮箱+密码）。
 ```json
 // Request
-{ "code": "ABC123-DEF456", "device_id": "uuid-xxx" }
+{ "email": "user@example.com", "password": "pass123", "device_id": "sha256..." }
 
 // Response (success)
-{ "code": 0, "msg": "激活成功", "data": { "user_id": 123, "level_id": 2, "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 } }
+{
+  "code": 0,
+  "msg": "登录成功",
+  "data": {
+    "access_token": "...",
+    "user_id": "123",
+    "expires_in": 86400,
+    "memberships": [
+      {
+        "level_code": "vip",
+        "level_name": "VIP会员",
+        "expires_at": "2027-10-01 23:59:59",
+        "remaining_days": 365
+      }
+    ]
+  }
+}
+
+// Response (error: already logged in on another device)
+{
+  "code": 403,
+  "msg": "账号已在其他设备登录，请先登出原设备",
+  "error_code": "ALREADY_LOGGED_IN",
+  "data": {
+    "device_name": "Xiaomi 12",
+    "last_login_at": "2026-10-01 12:00:00"
+  }
+}
+
+// Response (error: user not found)
+{ "code": 401, "msg": "用户不存在" }
+
+// Response (error: wrong password)
+{ "code": 401, "msg": "密码错误" }
+```
+
+**同设备重新登录**：如果 device_id 与已登录设备相同，直接签发新 token，更新 last_login_at。
+
+#### POST /api/v1/user/public/license/logout
+用户登出（显式登出）。
+```json
+// Request
+{ "user_id": "123", "device_id": "sha256..." }
+
+// Response (success)
+{ "code": 0, "msg": "登出成功" }
+```
+
+> **安全说明**：登出接口为公开接口，参数是 user_id + device_id。device_id 是 SHA256(Android ID)，不容易被猜测，无需额外验证。
+
+#### POST /api/v1/user/public/license/activate
+**一步激活**（注册/登录+激活合并，淘宝用户专用）。
+```json
+// Request
+{
+  "email": "user@example.com",
+  "password": "pass123",
+  "activation_code": "淘宝订单号",
+  "device_id": "sha256..."
+}
+
+// Response (success)
+{
+  "code": 0,
+  "msg": "激活成功",
+  "data": {
+    "access_token": "...",
+    "user_id": "123",
+    "memberships": [
+      {
+        "level_code": "vip",
+        "level_name": "VIP会员",
+        "expires_at": "2027-10-01 23:59:59",
+        "remaining_days": 365
+      }
+    ]
+  }
+}
+
+// Response (error: already logged in on another device)
+{
+  "code": 403,
+  "msg": "账号已在其他设备登录，请先登出原设备",
+  "error_code": "ALREADY_LOGGED_IN"
+}
+
+// Response (error: email exists, wrong password)
+{ "code": 401, "msg": "密码错误" }
 
 // Response (error: code already used)
-{ "code": 400, "msg": "激活码已激活，请使用恢复功能" }
+{ "code": 400, "msg": "激活码已被使用" }
 
-// Response (error: code canceled)
-{ "code": 400, "msg": "激活码已取消" }
-
-// Response (error: code expired)
-{ "code": 400, "msg": "激活码已过期" }
-```
-
-#### GET /api/v1/user/auth/license/status
-查询会员状态（返回当前用户所有有效会员身份）。
-```json
-// Response (multiple active memberships, with expiry warning)
-{ "code": 0, "msg": "ok", "data": { "active": true, "warning_days_left": 5, "memberships": [ { "level": "vip", "level_name": "VIP会员", "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 }, { "level": "premium", "level_name": "至尊会员", "expires_at": "2026-06-30 23:59:59", "remaining_days": 548 } ] } }
-
-// Response (no warning needed)
-{ "code": 0, "msg": "ok", "data": { "active": true, "warning_days_left": null, "memberships": [ { "level": "vip", "level_name": "VIP会员", "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 } ] } }
-
-// Response (no active memberships)
-{ "code": 0, "msg": "ok", "data": { "active": false, "warning_days_left": null, "memberships": [] } }
-```
-
-#### POST /api/v1/user/auth/license/restore
-恢复激活（C 端用户，只有原始激活用户才能恢复）。
-```json
-// Request
-{ "code": "ABC123-DEF456" }
-
-// Response (success)
-{ "code": 0, "msg": "恢复成功", "data": { "user_id": 123, "level_id": 2, "expires_at": "2025-12-31 23:59:59", "remaining_days": 365 } }
-
-// Response (error)
-{ "code": 400, "msg": "该激活码不属于当前用户" }
-
-// Response (error: restore count exceeded)
-{ "code": 400, "msg": "激活码恢复次数已达上限" }
-```
-
-#### POST /api/v1/admin/license/cancel
-取消激活码（管理端操作，取消后该激活码贡献的会员时间从用户总会员时间中减去）。
-```json
-// Request
-{ "code": "ABC123-DEF456" }
-
-// Response (success)
-{ "code": 0, "msg": "取消成功", "data": { "user_id": 123, "level_id": 2, "expires_at": "2025-06-30 23:59:59", "remaining_days": 180 } }
-
-// Response (error)
+// Response (error: code not found)
 { "code": 400, "msg": "激活码不存在" }
 ```
 
-### 3.4 会员等级管理（管理端）
-
-#### GET /api/v1/admin/license/levels
-获取所有会员等级列表。
+#### GET /api/v1/user/public/license/price
+查看套餐价格（无需登录）。
 ```json
 // Response
-{ "code": 0, "msg": "ok", "data": { "levels": [ { "id": 1, "name": "普通会员", "code": "normal" }, ... ] } }
-```
-
-#### POST /api/v1/admin/license/levels
-创建会员等级。
-
-#### PUT /api/v1/admin/license/levels/:id
-更新会员等级。
-
-#### DELETE /api/v1/admin/license/levels/:id
-删除会员等级。
-
-### 3.5 管理端设备管理
-
-#### GET /api/v1/admin/license/all-devices
-获取所有设备列表（管理端，可按 user_id 筛选）。
-
-## 4. 核心业务逻辑
-
-### 4.1 激活流程
-会员身份可叠加，每次激活创建一条激活记录，并更新用户的会员身份。不同会员类型的过期时间独立计算。
-
-**核心规则：**
-- 同一个激活码只能使用一次，重复使用提示"激活码已使用"
-- 同类型新激活码激活时，延长用户该类型的会员时间（顺延）
-- 不同类型激活码激活时，新增一个会员身份（叠加）
-- 会员有效时间跟随会员类型独立计算
-- 激活码被取消时，该激活码贡献的会员时间从用户总会员时间中减去
-- 激活码实例（activation_codes）和激活记录（activation_records）分开刻画
-
-```
-1. 验证激活码实例存在且 status == 0（未使用）
-   - 如果 status != 0，返回错误"激活码已使用"
-2. 验证激活码未过期（expires_at == NULL 或 expires_at > now）
-3. 根据 device_id 查找或创建用户
-4. 查询用户是否已有相同会员等级的有效会员身份（user_memberships WHERE user_id = ? AND level_id = ? AND status = 1）
-5. 计算新过期时间：
-   - 如果已有相同等级的有效会员身份：new_expiry = max(now, old_expiry) + duration_days（延长）
-   - 如果没有：new_expiry = now + duration_days（新增）
-6. 更新激活码实例：status = 1, used_by = user_id, used_at = now
-7. 创建激活记录（activation_records）：记录用户、激活码、激活时间、过期时间等
-8. 创建或更新用户会员身份（user_memberships）：相同等级则更新过期时间，不同等级则新增记录
-9. 返回用户当前所有有效会员身份列表
-```
-
-### 4.2 顺延逻辑
-```sql
--- 查询用户当前有效会员
-SELECT expires_at FROM user_memberships WHERE user_id = ? AND status = 1 ORDER BY expires_at DESC LIMIT 1;
-
--- 计算新过期时间
-new_expiry = GREATEST(NOW(), old_expiry) + INTERVAL duration_days DAY;
-```
-
-### 4.3 恢复激活流程
-```
-1. 验证激活码实例存在且 status == 1（已激活）
-2. 验证激活码的 used_by == 当前用户ID（只有原始激活用户才能恢复）
-3. 检查恢复次数：activation_codes.restore_count >= 3 时拒绝恢复，返回错误"激活码恢复次数已达上限"
-4. 查询该激活码对应的用户会员身份（user_memberships WHERE user_id = ? AND level_id = ?）
-5. 如果会员身份已过期（status=0 或 expires_at <= now）或仍有效（status=1 且 expires_at > now），均可恢复（相当于重新激活该码）：
-   - new_expiry = max(now, current_expires_at) + duration_days（顺延方式与激活相同）
-   - 更新 user_memberships：status = 1, expires_at = new_expiry
-6. 更新激活码实例：status = 2（已恢复），restore_count = restore_count + 1
-7. 创建新的激活记录（activation_records）：记录本次恢复的激活时间和过期时间
-8. 返回会员状态（包含 user_id）
-```
-
-### 4.4 取消激活码流程（管理端）
-取消激活码后，使用 **Replay 重算**方式重新计算用户剩余会员时间（而非简单减法），以保证叠加场景下计算正确。
-
-```
-1. 验证激活码实例存在
-2. 如果激活码 status == 0（未使用）：
-   - 直接更新激活码实例状态为 3（已取消）
-   - 返回成功
-3. 如果激活码 status == 1（已激活）或 status == 2（已恢复）：
-   a. 查询该激活码对应的激活记录（activation_records WHERE code_id = ?），获取 user_id 和 level_id
-   b. 查询该用户该等级的所有状态为有效（status=1）的激活记录（activation_records WHERE user_id=? AND level_id=? AND status=1），排除本次被取消的记录，按 activated_at 升序排列
-   c. Replay 重算过期时间：
-      - 如果剩余有效记录为空：
-        - user_memberships.status 改为 0（已过期），expires_at 改为 now
-      - 如果剩余有效记录不为空：
-        - base = 第一条记录的 activated_at
-        - 遍历每条记录（按 activated_at 升序）：
-            base = max(base, record.activated_at) + record.duration_days（天）
-        - 最终 base 即为新的 expires_at
-        - 更新 user_memberships.expires_at = base
-        - 如果 base < now，则 user_memberships.status 改为 0（已过期）
-   d. 更新激活记录状态为 2（已取消）
-   e. 更新激活码实例状态为 3（已取消）
-   f. 返回用户更新后的会员状态（包含 user_id）
-```
-
-### 4.5 多设备登录流程
-```
-1. 用户登录成功后（复用 user_auth 模块），license 插件检查该用户已有设备数量（user_devices WHERE user_id = ?）
-2. 如果设备数量 >= license.max_devices（默认 2）：
-   - 返回错误，提示踢出已有设备
-   - 返回设备列表供用户选择
-3. 如果设备数量 < license.max_devices：
-   - 插入新设备记录
-   - 自动同步该用户的会员状态
-```
-
-## 5. 客户端设计（mjarch flavor）
-
-### 5.1 新增类
-
-**MembershipAccessControl.java**
-- 实现 `IAccessControl` 接口
-- `canAccessGame()`: 检查本地缓存的会员状态，过期则弹窗
-- `showAccessDialog()`: 显示登录/注册/激活对话框
-
-**LoginActivity.java**
-- 手机号、短信验证码
-- 调用 `/api/v1/user/auth/send-code` 发送验证码
-- 调用 `/api/v1/user/auth/login` 登录
-- 登录成功后同步会员状态
-
-**MembershipActivationActivity.java**
-- 输入激活码
-- 调用 `/activate` API
-- 显示激活结果
-
-**MembershipStatusActivity.java**
-- 显示当前所有有效会员身份（标签形式，每个标签显示会员类型和过期时间）
-- 显示激活记录列表（激活码、会员类型、激活时间、有效时长、过期时间、状态）
-- 显示已登录设备列表
-- 踢出设备按钮
-
-### 5.2 本地存储（SharedPreferences）
-| Key | 类型 | 说明 |
-|-----|------|------|
-| user_token | string | JWT token |
-| user_id | long | 用户ID |
-| device_id | string | 设备标识（基于 Android ID 的 SHA-256 哈希，由客户端首次启动时生成并持久化） |
-| membership_level | string | 会员等级代码 |
-| membership_expires_at | long | 会员过期时间戳（毫秒） |
-| membership_code | string | 使用的激活码 |
-
-### 5.3 Flavor 配置
-mjarch flavor 的 `strings.xml`：
-```xml
-<string name="access_control_class">com.seleuco.mame4droid.access.MembershipAccessControl</string>
-```
-
-其他 flavor 保持原来的 `ActivationAccessControl`。
-
-## 6. 安全设计
-
-### 6.1 认证
-- API 使用 JWT token 认证（有效期 24 小时，复用 platform_admin JWT 中间件）
-- 短信验证码限频（复用 platform_admin sms_service）
-
-### 6.2 报文加密（RSA）
-客户端与服务器之间的通信使用 RSA 加密，与现有激活机制保持一致。
-
-**加密参数：**
-- 算法：RSA/ECB/PKCS1Padding
-- 密钥长度：2048 位（license 插件专用独立密钥对，与其他 flavor 旧激活机制的密钥完全独立，互不影响）
-- 公钥：存储在客户端 strings.xml 中（独立字段，如 `license_rsa_key`，不复用旧激活机制的 `key1`）
-- 私钥：服务端持有（license 插件配置中）
-
-**请求加密流程：**
-1. 客户端使用公钥加密 POST 参数（`RSAUtils.encrypt2Base64StringByPublicKey`）
-2. 服务端使用私钥解密请求参数
-
-**响应加密流程：**
-1. 服务端使用私钥加密响应数据
-2. 客户端使用公钥解密响应数据（`RSAUtils.decrypt2StringByBase64DataAndPublicKey`）
-
-**响应数据结构：**
-```json
 {
   "code": 0,
-  "msg": "success",
-  "data": "encrypted_data",
-  "time": "timestamp"
+  "msg": "ok",
+  "data": {
+    "items": [
+      {
+        "id": "1",
+        "name": "月卡",
+        "level_code": "vip",
+        "level_name": "VIP会员",
+        "duration_days": 30,
+        "price": 1800,
+        "original_price": 2000
+      }
+    ]
+  }
 }
 ```
 
-**Go 服务端实现：**
-- 使用 `github.com/youmark/pkcs8` 或标准库 `crypto/rsa` 实现 RSA 解密/加密
-- 私钥从插件配置中读取（环境变量或配置文件）
-- 请求解密：`rsa.DecryptPKCS1v15(rand.Reader, priv, encryptedData)`
-- 响应加密：`rsa.EncryptPKCS1v15(rand.Reader, pub, plainData)`
-
-### 6.3 其他安全措施
-- 激活码使用随机字符串（16位字母数字，格式 XXXX-XXXX-XXXX）
-- 防止重放攻击：激活接口检查激活码状态
-
-## 7. 部署
-
-license 插件采用 platform_admin 的 **RegisterDirect** 方式内嵌到主程序，不需要构建为 .so 文件。部署时重新编译 platform_admin 主程序即可。
-
-```go
-// 在 platform_admin main.go 或 auth.go 的 Init 中注册
-licensePlugin := license.NewPlugin(db, cfg)
-pluginMgr.RegisterDirect("license", licensePlugin)
-pluginMgr.Start("license")
+#### GET /api/v1/user/public/license/games
+获取游戏列表（无需登录）。
+```json
+// Response
+{
+  "code": 0,
+  "msg": "ok",
+  "data": {
+    "games": [
+      { "rom_name": "lhb", "required_levels": null },
+      { "rom_name": "lhb2", "required_levels": ["normal", "vip"] },
+      { "rom_name": "premium_game", "required_levels": ["premium"] }
+    ]
+  }
+}
 ```
 
-## 8. 测试计划
+> **说明**：
+> - `required_levels = null` 或不在列表中的游戏 = 免费游戏
+> - `required_levels = ["normal", "vip"]` = normal 或 vip 任一满足即可玩
+
+### 3.2 认证接口（需要登录）
+
+> **Header 要求**：
+> - `Authorization: Bearer <token>`
+> - `X-Device-ID: <sha256...>`
+
+#### GET /api/v1/user/auth/license/status
+查询会员状态。
+```json
+// Response
+{
+  "code": 0,
+  "msg": "ok",
+  "data": {
+    "user_id": "123",
+    "email": "user@example.com",
+    "memberships": [
+      {
+        "level_code": "normal",
+        "level_name": "普通会员",
+        "expires_at": "2026-12-31 23:59:59",
+        "remaining_days": 90
+      },
+      {
+        "level_code": "vip",
+        "level_name": "VIP会员",
+        "expires_at": "2026-11-30 23:59:59",
+        "remaining_days": 60,
+        "warning_days_left": 7
+      }
+    ]
+  }
+}
+```
+
+#### POST /api/v1/user/auth/license/activate
+激活会员（已登录用户）。
+```json
+// Request
+{ "activation_code": "XXXX-XXXX-XXXX-XXXX" }
+
+// Response
+{
+  "code": 0,
+  "msg": "激活成功",
+  "data": {
+    "level_code": "vip",
+    "level_name": "VIP会员",
+    "expires_at": "2026-12-31 23:59:59"
+  }
+}
+```
+
+#### POST /api/v1/user/auth/license/restore
+恢复激活（针对激活记录）。
+```json
+// Request
+{ "record_id": "456" }
+
+// Response
+{
+  "code": 0,
+  "msg": "恢复成功",
+  "data": {
+    "level_code": "vip",
+    "level_name": "VIP会员",
+    "expires_at": "2026-12-31 23:59:59"
+  }
+}
+```
+
+#### GET /api/v1/user/auth/license/records
+获取激活记录列表。
+```json
+// Response
+{
+  "code": 0,
+  "msg": "ok",
+  "data": {
+    "records": [
+      {
+        "id": "456",
+        "code": "XXXX-XXXX",
+        "level_code": "vip",
+        "level_name": "VIP会员",
+        "activated_at": "2026-01-01 12:00:00",
+        "starts_at": "2026-01-01 12:00:00",
+        "expires_at": "2027-01-01 12:00:00",
+        "duration_days": 365,
+        "status": 1,
+        "restore_count": 0,
+        "can_restore": true
+      }
+    ]
+  }
+}
+```
+
+### 3.3 管理端接口
+
+#### 游戏管理
+- GET /api/v1/admin/license/games - 游戏列表
+- POST /api/v1/admin/license/games - 创建游戏
+- PUT /api/v1/admin/license/games/:id - 更新游戏
+- DELETE /api/v1/admin/license/games/:id - 删除游戏
+
+#### 套餐管理
+- GET /api/v1/admin/license/prices - 套餐列表
+- POST /api/v1/admin/license/prices - 创建套餐
+- PUT /api/v1/admin/license/prices/:id - 更新套餐
+- DELETE /api/v1/admin/license/prices/:id - 删除套餐
+
+#### 用户设备管理（客服用）
+- POST /api/v1/admin/license/users/:id/force-logout - 强制登出用户
+
+## 4. 核心业务逻辑
+
+### 4.1 单设备登录逻辑
+
+```
+登录流程：
+1. 验证邮箱密码
+2. 查 Redis 缓存 `license:login:{tenant_id}:{user_id}`
+   - 有缓存 → 用缓存判断
+   - 无缓存 → 查库 user_devices，结果写入 Redis（TTL 24 小时）
+3. 判断登录状态：
+   - 有 is_logged_in = 1 的记录且 device_id != 当前设备 → 返回 403 ALREADY_LOGGED_IN
+   - 有 is_logged_in = 1 的记录且 device_id == 当前设备 → 更新 last_login_at，签发新 token
+   - 无记录或 is_logged_in = 0 → 创建/更新设备记录，签发 token
+4. 更新 Redis 登录状态缓存
+5. 签发 JWT token（只含 user_id，不含 device_id）
+6. 查询用户会员状态
+7. 返回 token + memberships
+
+登出流程：
+1. 更新 user_devices.is_logged_in = 0
+2. 删除 Redis 登录状态缓存
+3. 返回成功
+
+客服强制登出：
+1. 更新 user_devices.is_logged_in = 0
+2. 删除 Redis 登录状态缓存
+3. 被踢设备下次请求返回 401 + DEVICE_KICKED
+```
+
+### 4.2 被踢设备检测机制
+
+```
+每次认证接口请求：
+1. 从 JWT token 中获取 user_id
+2. 从 Header X-Device-ID 获取 device_id
+3. 查 Redis 缓存 `license:login:{tenant_id}:{user_id}`
+   - 有缓存 → 用缓存判断
+   - 无缓存 → 查库 user_devices，结果写入 Redis（TTL 24 小时）
+4. 判断：
+   - is_logged_in = 0 → 返回 401 + DEVICE_KICKED
+   - device_id != 缓存中的 device_id → 返回 401 + DEVICE_KICKED
+   - 正常 → 继续处理请求
+```
+
+### 4.3 一步激活流程（公开接口）
+```
+1. 验证密码长度 ≥ 6
+2. 查用户是否存在（按 tenant_id + email）
+   - 存在：验证密码（bcrypt.Compare）
+     - 密码错误 → 返回 401
+   - 不存在：创建用户（密码用 bcrypt 加密）
+     - 唯一约束冲突 → 重试查询
+3. 检查单设备登录限制（同 4.1）
+   - 已在其他设备登录 → 返回 403 ALREADY_LOGGED_IN
+4. 验证激活码（乐观锁）
+   - 不存在 → 返回 400
+   - status == 3 → 返回 400 "激活码已取消"
+   - used_activations >= max_activations → 返回 400 "激活码已被使用"
+   - expires_at < now → 返回 400 "激活码已过期"
+5. 获取 level_code：
+   - 优先 activation_codes.level_code
+   - 否则 activation_code_types.default_level_code
+6. 开启事务执行激活逻辑
+   - 更新激活码 used_activations（乐观锁）
+   - 如果 used_activations == max_activations，更新 status = 1
+   - 创建激活记录
+   - 创建/更新用户会员身份（user_memberships）
+7. 记录设备登录状态
+8. 签发 JWT token
+9. 更新 Redis 缓存（会员状态 + 登录状态）
+10. 返回 token + memberships
+```
+
+### 4.4 游戏访问控制
+```
+客户端逻辑：
+1. 从服务端获取游戏列表（含 required_levels）
+2. 从本地缓存获取用户会员状态（level_codes 集合 + 各自 expires_at）
+3. 点击游戏时：
+   - required_levels == null 或空 → 直接玩（免费游戏）
+   - required_levels 有值：
+     - 检查用户是否拥有 required_levels 中任一未过期的 level_code
+     - 有 → 直接玩
+     - 无 → 弹出会员引导（激活码/购买）
+```
+
+### 4.5 顺延逻辑
+```sql
+-- 同一用户同一等级激活时
+new_expiry = GREATEST(NOW(), old_expiry) + INTERVAL duration_days DAY;
+
+-- 更新 user_memberships
+INSERT INTO user_memberships (user_id, level_code, expires_at)
+VALUES (?, ?, new_expiry)
+ON DUPLICATE KEY UPDATE expires_at = GREATEST(expires_at, NOW()) + INTERVAL ? DAY;
+```
+
+### 4.6 激活码恢复逻辑
+```
+1. 查找激活记录（record_id + user_id）
+2. 验证是本人的激活记录
+3. 验证 restore_count < 3
+4. 执行恢复：
+   - 更新 user_memberships.expires_at（顺延逻辑）
+   - 更新 activation_records.restore_count += 1
+5. 清除 Redis 会员状态缓存
+```
+
+### 4.7 购买套餐生成激活码逻辑
+
+> 2026-10-02 起本流程由 4.9 商品履约策略架构承载（standard 策略），以下为 standard 策略的行为描述。
+```
+1. 从 price_configs 获取 code_type_id、level_code、duration_days
+2. 生成激活码：
+   - level_code = price_configs.level_code
+   - duration_days = price_configs.duration_days ?? activation_code_types.default_duration_days
+   - source = 'app_purchase'
+3. 执行激活逻辑（自动为下单用户激活，顺延规则见 4.5）
+```
+
+### 4.8 Redis 缓存策略
+
+| 缓存项 | Key 格式 | TTL | 说明 |
+|--------|---------|-----|------|
+| 用户会员状态 | `license:membership:{tenant_id}:{user_id}` | 5 分钟 | 包含所有会员等级及过期时间 |
+| 用户登录状态 | `license:login:{tenant_id}:{user_id}` | 24 小时 | device_id + is_logged_in |
+
+缓存失效时机：
+- 激活成功 → 清除会员状态缓存
+- 登录 → 更新登录状态缓存
+- 登出/强制登出 → 删除登录状态缓存
+
+### 4.9 商品履约策略架构（2026-10-02 新增）
+
+> **设计原则**：支付成功后的处理逻辑按商品类型路由，不写死在回调里。买不同东西走不同履约逻辑。
+
+**路由机制**：订单关联的激活码类型（`activation_code_types.logic_type` 字段）决定履约策略。
+
+```
+支付回调 / 对账补单（唯一入口）
+    ↓ FulfillOrder(tx, order)
+    ↓ 查订单商品的 activation_code_types.logic_type
+    ↓ fulfillmentRegistry[logic_type]   ← 策略注册表路由
+    ├─ "standard"  → 生成激活码 + 自动为下单用户激活会员（现有购买流程）
+    ├─ <新类型>    → 新商品的处理逻辑（策略实现者自定义）
+    └─ 未注册类型   → 不做履约动作：仅生成激活码留档，订单记已支付，不动用户权益
+```
+
+**核心组件**（`service/fulfillment.go`）：
+
+| 组件 | 职责 |
+|------|------|
+| `Fulfiller` 接口 | `LogicType()` + `Fulfill(*FulfillContext)`，每种商品一个实现 |
+| `FulfillContext` | 履约上下文：订单 + 激活码 + 事务句柄 |
+| `FulfillResult` | 履约结果：`Activated`（权益是否生效）/ `ActivationCode` / `Message` |
+| `RegisterFulfiller(f)` | 注册策略（init 或 NewLicenseService 时调用） |
+| `FulfillOrder(tx, order)` | 统一入口：确定 logic_type → 路由 → 执行；激活码生成/关联也在此统一处理 |
+
+**内置策略**：
+- `StandardFulfiller`（logic_type=`standard`）：生成激活码 → `ActivateV2` 为下单用户自动激活（顺延逻辑）→ 成功则订单置"已激活"；失败则订单停"已支付"并 `activate_retry_count+1`（对账任务重试 + 用户可手动激活兜底）
+
+**契约约定**：
+- `Fulfill` 返回 `error` → 整个支付事务回滚，微信重试回调（不丢单）
+- `FulfillResult.Activated=false` + `NoHandler=false` → 订单停在"已支付"，进入对账重试通道
+- `FulfillResult.NoHandler=true`（未注册类型）→ 不做履约动作也不重试：仅生成激活码留档，订单记已支付，不动用户权益；策略注册后**新订单**自动生效
+- 激活码的生成与订单关联统一在 `FulfillOrder` 内完成，策略只管"激活后的业务处理"
+- 新增商品类型三步：管理端建类型填 `logic_type` → 实现 `Fulfiller` → `RegisterFulfiller` 注册；回调主流程零改动
+- 管理端「激活码类型」表单的履约类型下拉支持自由输入新值；选项列表来自 `GET /api/v1/admin/license/fulfillment-types`（已注册策略实时列表）
+
+### 4.10 支付对账兜底（2026-10-02 新增）
+
+**问题**：微信回调可能丢失/延迟，或用户付款后立即退出 App，导致已付款订单停在"待支付"。
+
+**机制**：挂在已有的 `StartOrderTimeoutJob`（每分钟）上，新增 `ReconcilePendingOrders()`：
+
+1. **待支付订单查单兜底**：扫描近 24h 内创建的待支付订单（限 50 笔/轮），逐单调微信 `QueryOrder`：
+   - 微信侧 `SUCCESS` → 走 `HandlePaymentCallback`（与回调同一入口，幂等）补发货
+   - 微信侧 `CLOSED` → 同步关闭本地订单
+2. **激活失败重试**：扫描"已支付且 activate_retry_count ∈ (0,5)"的订单，重试 `ActivateV2` 自动激活
+
+**保证**：无论回调是否到达、用户是否在线，付款后最多 1 分钟内完成发货激活。用户 App 端无需做任何激活码查询/手动激活，只需正常同步 `/status` 即可看到会员生效。
+
+**兜底双保险**：`GetOrder` / 订单列表在"已支付"或"已激活"状态均返回激活码——自动激活持续失败（重试 5 次耗尽）时，用户可凭激活码手动激活。
+
+### 4.11 支付回调实现修正（2026-10-02）
+
+- 微信 V3 回调为 AES-GCM 加密报文，`PaymentCallback` handler 必须走 `WeChatPayAdapter.HandleCallback`（验签 + 解密），禁止按普通 JSON 解析
+- notify_url 实际路由：`/api/v1/user/public/license/payment/callback`（注意 `/public` 段）
+- 回调全链路日志：入口 IP → 微信签名头（Timestamp/Nonce/Serial）→ 验签结果 → 解密出订单号/交易状态/金额 → 落账结果
+- 验签失败返回 HTTP 400 + `{"code":"FAIL"}`（微信按衰减频率重试）；成功返回 `{"code":"SUCCESS"}`
+- 每笔回调落库：`RecordPaymentCallback`（原始报文+请求头，管理端可查）+ `RecordPaymentTransaction`（交易流水）
+
+## 5. 客户端设计（mjarch flavor）
+
+### 5.1 会员状态同步
+
+**同步时机**：
+- App 启动时调用 /status 刷新本地缓存
+- 点击会员游戏时可选再次检查
+
+```java
+public class MembershipSyncManager {
+    
+    public void syncOnStartup() {
+        if (isLoggedIn()) {
+            syncMembershipStatus();
+        }
+    }
+    
+    private void syncMembershipStatus() {
+        api.getMembershipStatus()
+           .subscribe(response -> {
+               saveMembershipsToLocal(response.memberships);
+           }, error -> {
+               // 使用本地缓存
+           });
+    }
+}
+```
+
+### 5.2 游戏访问控制
+
+**MembershipAccessControl.java**
+```java
+public class MembershipAccessControl implements IAccessControl {
+    
+    @Override
+    public boolean canAccessGame(Context context, GameConfig game) {
+        List<String> requiredLevels = game.getRequiredLevels();
+        
+        // 免费游戏，直接放行
+        if (requiredLevels == null || requiredLevels.isEmpty()) {
+            return true;
+        }
+        
+        // 检查用户是否拥有任一所需等级
+        Set<String> userLevels = getActiveMembershipLevelCodes();
+        for (String level : requiredLevels) {
+            if (userLevels.contains(level)) {
+                return true;
+            }
+        }
+        
+        // 弹出会员引导
+        showMembershipDialog(context, requiredLevels);
+        return false;
+    }
+    
+    private Set<String> getActiveMembershipLevelCodes() {
+        // 从本地缓存获取未过期的会员等级 code 集合
+        List<Membership> memberships = getMembershipsFromCache();
+        Set<String> activeLevels = new HashSet<>();
+        long now = System.currentTimeMillis();
+        for (Membership m : memberships) {
+            if (m.expiresAt > now) {
+                activeLevels.add(m.levelCode);
+            }
+        }
+        return activeLevels;
+    }
+}
+```
+
+### 5.3 游戏列表同步
+
+```java
+public class GameConfigSyncManager {
+    private static final long SYNC_INTERVAL = 6 * 60 * 60 * 1000; // 6 小时
+    
+    public void syncOnStartup() {
+        // App 启动时同步一次
+        syncGameConfigs();
+        
+        // 设置定时同步
+        schedulePeriodicSync();
+    }
+    
+    private void syncGameConfigs() {
+        // 从服务端获取游戏配置
+        List<GameConfig> serverConfigs = api.getGameConfigs();
+        
+        // 存储到本地（SharedPreferences 或文件）
+        saveToLocal(serverConfigs);
+    }
+    
+    public GameConfig mergeConfig(GameConfig localConfig) {
+        // 按 rom_name 匹配服务端配置
+        GameConfig serverConfig = getServerConfigByRomName(localConfig.romName);
+        if (serverConfig != null) {
+            // 用服务端数据覆盖 required_levels
+            localConfig.setRequiredLevels(serverConfig.requiredLevels);
+        }
+        return localConfig;
+    }
+}
+```
+
+### 5.4 网络请求
+
+```java
+public class LicenseApiClient {
+    
+    private OkHttpClient createClient() {
+        return new OkHttpClient.Builder()
+            .addInterceptor(chain -> {
+                Request original = chain.request();
+                Request.Builder builder = original.newBuilder();
+                
+                // 添加 X-Device-ID Header
+                String deviceId = getDeviceId();
+                builder.header("X-Device-ID", deviceId);
+                
+                // 添加 Authorization Header（如果已登录）
+                String token = getToken();
+                if (token != null) {
+                    builder.header("Authorization", "Bearer " + token);
+                }
+                
+                return chain.proceed(builder.build());
+            })
+            .build();
+    }
+    
+    private void handleError(Response response) {
+        if (response.code() == 401) {
+            String errorCode = parseErrorCode(response);
+            if ("DEVICE_KICKED".equals(errorCode)) {
+                showDeviceKickedDialog();
+                clearLocalSession();
+            }
+        } else if (response.code() == 403) {
+            String errorCode = parseErrorCode(response);
+            if ("ALREADY_LOGGED_IN".equals(errorCode)) {
+                showAlreadyLoggedInDialog(response);
+            }
+        }
+    }
+}
+```
+
+### 5.5 页面设计
+
+**MembershipDialogFragment** - 会员引导弹窗
+- 显示需要的会员等级
+- 两个按钮：[输入激活码] [购买会员]
+
+**ActivationActivity** - 一步激活页面（淘宝用户）
+- 邮箱输入
+- 密码输入（≥6位）
+- 激活码/淘宝订单号输入
+- [激活] 按钮
+- "已有账号？登录" 链接
+
+**LoginActivity** - 登录页面
+- 邮箱输入
+- 密码输入
+- [登录] 按钮
+- "没有账号？注册" 链接
+- "忘记密码？联系客服" 文本
+
+**RegisterActivity** - 注册页面
+- 邮箱输入
+- 密码输入（≥6位）
+- 确认密码输入
+- [注册] 按钮
+
+**PurchaseActivity** - 购买会员页面
+- 套餐列表（从服务端获取）
+- [微信支付] 按钮
+
+**MembershipStatusActivity** - 会员状态页面
+- 显示邮箱
+- 显示当前会员等级集合（多个标签）
+- 每个等级显示过期时间
+- 显示激活记录（可恢复）
+- [登出] 按钮
+
+### 5.6 本地存储（SharedPreferences: "membership"）
+| Key | 类型 | 说明 |
+|-----|------|------|
+| user_token | string | JWT token |
+| user_id | string | 用户ID |
+| user_email | string | 用户邮箱 |
+| device_id | string | 设备标识（SHA-256(Android ID)） |
+| memberships | json | 会员等级集合 `[{level_code, expires_at}, ...]` |
+
+### 5.7 Flavor 配置
+
+mjarch flavor 的 `strings.xml`：
+```xml
+<string name="access_control_class">com.seleuco.mame4droid.access.MembershipAccessControl</string>
+<string name="server_url">https://app.btcola.com</string>
+<string name="license_rsa_key">MIIBIjAN...公钥...</string>
+```
+
+## 6. 安全设计
+
+### 6.1 密码安全
+- 密码使用 bcrypt 加密存储（cost=10）
+- 密码长度要求：≥ 6 位，不做复杂度要求
+- 密码不可为空（注册时必填）
+
+### 6.2 认证
+- API 使用 JWT token 认证（有效期 24 小时）
+- JWT 只存 user_id，不存 device_id
+- 客户端每次请求通过 X-Device-ID Header 传递 device_id
+- 单设备登录，同一时间只能一台设备在线
+- 被踢设备通过 Redis 缓存检测，返回 401 + DEVICE_KICKED
+
+### 6.3 报文加密（RSA）
+- 算法：RSA/ECB/PKCS1Padding，2048位
+- 公钥存储在客户端 strings.xml
+- 私钥服务端持有
+
+### 6.4 并发安全
+- 邮箱唯一约束 + 冲突重试
+- 激活码 used_activations 更新使用乐观锁（version 字段）
+- `UPDATE ... SET used_activations = used_activations + 1, version = version + 1 WHERE id = ? AND version = ? AND used_activations < max_activations`
+
+## 7. 测试计划
 
 ### 单元测试
-- 激活码生成和验证
-- 会员过期时间计算（顺延逻辑）
-- 多设备登录限制
+- 密码加密验证
+- 一步激活逻辑（新用户/老用户）
+- 乐观锁并发测试
+- 会员等级集合访问控制
+- level_code 获取逻辑（优先级）
 
 ### 集成测试
-- 注册 → 登录 → 激活 → 查询状态 完整流程
-- 多设备登录和同步
-- 激活码恢复
+- 注册 → 登录 → 激活 完整流程
+- 一步激活流程（新用户/老用户）
+- 单设备登录限制测试
+- 同设备重新登录测试
+- 显式登出 → 另一设备登录
+- 强制登出 → 被踢设备返回 DEVICE_KICKED
+- 微信支付 → 自动激活
+- 激活码恢复流程
 
 ### 客户端测试
-- mjarch flavor 使用新激活逻辑
-- 其他 flavor 不受影响
-- 离线状态检查
+- 免费游戏无需登录
+- 会员游戏根据等级集合判断
+- 游戏列表同步（启动时 + 6 小时）
+- 会员状态同步（启动时）
+- 激活流程
+- 购买流程

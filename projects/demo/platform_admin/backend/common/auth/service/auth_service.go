@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -17,9 +18,10 @@ import (
 // AuthService 认证服务
 // blacklist 使用 spi.TokenBlacklistStore 接口，支持内存（单实例）或 Redis（多 Pod）实现
 type AuthService struct {
-	db        *gorm.DB
-	cfg       *config.Config
-	blacklist spi.TokenBlacklistStore
+	db             *gorm.DB
+	cfg            *config.Config
+	blacklist      spi.TokenBlacklistStore
+	tokenRecorder  *TokenRecordService
 }
 
 // GetConfig 返回配置（供中间件等外部调用方使用）
@@ -46,8 +48,15 @@ func (s *AuthService) AutoDegradeIfExpired(tenantID int64) bool {
 // CheckUserStatus 检查用户状态
 func (s *AuthService) CheckUserStatus(userID int64) (int, error) {
 	var status int
-	err := s.db.Table("admin_user").Where("id = ?", userID).Pluck("status", &status).Error
-	return status, err
+	result := s.db.Table("admin_user").Where("id = ?", userID).Pluck("status", &status)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	if result.RowsAffected == 0 {
+		// 用户不存在于 admin_user 表（可能是C端用户），返回 ErrRecordNotFound
+		return 0, gorm.ErrRecordNotFound
+	}
+	return status, nil
 }
 
 // NewAuthService 构造认证服务
@@ -59,10 +68,13 @@ func NewAuthService(db *gorm.DB, cfg *config.Config, blacklistStore ...spi.Token
 	} else {
 		bl = &localBlacklistFallback{}
 	}
+	tokenRecorder := NewTokenRecordService(db)
+	tokenRecorder.SetBlacklist(bl) // 注入黑名单，使登录时旧 token 真正失效
 	return &AuthService{
-		db:        db,
-		cfg:       cfg,
-		blacklist: bl,
+		db:            db,
+		cfg:           cfg,
+		blacklist:     bl,
+		tokenRecorder: tokenRecorder,
 	}
 }
 
@@ -98,7 +110,7 @@ func (s *AuthService) GetUserIDByUsername(username string) int64 {
 }
 
 // Login 用户登录
-func (s *AuthService) Login(username, password string) (*strategy.LoginResponse, error) {
+func (s *AuthService) Login(username, password, ip, userAgent string) (*strategy.LoginResponse, error) {
 	// 查询用户
 	var user model.User
 	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
@@ -170,15 +182,59 @@ func (s *AuthService) Login(username, password string) (*strategy.LoginResponse,
 		// 查询用户在该租户下的角色
 		roleIDs := s.getUserRoles(user.ID, tenantInfos[0].ID)
 
+		// 计算 access token 过期时间（秒）：优先使用用户自定义，否则使用全局配置
+		accessExpiresIn := int64(s.cfg.JWT.AccessTokenTTL.Seconds())
+		if user.AccessTokenExpireMinutes != nil && *user.AccessTokenExpireMinutes > 0 {
+			accessExpiresIn = int64(*user.AccessTokenExpireMinutes * 60)
+		}
+
 		accessToken, err := strategy.GenerateAccessToken(s.cfg, &strategy.AccessTokenOptions{
 			UserID:       user.ID,
 			TenantID:     tenantInfos[0].ID,
 			Roles:        roleIDs,
 			UserPool:     strategy.UserPoolAdmin,
 			TokenVersion: 0,
+			ExpiresIn:    accessExpiresIn,
 		})
 		if err != nil {
 			return nil, err
+		}
+
+		// 计算 refresh token 过期时间（秒）：优先使用用户自定义，否则使用全局配置
+		refreshExpiresIn := int64(s.cfg.JWT.RefreshTokenTTL.Seconds())
+		if user.RefreshTokenExpireMinutes != nil && *user.RefreshTokenExpireMinutes > 0 {
+			refreshExpiresIn = int64(*user.RefreshTokenExpireMinutes * 60)
+		}
+
+		refreshToken, err := strategy.GenerateRefreshToken(s.cfg, &strategy.RefreshTokenOptions{
+			UserID:       user.ID,
+			TenantID:     tenantInfos[0].ID,
+			UserPool:     strategy.UserPoolAdmin,
+			TokenVersion: 0,
+			ExpiresIn:    refreshExpiresIn,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// 记录 Token 到审计日志
+		if s.tokenRecorder != nil {
+			accessClaims, _ := strategy.ParseAccessToken(s.cfg, accessToken)
+			refreshClaims, _ := strategy.ParseRefreshToken(s.cfg, refreshToken)
+			accessJTI := ""
+			refreshJTI := ""
+			if accessClaims != nil {
+				accessJTI = accessClaims.ID
+			}
+			if refreshClaims != nil {
+				refreshJTI = refreshClaims.ID
+			}
+			_ = s.tokenRecorder.RecordLoginFull(
+				user.ID, user.Username, tenantInfos[0].ID,
+				accessToken, accessJTI, time.Now().Add(time.Duration(accessExpiresIn)*time.Second),
+				refreshToken, refreshJTI, time.Now().Add(time.Duration(refreshExpiresIn)*time.Second),
+				model.TokenSourceLogin, ip, userAgent,
+			)
 		}
 
 		return &strategy.LoginResponse{
@@ -186,8 +242,9 @@ func (s *AuthService) Login(username, password string) (*strategy.LoginResponse,
 			Token:         accessToken,
 			AccessToken:   accessToken,
 			PlatformToken: platformToken,
+			RefreshToken:  refreshToken,
 			Tenants:       tenantInfos,
-			ExpiresIn:     int64(s.cfg.JWT.AccessTokenTTL.Seconds()),
+			ExpiresIn:     accessExpiresIn,
 		}, nil
 	}
 
@@ -206,7 +263,7 @@ func (s *AuthService) Login(username, password string) (*strategy.LoginResponse,
 }
 
 // SelectTenant 选择租户，签发 access_token
-func (s *AuthService) SelectTenant(platformTokenStr string, tenantID int64) (*strategy.SelectTenantResponse, error) {
+func (s *AuthService) SelectTenant(platformTokenStr string, tenantID int64, ip, userAgent string) (*strategy.SelectTenantResponse, error) {
 	// 解析 platform_token
 	claims, err := strategy.ParsePlatformToken(s.cfg, platformTokenStr)
 	if err != nil {
@@ -246,6 +303,18 @@ func (s *AuthService) SelectTenant(platformTokenStr string, tenantID int64) (*st
 	// 查询用户在该租户下的角色
 	roleIDs := s.getUserRoles(claims.UserID, tenantID)
 
+	// 查询用户以获取 per-user token expiration 设置
+	var user model.User
+	if err := s.db.Where("id = ?", claims.UserID).First(&user).Error; err != nil {
+		return nil, err
+	}
+
+	// 计算 access token 过期时间（秒）：优先使用用户自定义，否则使用全局配置
+	accessExpiresIn := int64(s.cfg.JWT.AccessTokenTTL.Seconds())
+	if user.AccessTokenExpireMinutes != nil && *user.AccessTokenExpireMinutes > 0 {
+		accessExpiresIn = int64(*user.AccessTokenExpireMinutes * 60)
+	}
+
 	// 签发 access_token
 	accessToken, err := strategy.GenerateAccessToken(s.cfg, &strategy.AccessTokenOptions{
 		UserID:       claims.UserID,
@@ -253,30 +322,166 @@ func (s *AuthService) SelectTenant(platformTokenStr string, tenantID int64) (*st
 		Roles:        roleIDs,
 		UserPool:     strategy.UserPoolAdmin,
 		TokenVersion: 0,
+		ExpiresIn:    accessExpiresIn,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	// 计算 refresh token 过期时间（秒）：优先使用用户自定义，否则使用全局配置
+	refreshExpiresIn := int64(s.cfg.JWT.RefreshTokenTTL.Seconds())
+	if user.RefreshTokenExpireMinutes != nil && *user.RefreshTokenExpireMinutes > 0 {
+		refreshExpiresIn = int64(*user.RefreshTokenExpireMinutes * 60)
+	}
+
+	// 签发 refresh_token（绑定到该租户）
+	refreshToken, err := strategy.GenerateRefreshToken(s.cfg, &strategy.RefreshTokenOptions{
+		UserID:       claims.UserID,
+		TenantID:     tenantID,
+		UserPool:     strategy.UserPoolAdmin,
+		TokenVersion: 0,
+		ExpiresIn:    refreshExpiresIn,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 记录 Token 到审计日志
+	if s.tokenRecorder != nil {
+		accessClaims, _ := strategy.ParseAccessToken(s.cfg, accessToken)
+		refreshClaims, _ := strategy.ParseRefreshToken(s.cfg, refreshToken)
+		accessJTI := ""
+		refreshJTI := ""
+		if accessClaims != nil {
+			accessJTI = accessClaims.ID
+		}
+		if refreshClaims != nil {
+			refreshJTI = refreshClaims.ID
+		}
+		_ = s.tokenRecorder.RecordSelectTenant(
+			claims.UserID, user.Username, tenantID,
+			accessToken, accessJTI, time.Now().Add(time.Duration(accessExpiresIn)*time.Second),
+			refreshToken, refreshJTI, time.Now().Add(time.Duration(refreshExpiresIn)*time.Second),
+			ip, userAgent,
+		)
+	}
+
 	return &strategy.SelectTenantResponse{
-		AccessToken: accessToken,
-		ExpiresIn:   int64(s.cfg.JWT.AccessTokenTTL.Seconds()),
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    accessExpiresIn,
 	}, nil
 }
 
-// Refresh 用 platform_token 刷新 access_token
-func (s *AuthService) Refresh(platformTokenStr string, tenantID int64) (*strategy.SelectTenantResponse, error) {
-	// 逻辑与 SelectTenant 相同
-	return s.SelectTenant(platformTokenStr, tenantID)
+// RefreshResponse 刷新响应
+type RefreshResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+}
+
+// Refresh 用 refresh_token 刷新 access_token + refresh_token
+func (s *AuthService) Refresh(refreshTokenStr string, tenantID int64, ip, userAgent string) (*RefreshResponse, error) {
+	// 解析 refresh_token
+	refreshClaims, err := strategy.ParseRefreshToken(s.cfg, refreshTokenStr)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查 refresh_token 是否在黑名单中（已被吊销或已刷新）
+	if refreshClaims.ID != "" && s.blacklist.Contains(refreshClaims.ID) {
+		return nil, errors.NewAuthError(errors.ErrTokenBlacklisted, "refresh_token 已失效")
+	}
+
+	// 检查用户状态
+	userStatus, err := s.CheckUserStatus(refreshClaims.UserID)
+	if err == nil && userStatus != 1 {
+		return nil, errors.NewAuthError(errors.ErrAccountDisabled, "账号已禁用")
+	}
+
+	// 查询用户在该租户下的角色（刷新时也要包含角色，否则权限丢失）
+	roleIDs := s.getUserRoles(refreshClaims.UserID, refreshClaims.TenantID)
+
+	// 签发新的 access_token
+	accessToken, err := strategy.GenerateAccessToken(s.cfg, &strategy.AccessTokenOptions{
+		UserID:       refreshClaims.UserID,
+		TenantID:     refreshClaims.TenantID,
+		Roles:        roleIDs,
+		UserPool:     refreshClaims.UserPool,
+		TokenVersion: refreshClaims.TokenVersion,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 签发新的 refresh_token（旧 refresh_token 通过黑名单失效）
+	refreshToken, err := strategy.GenerateRefreshToken(s.cfg, &strategy.RefreshTokenOptions{
+		UserID:       refreshClaims.UserID,
+		TenantID:     refreshClaims.TenantID,
+		UserPool:     refreshClaims.UserPool,
+		TokenVersion: refreshClaims.TokenVersion,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 旧 refresh_token 加入黑名单
+	if refreshClaims.ID != "" {
+		ttl := time.Until(refreshClaims.ExpiresAt.Time)
+		if ttl <= 0 {
+			ttl = time.Minute
+		}
+		_ = s.blacklist.Add(refreshClaims.ID, ttl)
+		
+		// 异步更新旧 token 记录状态为 USED（不阻塞刷新响应）
+		if s.tokenRecorder != nil {
+			oldRefreshJTI := refreshClaims.ID
+			go func() {
+				if err := s.tokenRecorder.MarkRefreshTokenUsed(oldRefreshJTI); err != nil {
+					log.Printf("[auth] MarkRefreshTokenUsed failed: %v", err)
+				}
+			}()
+		}
+	}
+
+	// 记录 Token 刷新
+	if s.tokenRecorder != nil {
+		newAccessClaims, _ := strategy.ParseAccessToken(s.cfg, accessToken)
+		newRefreshClaims, _ := strategy.ParseRefreshToken(s.cfg, refreshToken)
+		accessJTI := ""
+		refreshJTI := ""
+		if newAccessClaims != nil {
+			accessJTI = newAccessClaims.ID
+		}
+		if newRefreshClaims != nil {
+			refreshJTI = newRefreshClaims.ID
+		}
+		_ = s.tokenRecorder.RecordRefresh(
+			refreshClaims.UserID, refreshClaims.TenantID,
+			accessToken, accessJTI, time.Now().Add(s.cfg.JWT.AccessTokenTTL),
+			refreshToken, refreshJTI, time.Now().Add(s.cfg.JWT.RefreshTokenTTL),
+			ip, userAgent,
+		)
+	}
+
+	return &RefreshResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int64(s.cfg.JWT.AccessTokenTTL.Seconds()),
+	}, nil
 }
 
 // Logout 将 token 的 JTI 加入黑名单
 func (s *AuthService) Logout(tokenStr string) error {
+	log.Printf("[auth] Logout called")
 	claims, err := strategy.ParseAccessToken(s.cfg, tokenStr)
 	if err != nil {
+		log.Printf("[auth] Logout: token parse error: %v", err)
 		// 即使 token 过期也允许 logout
 		return nil
 	}
+
+	log.Printf("[auth] Logout: jti=%s user_id=%d", claims.ID, claims.UserID)
 
 	if claims.ID != "" {
 		ttl := time.Until(claims.ExpiresAt.Time)
@@ -284,6 +489,16 @@ func (s *AuthService) Logout(tokenStr string) error {
 			ttl = time.Minute // 已过期 token 保留 1 分钟防重放
 		}
 		_ = s.blacklist.Add(claims.ID, ttl)
+
+		// 异步更新数据库中的 token 记录状态为 REVOKED（不阻塞登出响应）
+		if s.tokenRecorder != nil {
+			accessJTI := claims.ID
+			go func() {
+				if err := s.tokenRecorder.MarkAccessTokenRevoked(accessJTI); err != nil {
+					log.Printf("[auth] MarkAccessTokenRevoked failed: %v", err)
+				}
+			}()
+		}
 	}
 	return nil
 }

@@ -65,3 +65,33 @@ export function deleteLoginLog(id: string): Promise<void> {
 export function listOperationLogs(params: OperationLogQuery) {
   return request.get('/api/v1/admin/operation-logs', { params })
 }
+
+// ===== 登录黑名单（v2-cr11） =====
+
+export interface LoginBlacklistQuery {
+  ip?: string
+  page: number
+  page_size: number
+}
+
+export interface LoginBlacklistItem {
+  id: string
+  ban_type: 'combo' | 'ip'
+  ip: string
+  username: string
+  fail_count: number
+  banned_at: string
+  expires_at: string
+  active: boolean
+  remaining_min: number
+}
+
+/** 登录黑名单分页查询 */
+export function listLoginBlacklist(params: LoginBlacklistQuery) {
+  return request.get('/api/v1/admin/login-blacklist', { params })
+}
+
+/** 手动解封（删除黑名单记录） */
+export function deleteLoginBlacklist(id: string): Promise<void> {
+  return request.delete(`/api/v1/admin/login-blacklist/${id}`)
+}

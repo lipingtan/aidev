@@ -1,6 +1,6 @@
 {
-  "name": "spmp-web-pc",
-  "version": "0.1.0",
+  "name": "platform-admin-web",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -37,6 +37,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-vue": "^9.26.0",
     "prettier": "^3.3.2",
+    "sass-embedded": "^1.105.1",
     "typescript": "^5.4.5",
     "vite": "^5.2.12",
     "vitest": "^2.1.9",

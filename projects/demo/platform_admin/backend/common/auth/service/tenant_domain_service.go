@@ -20,7 +20,7 @@ const (
 )
 
 // 保留域名列表
-var reservedDomains = []string{"localhost", "127.0.0.1", "0.0.0.0"}
+var reservedDomains = []string{"127.0.0.1", "0.0.0.0"}
 
 // QueryDomainResult 域名查询结果 DTO
 type QueryDomainResult struct {

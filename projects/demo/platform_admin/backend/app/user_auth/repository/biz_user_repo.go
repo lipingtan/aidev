@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"strings"
+
 	"go-admin/app/user_auth/model"
 
 	"gorm.io/gorm"
@@ -11,6 +13,8 @@ type BizUserRepository interface {
 	Create(db *gorm.DB, user *model.BizUser) error
 	FindByID(db *gorm.DB, id int64) (*model.BizUser, error)
 	FindByTenantPhone(db *gorm.DB, tenantID int64, phone string) (*model.BizUser, error)
+	FindByTenantEmail(db *gorm.DB, tenantID int64, email string) (*model.BizUser, error)
+	FindByTenantAccount(db *gorm.DB, tenantID int64, account string) (*model.BizUser, error) // 按手机号或邮箱查找
 	Update(db *gorm.DB, user *model.BizUser) error
 	Delete(db *gorm.DB, id int64) error
 	ListByTenant(db *gorm.DB, tenantID int64, page, pageSize int, phone string) ([]model.BizUser, int64, error)
@@ -56,6 +60,81 @@ func (r *bizUserRepo) FindByTenantPhone(db *gorm.DB, tenantID int64, phone strin
 	return &user, nil
 }
 
+// FindByTenantEmail 根据租户ID和邮箱查找C端用户
+func (r *bizUserRepo) FindByTenantEmail(db *gorm.DB, tenantID int64, email string) (*model.BizUser, error) {
+	var user model.BizUser
+	err := db.Where("tenant_id = ? AND email = ? AND deleted_at IS NULL", tenantID, email).First(&user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// FindByTenantAccount 根据租户ID和账号（手机号或邮箱）查找C端用户
+// 逻辑：先识别账号类型，精确查询；若无法识别则两个字段都查
+func (r *bizUserRepo) FindByTenantAccount(db *gorm.DB, tenantID int64, account string) (*model.BizUser, error) {
+	var user model.BizUser
+	
+	// 判断账号类型
+	isEmail := isEmailFormat(account)
+	isPhone := isPhoneFormat(account)
+	
+	if isEmail && !isPhone {
+		// 明确是邮箱格式，只查 email
+		err := db.Where("tenant_id = ? AND email = ? AND deleted_at IS NULL", tenantID, account).First(&user).Error
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return nil, gorm.ErrRecordNotFound
+			}
+			return nil, err
+		}
+		return &user, nil
+	}
+	
+	if isPhone && !isEmail {
+		// 明确是手机号格式，只查 phone
+		err := db.Where("tenant_id = ? AND phone = ? AND deleted_at IS NULL", tenantID, account).First(&user).Error
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return nil, gorm.ErrRecordNotFound
+			}
+			return nil, err
+		}
+		return &user, nil
+	}
+	
+	// 无法明确识别，两个字段都查（用 OR）
+	err := db.Where("tenant_id = ? AND (phone = ? OR email = ?) AND deleted_at IS NULL", tenantID, account, account).First(&user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// isEmailFormat 判断是否为邮箱格式（包含 @）
+func isEmailFormat(s string) bool {
+	return len(s) > 3 && strings.Contains(s, "@") && strings.Contains(s, ".")
+}
+
+// isPhoneFormat 判断是否为手机号格式（纯数字，长度 11）
+func isPhoneFormat(s string) bool {
+	if len(s) != 11 {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 // Update 更新C端用户（乐观锁）
 func (r *bizUserRepo) Update(db *gorm.DB, user *model.BizUser) error {
 	oldVersion := user.Version
@@ -64,6 +143,7 @@ func (r *bizUserRepo) Update(db *gorm.DB, user *model.BizUser) error {
 		Where("id = ? AND version = ? AND deleted_at IS NULL", user.ID, oldVersion).
 		Updates(map[string]interface{}{
 			"phone":         user.Phone,
+			"email":         user.Email,
 			"password":      user.Password,
 			"nickname":      user.Nickname,
 			"avatar":        user.Avatar,

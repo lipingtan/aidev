@@ -1,5 +1,7 @@
 # Platform Admin 项目启动指南
 
+> **总设计文档**：[../DESIGN.md](../DESIGN.md) —— 系统架构、模块划分、插件体系、CR 设计资产索引。新 CR / 架构变更时同步更新。
+
 本项目包含三个子应用：后端服务、管理端前端（dev-web-admin）、C端前端（dev-web-user）。
 
 ---

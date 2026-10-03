@@ -243,8 +243,13 @@ func run() error {
 				approvalCron.AddFunc("0 */5 * * * *", func() {
 					jobs.RunApprovalTimeoutScan(primaryDB)
 				})
+				// Token 过期状态清理（每5分钟，将已过期的 token 记录状态更新为 EXPIRED）
+				approvalCron.AddFunc("0 */5 * * * *", func() {
+					jobs.RunTokenExpiryCleanup(primaryDB)
+				})
 				approvalCron.Start()
 				log.Info("审批超时扫描 Cron 已启动（每5分钟）")
+				log.Info("Token 过期清理 Cron 已启动（每5分钟）")
 			}
 
 			// 注册审批结果 EventBus 监听（subscription_status 联动，所有 Pod 均注册）

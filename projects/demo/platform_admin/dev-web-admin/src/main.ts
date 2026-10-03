@@ -22,6 +22,7 @@ import router from './router'
 import { setupRouterGuard } from './router/guard'
 import { useAppStore } from './store/modules/app'
 import { initRouteManager } from './plugin-loader/route-manager'
+import { initTokenManager } from './utils/token-manager'
 
 // 国际化
 import i18n from './locales'
@@ -88,6 +89,9 @@ setupRouterGuard(router)
 
 // 初始化插件路由管理器
 initRouteManager(router)
+
+// 初始化 Token Manager（跨标签页同步、领导者选举、定时刷新）
+initTokenManager()
 
 app.mount('#app')
 

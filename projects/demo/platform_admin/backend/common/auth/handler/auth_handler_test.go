@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"bytes"
@@ -400,11 +400,9 @@ func TestRefreshToken(t *testing.T) {
 
 	user := createAuthUser(t, db, "admin", "password123")
 	tenant1 := createAuthTenant(t, db, "corp_a", "公司A")
-	tenant2 := createAuthTenant(t, db, "corp_b", "公司B")
 	createAuthUserTenant(t, db, user.ID, tenant1.ID)
-	createAuthUserTenant(t, db, user.ID, tenant2.ID)
 
-	// 登录获取 platform_token
+	// 登录获取 token（单租户直接返回 access_token + refresh_token）
 	loginBody := map[string]interface{}{
 		"username": "admin",
 		"password": "password123",
@@ -416,42 +414,83 @@ func TestRefreshToken(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	var loginResp struct {
+		Code int `json:"code"`
 		Data struct {
-			Token string `json:"token"`
+			AccessToken  string `json:"access_token"`
+			RefreshToken string `json:"refresh_token"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &loginResp)
-	platformToken := loginResp.Data.Token
 
-	// 刷新获取新的 access_token
+	if loginResp.Code != 0 {
+		t.Fatalf("登录失败: code=%d, body=%s", loginResp.Code, w.Body.String())
+	}
+	if loginResp.Data.AccessToken == "" {
+		t.Fatal("登录后 access_token 不应为空")
+	}
+	if loginResp.Data.RefreshToken == "" {
+		t.Fatal("登录后 refresh_token 不应为空")
+	}
+
+	// 使用 refresh_token 刷新
 	refreshBody := map[string]interface{}{
-		"tenant_id": fmt.Sprintf("%d", tenant1.ID),
+		"refresh_token": loginResp.Data.RefreshToken,
 	}
 	jsonBody, _ = json.Marshal(refreshBody)
 	req = httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+platformToken)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("期望状态码 200，实际: %d, body: %s", w.Code, w.Body.String())
+		t.Fatalf("刷新期望状态码 200，实际: %d, body: %s", w.Code, w.Body.String())
 	}
 
 	var refreshResp struct {
 		Code int `json:"code"`
 		Data struct {
-			AccessToken string `json:"access_token"`
-			ExpiresIn   int64  `json:"expires_in"`
+			AccessToken  string `json:"access_token"`
+			RefreshToken string `json:"refresh_token"`
+			ExpiresIn    int64  `json:"expires_in"`
 		} `json:"data"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &refreshResp)
 
 	if refreshResp.Code != 0 {
-		t.Fatalf("期望 code=0，实际: %d", refreshResp.Code)
+		t.Fatalf("刷新期望 code=0，实际: %d, body: %s", refreshResp.Code, w.Body.String())
 	}
 	if refreshResp.Data.AccessToken == "" {
 		t.Fatal("刷新后 access_token 不应为空")
+	}
+	if refreshResp.Data.RefreshToken == "" {
+		t.Fatal("刷新后 refresh_token 不应为空")
+	}
+	if refreshResp.Data.AccessToken == loginResp.Data.AccessToken {
+		t.Fatal("刷新后 access_token 应该变化")
+	}
+	if refreshResp.Data.RefreshToken == loginResp.Data.RefreshToken {
+		t.Fatal("刷新后 refresh_token 应该变化（旋转刷新）")
+	}
+
+	// 验证旧 refresh_token 已失效（黑名单）
+	oldRefreshBody := map[string]interface{}{
+		"refresh_token": loginResp.Data.RefreshToken,
+	}
+	jsonBody, _ = json.Marshal(oldRefreshBody)
+	req = httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code == http.StatusOK {
+		// 旧 token 应该被拒绝
+		var oldRefreshResp struct {
+			Code int `json:"code"`
+		}
+		json.Unmarshal(w.Body.Bytes(), &oldRefreshResp)
+		if oldRefreshResp.Code == 0 {
+			t.Fatal("旧 refresh_token 应该被拒绝（黑名单），但刷新成功了")
+		}
 	}
 }
 

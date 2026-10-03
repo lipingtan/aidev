@@ -8,8 +8,8 @@ import (
 
 // RoleApp 角色-应用关联（M:N）
 type RoleApp struct {
-	ID        int64      `gorm:"primaryKey" json:"id"`
-	RoleID    int64      `gorm:"uniqueIndex:idx_role_app;not null" json:"role_id"`              // 角色 ID
+	ID        int64      `gorm:"primaryKey" json:"id,string"`
+	RoleID    int64      `gorm:"uniqueIndex:idx_role_app;not null" json:"role_id,string"`              // 角色 ID
 	AppCode   string     `gorm:"type:varchar(64);uniqueIndex:idx_role_app;not null" json:"app_code"` // 应用编码
 	CreatedAt *time.Time `gorm:"autoCreateTime" json:"created_at"`
 }

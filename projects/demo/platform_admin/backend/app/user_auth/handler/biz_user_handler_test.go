@@ -195,9 +195,13 @@ func TestBizUser_ToggleStatus(t *testing.T) {
 		Phone:    "13800138003",
 	})
 
-	// 默认 status=1，切换到 0
+	// 默认 status=1，切换到 0（禁用需填原因）
 	path := fmt.Sprintf("/api/v1/admin/biz-users/%d/toggle-status", user.ID)
-	w := performRequest(router, "POST", path, map[string]int{"status": 0})
+	w := performRequest(router, "POST", path, map[string]interface{}{
+		"status":       0,
+		"admin_reason": "测试禁用",
+		"user_reason":  "测试原因",
+	})
 	if w.Code != http.StatusOK {
 		t.Fatalf("期望 200，实际: %d, body: %s", w.Code, w.Body.String())
 	}

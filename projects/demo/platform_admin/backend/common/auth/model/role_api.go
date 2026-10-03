@@ -8,9 +8,9 @@ import (
 
 // RoleApi 角色-接口权限关联
 type RoleApi struct {
-	ID              int64      `gorm:"primaryKey" json:"id"`
-	RoleID          int64      `gorm:"uniqueIndex:idx_role_api;not null" json:"role_id"`           // 角色 ID
-	ApiPermissionID int64      `gorm:"uniqueIndex:idx_role_api;not null" json:"api_permission_id"` // 接口权限 ID
+	ID              int64      `gorm:"primaryKey" json:"id,string"`
+	RoleID          int64      `gorm:"uniqueIndex:idx_role_api;not null" json:"role_id,string"`           // 角色 ID
+	ApiPermissionID int64      `gorm:"uniqueIndex:idx_role_api;not null" json:"api_permission_id,string"` // 接口权限 ID
 	CreatedAt       *time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 

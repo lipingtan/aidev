@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"fmt"
+
 	"go-admin/common/auth/model"
 
 	"golang.org/x/crypto/bcrypt"
@@ -99,6 +101,11 @@ func SeedInitialData(db *gorm.DB) error {
 
 	// 9. 创建管理端菜单（全部 platform=admin, app_code=platform_admin）
 	if err := seedMenus(db); err != nil {
+		return err
+	}
+
+	// 10. 补充 Token 管理菜单
+	if err := SeedTokenManagementMenu(db); err != nil {
 		return err
 	}
 
@@ -294,4 +301,119 @@ func SeedCR10Menus(db *gorm.DB) error {
 		Version:        1,
 	}
 	return db.Create(menu).Error
+}
+
+// SeedTokenManagementMenu 补充 Token 管理菜单（幂等，可多次执行）
+func SeedTokenManagementMenu(db *gorm.DB) error {
+	var count int64
+	db.Model(&model.Resource{}).Where("path = ?", "/system/tokens").Count(&count)
+	if count > 0 {
+		return nil // 已存在，幂等跳过
+	}
+	var sysParent model.Resource
+	if err := db.Where("path = ? AND app_code = ?", "/system", "platform_admin").First(&sysParent).Error; err != nil {
+		return nil // 系统管理父菜单不存在时跳过
+	}
+	sysID := sysParent.ID
+	menu := &model.Resource{
+		ParentID:       &sysID,
+		Type:           "MENU",
+		Name:           "Token 管理",
+		Path:           "/system/tokens",
+		Icon:           "Key",
+		PermissionCode: "system:token:list",
+		AppCode:        "platform_admin",
+		Platform:       "admin",
+		ModuleCode:     "token-mgmt",
+		SortOrder:      12,
+		Status:         1,
+		Version:        1,
+	}
+	return db.Create(menu).Error
+}
+
+// SeedCR11LoginBlacklist 登录黑名单菜单 + 阈值/时长配置项 seed（v2-cr11，幂等）
+func SeedCR11LoginBlacklist(db *gorm.DB) error {
+	// 1. 菜单：日志管理下"登录黑名单"
+	var menuCount int64
+	db.Model(&model.Resource{}).Where("path = ?", "/log/login-blacklist").Count(&menuCount)
+	if menuCount == 0 {
+		var logParent model.Resource
+		if err := db.Where("path = ? AND app_code = ?", "/log", "platform_admin").First(&logParent).Error; err == nil {
+			parentID := logParent.ID
+			menu := &model.Resource{
+				ParentID:       &parentID,
+				Type:           "MENU",
+				Name:           "登录黑名单",
+				Path:           "/log/login-blacklist",
+				Icon:           "Lock",
+				PermissionCode: "log:blacklist:list",
+				AppCode:        "platform_admin",
+				Platform:       "admin",
+				ModuleCode:     "log-mgmt",
+				SortOrder:      2,
+				Status:         1,
+				Version:        1,
+			}
+			if err := db.Create(menu).Error; err != nil {
+				return fmt.Errorf("创建登录黑名单菜单失败: %w", err)
+			}
+		} // 父菜单不存在时跳过（保持与其他增量 seed 一致的容错）
+	}
+
+	// 2. 配置项：平台级（scope=SYSTEM, scope_id=0），insert-if-not-exists
+	seedConfigs := []model.AdminConfig{
+		{
+			ConfigKey:   "auth.login_fail_ban_threshold",
+			ConfigValue: "10",
+			ConfigType:  "number",
+			Scope:       "SYSTEM",
+			ScopeID:     0,
+			TenantID:    0,
+			DisplayName: "登录失败封禁阈值（次，0=关闭）",
+			Description: "同一 IP+用户名 连续登录失败达到该次数后封禁该组合；0 表示关闭一级防护",
+		},
+		{
+			ConfigKey:   "auth.login_fail_ip_ban_threshold",
+			ConfigValue: "5",
+			ConfigType:  "number",
+			Scope:       "SYSTEM",
+			ScopeID:     0,
+			TenantID:    0,
+			DisplayName: "整 IP 封禁升级阈值（个，0=关闭）",
+			Description: "同一 IP 下被封禁的用户名组合数达到该值后，升级封禁整个 IP；0 表示关闭二级防护",
+		},
+		{
+			ConfigKey:   "auth.login_fail_ban_hours",
+			ConfigValue: "24",
+			ConfigType:  "number",
+			Scope:       "SYSTEM",
+			ScopeID:     0,
+			TenantID:    0,
+			DisplayName: "登录失败封禁时长（小时）",
+			Description: "IP 被封禁后的持续时长，到期自动解封",
+		},
+	}
+	for i := range seedConfigs {
+		cfg := &seedConfigs[i]
+		var count int64
+		db.Model(&model.AdminConfig{}).Where("config_key = ? AND scope = ? AND scope_id = ?", cfg.ConfigKey, "SYSTEM", 0).Count(&count)
+		if count == 0 {
+			if err := db.Create(cfg).Error; err != nil {
+				return fmt.Errorf("创建配置项 %s 失败: %w", cfg.ConfigKey, err)
+			}
+		}
+	}
+	return nil
+}
+
+// backfillAdminConfigNames 回填 admin_config 的 config_name/remark（幂等）：
+// 旧数据只有 display_name/description，新列建出来后为空，回填保证前端列表不出现空名称
+func backfillAdminConfigNames(db *gorm.DB) {
+	db.Model(&model.AdminConfig{}).
+		Where("config_name = '' OR config_name IS NULL").
+		Update("config_name", gorm.Expr("display_name"))
+	db.Model(&model.AdminConfig{}).
+		Where("remark = '' OR remark IS NULL").
+		Update("remark", gorm.Expr("description"))
 }

@@ -8,9 +8,9 @@ import (
 
 // UserTenant 用户-租户关联（M:N）
 type UserTenant struct {
-	ID        int64      `gorm:"primaryKey" json:"id"`
-	UserID    int64      `gorm:"uniqueIndex:idx_user_tenant;not null" json:"user_id"`   // 用户 ID
-	TenantID  int64      `gorm:"uniqueIndex:idx_user_tenant;not null" json:"tenant_id"` // 租户 ID
+	ID        int64      `gorm:"primaryKey" json:"id,string"`
+	UserID    int64      `gorm:"uniqueIndex:idx_user_tenant;not null" json:"user_id,string"`   // 用户 ID
+	TenantID  int64      `gorm:"uniqueIndex:idx_user_tenant;not null" json:"tenant_id,string"` // 租户 ID
 	CreatedAt *time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 

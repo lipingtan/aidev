@@ -24,6 +24,8 @@ export interface UserPageItem {
   phone: string
   status: number
   version: number
+  access_token_expire_minutes?: number | null
+  refresh_token_expire_minutes?: number | null
   created_at: string
   updated_at: string
 }
@@ -34,6 +36,8 @@ export interface UserCreateParams {
   password: string
   email?: string
   phone?: string
+  access_token_expire_minutes?: number | null
+  refresh_token_expire_minutes?: number | null
 }
 
 /** 用户编辑参数 */
@@ -42,6 +46,8 @@ export interface UserUpdateParams {
   email?: string
   phone?: string
   status?: number
+  access_token_expire_minutes?: number | null
+  refresh_token_expire_minutes?: number | null
   version: number
 }
 

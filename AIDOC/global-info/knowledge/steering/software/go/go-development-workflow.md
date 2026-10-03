@@ -261,7 +261,36 @@ ALTER TABLE game ADD COLUMN xxx ...;
 4. 有条件分支或业务规则判断 → **中**
 5. 其余 → **低**
 
-### 3.2 任务三要素格式
+### 3.2 任务设计文档溯源（强制，违反即返工）
+
+**每个任务必须明确标注其对应的设计文档章节，确保实现与设计规格一致。**
+
+**规则：**
+1. **必须标注设计来源**：每个 Task 必须在 Scope 下方添加 `设计来源` 字段，格式为 `design.md #{章节编号} {章节名称}`
+2. **逻辑必须与设计一致**：实现逻辑、字段定义、状态枚举、处理流程必须与设计文档中的描述完全一致
+3. **发现偏差必须同步**：如果执行过程中发现设计文档有遗漏或需要调整，必须先更新 design.md，再继续执行
+4. **跨章节任务需列全**：如果任务涉及多个设计章节，需全部列出
+
+**示例：**
+```markdown
+### Task N: 实现订单项 validstate 变更处理
+
+**复杂度**: 高
+
+**设计来源:**
+- design.md #3.7.3 激活码生成规则 - validstate 字段说明
+- design.md #3.7.4 接口定义 - 订单项 validstate 变更处理
+
+**Scope（边界）:**
+- 涉及文件: app/license/service/license_service.go
+...
+```
+
+**违反后果：**
+- 任务执行后发现与设计文档不一致，必须回退并修正
+- 多次违反时，追溯到任务拆解阶段重新 Review
+
+### 3.3 任务三要素格式
 
 > 详细定义见 `go-task-representation.md`，以下为各复杂度的格式示例。
 
@@ -317,7 +346,7 @@ ALTER TABLE game ADD COLUMN xxx ...;
 - AC: go build ./... 零错误
 ```
 
-### 3.3 任务状态管理（强制）
+### 3.4 任务状态管理（强制）
 
 **tasks.md 必须包含任务状态和进度信息。**
 
@@ -376,7 +405,7 @@ ALTER TABLE game ADD COLUMN xxx ...;
 
 ---
 
-### 3.4 任务一致性自检（强制，tasks.md 生成后自动执行）
+### 3.5 任务一致性自检（强制，tasks.md 生成后自动执行）
 
 **触发条件：** tasks.md 首次生成或重大修改后，AI 必须自动执行以下检查，不需用户触发。
 
@@ -509,6 +538,76 @@ ALTER TABLE game ADD COLUMN xxx ...;
 - 任何不匹配项立即记录到验收报告并标记严重度
 - 高优问题必须在当前 CR 内修复后才能标记验收通过
 - **规范自演进（强制）：** 每次 review 完成后，如果发现了不在上述清单中的新问题模式，必须立即将其追加到本检查清单中（附编号、判定方法、严重度），确保同类问题在后续 CR 中被自动检测到
+
+### 5.2.2 E2E 测试验收（强制，有头模式 UI 测试）
+
+**定义：** E2E 测试指使用 Playwright 有头模式（headed）启动真实浏览器，模拟用户点击、输入、导航等操作的端到端测试。**不是** API 接口测试。
+
+**强制要求：**
+
+| # | 检查项 | 判定方法 | 严重度 |
+|---|--------|----------|--------|
+| 1 | **核心流程 E2E 覆盖** | 每个用户故事的主要操作路径必须有对应的 E2E 测试用例 | 高 |
+| 2 | **新增页面 E2E 测试** | 新增的管理页面必须有 E2E 测试覆盖基本 CRUD 操作 | 高 |
+| 3 | **关键交互验证** | 弹窗、下拉菜单、表格操作等交互必须在 E2E 中实际点击验证 | 中 |
+| 4 | **表单提交验证** | 表单填写 → 提交 → 结果验证的完整流程必须 E2E 覆盖 | 高 |
+| 5 | **错误提示验证** | 异常场景（如必填项为空、数据不存在）的错误提示必须 E2E 验证 | 中 |
+
+**E2E 测试文件位置：** `e2e/tests/{feature-name}.e2e.spec.ts`
+
+**E2E 测试执行命令：**
+```bash
+cd e2e
+pnpm exec playwright test {test-file} --headed   # 有头模式，可观察浏览器操作
+pnpm exec playwright test {test-file}            # 无头模式，CI 环境使用
+```
+
+**E2E 测试示例结构：**
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('激活码管理', () => {
+  test.beforeEach(async ({ page }) => {
+    // 登录
+    await page.goto('/login');
+    await page.fill('input[name="username"]', 'admin');
+    await page.fill('input[name="password"]', 'admin123');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('/dashboard');
+  });
+
+  test('查看激活码列表并点击设备信息', async ({ page }) => {
+    // 导航到激活码页面
+    await page.goto('/license/codes');
+    
+    // 验证表格显示
+    await expect(page.locator('table')).toBeVisible();
+    
+    // 点击设备信息按钮
+    await page.click('text=设备');
+    
+    // 验证弹窗显示
+    await expect(page.locator('.el-dialog')).toBeVisible();
+    await expect(page.locator('.el-dialog')).toContainText('设备绑定信息');
+  });
+
+  test('验证激活码列表显示关联信息', async ({ page }) => {
+    await page.goto('/license/codes');
+    
+    // 验证表格列包含类型、等级、时长等信息
+    await expect(page.locator('th:has-text("类型")')).toBeVisible();
+    await expect(page.locator('th:has-text("会员等级")')).toBeVisible();
+    await expect(page.locator('th:has-text("时长")')).toBeVisible();
+    await expect(page.locator('th:has-text("激活码过期")')).toBeVisible();
+  });
+});
+```
+
+**验收规则：**
+- 开发过程中可先用无头模式快速验证 API 和基本流程
+- **最终验收必须用有头模式（`--headed`）运行一次**，肉眼确认浏览器操作符合预期
+- E2E 测试全部通过后才能标记产品验收通过
+- CI 环境使用无头模式运行
 
 ### 5.3 任务验收状态
 

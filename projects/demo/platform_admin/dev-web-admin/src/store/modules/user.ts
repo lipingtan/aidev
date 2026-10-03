@@ -58,6 +58,11 @@ export const useUserStore = defineStore('user', () => {
 
   /** 登出 */
   async function logout(): Promise<void> {
+    try {
+      await request.post('/auth/logout', {})
+    } catch (e) {
+      // 即使后端登出失败也清除本地状态
+    }
     resetState()
     router.push('/login')
   }

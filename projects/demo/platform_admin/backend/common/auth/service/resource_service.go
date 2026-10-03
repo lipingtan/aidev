@@ -202,12 +202,16 @@ func (s *ResourceService) SortResources(items []repository.SortItem) error {
 	return s.resourceRepo.BatchUpdateSort(s.db, items)
 }
 
-// GetPublicMenu 获取公开的 user 端菜单（无需登录，返回指定 platform 的所有菜单）
+// GetPublicMenu 获取公开的 user 端菜单（无需登录，排除 requires_login=true 的菜单）
 func (s *ResourceService) GetPublicMenu(platform string) ([]*ResourceNode, error) {
 	var resources []model.Resource
 	query := s.db.Where("type = 'menu'")
 	if platform != "" {
 		query = query.Where("platform = ?", platform)
+		// user 平台：公开菜单排除需要登录的菜单
+		if platform == "user" {
+			query = query.Where("requires_login = ?", false)
+		}
 	}
 	err := query.Order("sort_order ASC, created_at ASC").Find(&resources).Error
 	if err != nil {
@@ -219,7 +223,20 @@ func (s *ResourceService) GetPublicMenu(platform string) ([]*ResourceNode, error
 // GetUserMenu 获取用户有权限的菜单树
 // SUPER_ADMIN 角色返回对应 platform 的所有菜单
 // 普通角色：查角色绑定应用 → 查角色资源 → 按 platform + enabled_modules 过滤
+// user 平台：返回所有 user 菜单（公开 + 需登录），不做角色权限过滤
 func (s *ResourceService) GetUserMenu(tenantID int64, userID int64, platform string) ([]*ResourceNode, error) {
+	// user 平台：所有登录用户都能看到所有 user 菜单（公开 + 需登录）
+	if platform == "user" {
+		var resources []model.Resource
+		err := s.db.Where("type = ? AND platform = ?", "MENU", "user").
+			Order("sort_order ASC, created_at ASC").
+			Find(&resources).Error
+		if err != nil {
+			return nil, err
+		}
+		return buildTree(resources), nil
+	}
+
 	// 查询用户在该租户下的角色 ID 列表
 	var roleIDs []int64
 	err := s.db.Model(&model.UserRole{}).

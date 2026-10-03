@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import request from '@/utils/request'
+import { broadcastTokenCleared } from '@/utils/token-manager'
 
 /** 租户信息 */
 export interface TenantInfo {
@@ -21,18 +22,21 @@ export interface TenantInfo {
 export interface LoginResponse {
   platform_token: string
   access_token?: string
+  refresh_token?: string
   tenants: TenantInfo[]
 }
 
 /** 租户选择响应 */
 export interface TenantSelectResponse {
   access_token: string
+  refresh_token?: string
   expires_in: number
 }
 
 /** 刷新 Token 响应 */
 export interface RefreshResponse {
   access_token: string
+  refresh_token?: string
   expires_in: number
 }
 
@@ -64,6 +68,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (res.access_token) {
       accessToken.value = res.access_token
       localStorage.setItem('access_token', res.access_token)
+      if (res.refresh_token) {
+        localStorage.setItem('refresh_token', res.refresh_token)
+      }
       if (res.tenants?.length === 1) {
         currentTenantId.value = String(res.tenants[0].id)
         localStorage.setItem('current_tenant_id', String(res.tenants[0].id))
@@ -85,35 +92,48 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = res.access_token
     currentTenantId.value = tenantId
     localStorage.setItem('access_token', res.access_token)
+    if (res.refresh_token) {
+      localStorage.setItem('refresh_token', res.refresh_token)
+    }
     localStorage.setItem('current_tenant_id', tenantId)
     return res
   }
 
   /**
    * 刷新 Token：调用 POST /auth/refresh
-   * 使用 platform_token 刷新 access_token
+   * 使用 refresh_token 刷新 access_token + refresh_token
    */
   async function refresh(): Promise<RefreshResponse> {
+    const refreshToken = localStorage.getItem('refresh_token') || ''
     const res = await request.post<any, RefreshResponse>(
       '/auth/refresh',
-      {},
-      { headers: { Authorization: `Bearer ${platformToken.value}` } }
+      { refresh_token: refreshToken }
     )
     accessToken.value = res.access_token
     localStorage.setItem('access_token', res.access_token)
+    if (res.refresh_token) {
+      localStorage.setItem('refresh_token', res.refresh_token)
+    }
     return res
   }
 
-  /** 登出：清除所有认证状态 */
-  function logout(): void {
+  /** 登出：调用后端 API + 清除所有认证状态 */
+  async function logout(): Promise<void> {
+    try {
+      await request.post('/auth/logout', {})
+    } catch (e) {
+      // 即使后端登出失败也清除本地状态
+    }
     platformToken.value = ''
     accessToken.value = ''
     tenants.value = []
     currentTenantId.value = ''
     localStorage.removeItem('platform_token')
     localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
     localStorage.removeItem('current_tenant_id')
     localStorage.removeItem('tenant_list')
+    broadcastTokenCleared()
   }
 
   return {

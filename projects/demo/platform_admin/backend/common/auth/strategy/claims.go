@@ -42,10 +42,12 @@ type LoginResponse struct {
 	Tenants       []TenantInfo `json:"tenants,omitempty"`        // 可用租户列表
 	ExpiresIn     int64        `json:"expires_in"`               // 过期秒数
 	PlatformToken string       `json:"platform_token,omitempty"` // 单租户时也返回 platform_token 用于后续刷新
+	RefreshToken  string       `json:"refresh_token,omitempty"`  // 刷新令牌
 }
 
 // SelectTenantResponse 选择租户响应
 type SelectTenantResponse struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int64  `json:"expires_in"`
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+	RefreshToken string `json:"refresh_token,omitempty"` // 刷新令牌
 }

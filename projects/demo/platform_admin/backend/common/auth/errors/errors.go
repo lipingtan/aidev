@@ -10,6 +10,8 @@ const (
 	ErrAccountDisabled     = 40104
 	ErrTenantDisabled      = 40105
 	ErrNotAssociatedTenant = 40106
+	// ErrIPBlacklisted IP 因连续登录失败被封禁（v2-cr11）
+	ErrIPBlacklisted = 40305
 )
 
 // 授权相关错误码 (403xx)

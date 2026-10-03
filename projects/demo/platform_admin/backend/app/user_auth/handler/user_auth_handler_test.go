@@ -180,10 +180,11 @@ func TestLogin_ExistingUser(t *testing.T) {
 	handler, smsService := setupHandler(t, db)
 
 	// 预创建用户
+	phone := "13800138000"
 	db.Create(&model.BizUser{
 		ID:           10001,
 		TenantID:     1,
-		Phone:        "13800138000",
+		Phone:        &phone,
 		Nickname:     "测试用户",
 		Status:       1,
 		TokenVersion: 1,
@@ -201,7 +202,7 @@ func TestLogin_ExistingUser(t *testing.T) {
 
 	// 登录
 	loginReq := dto.SmsLoginRequest{
-		Phone:      "13800138000",
+		Account:    "13800138000",
 		Code:       code,
 		TenantCode: "valid_tenant",
 	}
@@ -249,7 +250,7 @@ func TestLogin_NewUser(t *testing.T) {
 
 	// 登录（新用户）
 	loginReq := dto.SmsLoginRequest{
-		Phone:      "13900139000",
+		Account:    "13900139000",
 		Code:       code,
 		TenantCode: "valid_tenant",
 	}
@@ -293,7 +294,7 @@ func TestLogin_WrongCode(t *testing.T) {
 
 	// 用错误验证码登录
 	loginReq := dto.SmsLoginRequest{
-		Phone:      "13800138002",
+		Account:    "13800138002",
 		Code:       "0000",
 		TenantCode: "valid_tenant",
 	}
@@ -314,7 +315,7 @@ func TestLogin_InvalidTenant(t *testing.T) {
 	router.POST("/api/v1/user/auth/login", handler.Login)
 
 	loginReq := dto.SmsLoginRequest{
-		Phone:      "13800138000",
+		Account:    "13800138000",
 		Code:       "1234",
 		TenantCode: "invalid_tenant",
 	}
@@ -335,7 +336,7 @@ func TestLogin_DisabledTenant(t *testing.T) {
 	router.POST("/api/v1/user/auth/login", handler.Login)
 
 	loginReq := dto.SmsLoginRequest{
-		Phone:      "13800138000",
+		Account:    "13800138000",
 		Code:       "1234",
 		TenantCode: "disabled_tenant",
 	}

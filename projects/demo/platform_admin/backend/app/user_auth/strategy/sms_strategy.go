@@ -3,6 +3,7 @@ package strategy
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"go-admin/app/user_auth/dto"
 	"go-admin/app/user_auth/model"
@@ -70,7 +71,7 @@ func (s *SmsStrategy) Authenticate(c *gin.Context) (*authStrategy.AuthResult, er
 	}
 
 	// 校验验证码
-	if err := s.smsService.VerifyCode(req.Phone, req.TenantCode, req.Code); err != nil {
+	if err := s.smsService.VerifyCode(req.Account, req.TenantCode, req.Code); err != nil {
 		if errors.Is(err, service.ErrCodeInvalid) {
 			c.JSON(http.StatusUnauthorized, gin.H{"code": 40101, "data": nil, "message": "验证码错误"})
 			return nil, err
@@ -80,7 +81,7 @@ func (s *SmsStrategy) Authenticate(c *gin.Context) (*authStrategy.AuthResult, er
 	}
 
 	// 查找或创建用户
-	user, err := s.findOrCreateUser(tenantID, req.Phone)
+	user, err := s.findOrCreateUser(tenantID, req.Account)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 50000, "data": nil, "message": "用户处理失败"})
 		return nil, err
@@ -140,9 +141,9 @@ func (s *SmsStrategy) validateTenant(tenantCode string) (int64, error) {
 
 // findOrCreateUser 按 (tenant_id, phone) 查找用户，不存在则自动创建
 // 唯一约束冲突时重试查询（upsert 语义）
-func (s *SmsStrategy) findOrCreateUser(tenantID int64, phone string) (*model.BizUser, error) {
-	// 先尝试查找
-	user, err := s.bizUserRepo.FindByTenantPhone(s.db, tenantID, phone)
+func (s *SmsStrategy) findOrCreateUser(tenantID int64, account string) (*model.BizUser, error) {
+	// 先尝试按账号查找（手机号或邮箱）
+	user, err := s.bizUserRepo.FindByTenantAccount(s.db, tenantID, account)
 	if err == nil {
 		return user, nil
 	}
@@ -151,15 +152,38 @@ func (s *SmsStrategy) findOrCreateUser(tenantID int64, phone string) (*model.Biz
 	}
 
 	// 不存在，创建新用户
-	newUser, err := s.bizUserSvc.CreateBizUser(&dto.CreateBizUserRequest{
+	isEmail := isEmailFormat(account)
+	
+	var phone, email, nickname string
+	if isEmail {
+		email = account
+		if idx := strings.Index(account, "@"); idx > 0 {
+			nickname = "用户" + account[:idx]
+			if len(nickname) > 20 {
+				nickname = nickname[:20]
+			}
+		} else {
+			nickname = "用户"
+		}
+	} else {
+		phone = account
+		if len(account) >= 4 {
+			nickname = "用户" + account[len(account)-4:]
+		} else {
+			nickname = "用户" + account
+		}
+	}
+	
+	newUser, err := s.bizUserSvc.CreateBizUserByAccount(&dto.CreateBizUserByAccountRequest{
 		TenantID: tenantID,
 		Phone:    phone,
-		Nickname: "用户" + phone[len(phone)-4:],
+		Email:    email,
+		Nickname: nickname,
 	})
 	if err != nil {
 		// 唯一约束冲突 → 重新查询
-		if errors.Is(err, service.ErrDuplicatePhone) {
-			user, retryErr := s.bizUserRepo.FindByTenantPhone(s.db, tenantID, phone)
+		if errors.Is(err, service.ErrDuplicatePhone) || errors.Is(err, service.ErrDuplicateEmail) {
+			user, retryErr := s.bizUserRepo.FindByTenantAccount(s.db, tenantID, account)
 			if retryErr != nil {
 				return nil, retryErr
 			}
@@ -168,4 +192,9 @@ func (s *SmsStrategy) findOrCreateUser(tenantID int64, phone string) (*model.Biz
 		return nil, err
 	}
 	return newUser, nil
+}
+
+// isEmailFormat 判断是否为邮箱格式
+func isEmailFormat(s string) bool {
+	return len(s) > 3 && strings.Contains(s, "@") && strings.Contains(s, ".")
 }

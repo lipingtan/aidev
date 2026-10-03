@@ -1,73 +1,115 @@
 <template>
-  <div class="page-container">
-    <!-- 搜索区域 -->
-    <el-card shadow="never" class="search-card">
-      <el-form :model="queryParams" inline>
-        <el-form-item label="租户名称">
-          <el-input v-model="queryParams.name" placeholder="请输入租户名称" clearable @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="全部" clearable>
-            <el-option label="启用" :value="1" />
-            <el-option label="禁用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 表格区域 -->
-    <el-card shadow="never">
-      <template #header>
+  <div class="page-container" :class="{ 'mobile-layout': isMobile }">
+    <el-card shadow="never" class="main-card">
+      <!-- 固定头部区域（手机端） -->
+      <div class="sticky-header">
         <div class="card-header">
           <span>租户列表</span>
-          <el-button type="primary" @click="handleAdd">新增租户</el-button>
+          <el-button type="primary" size="small" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            <span v-if="!isMobile">新增租户</span>
+          </el-button>
         </div>
-      </template>
 
-      <el-table v-loading="loading" :data="tableData" row-key="id">
-        <template #empty>
-          <el-empty description="暂无数据" />
+        <!-- 搜索栏 -->
+        <el-form :model="queryParams" :inline="!isMobile" class="search-form">
+          <el-form-item label="租户名称">
+            <el-input v-model="queryParams.name" placeholder="请输入租户名称" clearable @keyup.enter="handleSearch" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="queryParams.status" placeholder="全部" clearable>
+              <el-option label="启用" :value="1" />
+              <el-option label="禁用" :value="0" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">查询</el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 可滚动的列表区域 -->
+      <div class="scrollable-content">
+        <!-- 响应式列表 -->
+        <ResponsiveList :data="tableData" :loading="loading">
+        <!-- 桌面端表格 -->
+        <template #table>
+          <el-table-column prop="name" label="租户名称" min-width="140" />
+          <el-table-column prop="tenant_code" label="租户编码" min-width="140" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-switch
+                :model-value="row.status === 1"
+                @change="(val: boolean) => handleStatusChange(row, val)"
+                inline-prompt
+                active-text="启用"
+                inactive-text="禁用"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="created_at" label="创建时间" width="180" />
+          <el-table-column label="操作" width="160" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            </template>
+          </el-table-column>
         </template>
-        <el-table-column prop="name" label="租户名称" min-width="140" />
-        <el-table-column prop="tenant_code" label="租户编码" min-width="140" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-switch
-              :model-value="row.status === 1"
-              @change="(val: boolean) => handleStatusChange(row, val)"
-              inline-prompt
-              active-text="启用"
-              inactive-text="禁用"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
 
-      <el-pagination
-        class="pagination"
-        v-model:current-page="queryParams.page"
-        v-model:page-size="queryParams.page_size"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="fetchData"
-        @current-change="fetchData"
-      />
+        <!-- 手机端卡片 -->
+        <template #card="{ row }">
+          <div class="card-title">
+            {{ row.name }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" class="card-tag">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </div>
+          <div class="card-row">
+            <span class="card-label">租户编码</span>
+            <span class="card-value">{{ row.tenant_code }}</span>
+          </div>
+          <div class="card-row">
+            <span class="card-label">状态</span>
+            <span class="card-value">
+              <el-switch
+                :model-value="row.status === 1"
+                @change="(val: boolean) => handleStatusChange(row, val)"
+                inline-prompt
+                active-text="启用"
+                inactive-text="禁用"
+              />
+            </span>
+          </div>
+          <div class="card-row">
+            <span class="card-label">创建时间</span>
+            <span class="card-value">{{ row.created_at }}</span>
+          </div>
+        </template>
+
+        <!-- 手机端操作按钮 -->
+        <template #actions="{ row }">
+          <el-button size="small" type="primary" @click="handleEdit(row)">编辑</el-button>
+          <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </ResponsiveList>
+
+        <el-pagination
+          class="pagination"
+          v-model:current-page="queryParams.page"
+          v-model:page-size="queryParams.page_size"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          :layout="isMobile ? 'total, prev, pager, next' : 'total, sizes, prev, pager, next, jumper'"
+          :small="isMobile"
+          @size-change="fetchData"
+          @current-change="fetchData"
+        />
+      </div>
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑租户' : '新增租户'" width="500px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑租户' : '新增租户'" :width="isMobile ? '95%' : '500px'" destroy-on-close>
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入租户名称" />
@@ -88,9 +130,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import {
   listTenants,
   createTenant,
@@ -99,6 +142,21 @@ import {
   deleteTenant
 } from '@/api/tenant'
 import type { TenantItem, TenantFormData } from '@/api/tenant'
+import ResponsiveList from '@/components/ResponsiveList.vue'
+
+// 响应式检测
+const isMobile = ref(false)
+const MOBILE_BREAKPOINT = 768
+function checkMobile() {
+  isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
+}
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 // 列表状态
 const loading = ref(false)
@@ -243,7 +301,73 @@ onMounted(fetchData)
 
 <style scoped>
 .page-container { padding: 16px; }
-.search-card { margin-bottom: 16px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
+.search-form { margin-bottom: 0; }
 .pagination { margin-top: 16px; justify-content: flex-end; }
+
+/* 手机端布局 - 固定头部 */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .page-container .main-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .page-container .main-card :deep(.el-card__body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sticky-header {
+    flex-shrink: 0;
+    background: var(--el-bg-color);
+    z-index: 10;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .sticky-header .card-header {
+    padding: 12px;
+    border-bottom: 1px solid var(--el-border-color-light);
+  }
+
+  .scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .search-form {
+    padding: 12px;
+  }
+
+  .search-form :deep(.el-form-item) {
+    margin-bottom: 12px;
+    margin-right: 0;
+    width: 100%;
+  }
+
+  .search-form :deep(.el-input),
+  .search-form :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .pagination {
+    justify-content: center;
+    padding-bottom: 12px;
+  }
+}
 </style>

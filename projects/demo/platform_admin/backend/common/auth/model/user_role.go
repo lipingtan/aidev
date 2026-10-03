@@ -8,10 +8,10 @@ import (
 
 // UserRole 用户-角色关联
 type UserRole struct {
-	ID             int64      `gorm:"primaryKey" json:"id"`
-	UserID         int64      `gorm:"uniqueIndex:idx_user_role_tenant;not null" json:"user_id"`   // 用户 ID
-	RoleID         int64      `gorm:"uniqueIndex:idx_user_role_tenant;not null" json:"role_id"`   // 角色 ID
-	TenantID       int64      `gorm:"uniqueIndex:idx_user_role_tenant;not null" json:"tenant_id"` // 租户 ID
+	ID             int64      `gorm:"primaryKey" json:"id,string"`
+	UserID         int64      `gorm:"uniqueIndex:idx_user_role_tenant;not null" json:"user_id,string"`   // 用户 ID
+	RoleID         int64      `gorm:"uniqueIndex:idx_user_role_tenant;not null" json:"role_id,string"`   // 角色 ID
+	TenantID       int64      `gorm:"uniqueIndex:idx_user_role_tenant;not null" json:"tenant_id,string"` // 租户 ID
 	EffectiveStart *time.Time `json:"effective_start"`                                            // 生效开始时间
 	EffectiveEnd   *time.Time `json:"effective_end"`                                              // 生效结束时间
 	CreatedAt      *time.Time `gorm:"autoCreateTime" json:"created_at"`

@@ -176,7 +176,7 @@ func (h *FieldPermissionHandler) SetPermissions(c *gin.Context) {
 		Error(c, err)
 		return
 	}
-	Success(c, gin.H{"role_id": req.RoleID, "object_code": req.ObjectCode})
+	Success(c, gin.H{"role_id": strconv.FormatInt(req.RoleID, 10), "object_code": req.ObjectCode})
 }
 
 // DeletePermission 删除字段权限配置

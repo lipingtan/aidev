@@ -10,16 +10,25 @@ import request from '@/utils/request'
 export interface BizUser {
   id: string
   tenant_id: string
-  phone: string
+  phone: string | null
+  email: string | null
   nickname: string
   avatar: string
   status: number
+  disabled_at: string | null
+  disabled_by: string
+  disabled_reason: string
+  disabled_reason_user: string
+  enabled_at: string | null
+  enabled_by: string
   token_version: number
   last_login_at: string | null
   last_login_ip: string
   created_at: string
   updated_at: string
   version: number
+  access_token_expire_minutes?: number | null
+  refresh_token_expire_minutes?: number | null
 }
 
 /** C端用户查询参数 */
@@ -27,21 +36,28 @@ export interface BizUserQuery {
   page: number
   page_size: number
   phone?: string
+  email?: string
 }
 
 /** C端用户新增参数 */
 export interface BizUserCreateParams {
-  phone: string
+  phone?: string
+  email?: string
   nickname?: string
   password?: string
+  accessTokenExpireMinutes?: number | null
+  refreshTokenExpireMinutes?: number | null
 }
 
 /** C端用户编辑参数 */
 export interface BizUserUpdateParams {
   phone?: string
+  email?: string
   nickname?: string
   avatar?: string
   version: number
+  accessTokenExpireMinutes?: number | null
+  refreshTokenExpireMinutes?: number | null
 }
 
 /** C端用户分页响应 */
@@ -94,7 +110,7 @@ export function forceLogout(id: string): Promise<void> {
   return request.post(`/api/v1/admin/biz-users/${id}/force-logout`)
 }
 
-/** 切换启用/禁用状态 */
-export function toggleStatus(id: string, status: number): Promise<void> {
-  return request.put(`/api/v1/admin/biz-users/${id}/toggle-status`, { status })
+/** 切换启用/禁用状态（FR-21：禁用时需携带管理端原因与用户展示原因） */
+export function toggleStatus(id: string, status: number, adminReason = '', userReason = ''): Promise<void> {
+  return request.put(`/api/v1/admin/biz-users/${id}/toggle-status`, { status, admin_reason: adminReason, user_reason: userReason })
 }

@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"go-admin/app/user_auth/dto"
 	"go-admin/app/user_auth/model"
@@ -41,8 +42,8 @@ func NewUserAuthHandler(
 	}
 }
 
-// SendCode POST /api/v1/user/auth/send-code
-// 请求: {"phone": "...", "tenant_code": "..."}
+// SendCode POST /api/v1/user/public/send-code
+// 请求: {"phone": "...", "tenant_code": "..."} （tenant_code 可选，为空时从 Host 识别）
 // 响应: {"code": 200, "data": {"expires_in": 300}}
 // 限频: 429 + {"retry_after": N}
 func (h *UserAuthHandler) SendCode(c *gin.Context) {
@@ -52,14 +53,15 @@ func (h *UserAuthHandler) SendCode(c *gin.Context) {
 		return
 	}
 
-	// 验证 tenant_code
-	if err := h.validateTenantCode(req.TenantCode); err != nil {
+	// 解析租户：优先使用请求体中的 tenant_code，为空时从 Host 识别
+	tenantCode, err := h.resolveTenantCode(c, req.TenantCode)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 40000, "data": nil, "message": err.Error()})
 		return
 	}
 
 	// 发送验证码
-	_, err := h.smsService.SendCode(req.Phone, req.TenantCode)
+	_, err = h.smsService.SendCode(req.Phone, tenantCode)
 	if err != nil {
 		// 限频错误
 		var tooFreqErr *service.TooFrequentError
@@ -83,11 +85,11 @@ func (h *UserAuthHandler) SendCode(c *gin.Context) {
 	})
 }
 
-// Login POST /api/v1/user/auth/login
-// 请求: {"phone": "...", "code": "...", "tenant_code": "..."}
+// Login POST /api/v1/user/public/login
+// 请求: {"account": "手机号或邮箱", "code": "...", "tenant_code": "..."} （tenant_code 可选，为空时从 Host 识别）
 // 成功: {"code": 200, "data": {"access_token": "...", "expires_in": N}}
 // 验证码错误: 401
-// tenant_code 无效: 400
+// 租户识别失败: 400
 func (h *UserAuthHandler) Login(c *gin.Context) {
 	var req dto.SmsLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -95,15 +97,22 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// 验证 tenant_code → 查 admin_tenant
-	tenantID, err := h.resolveTenant(req.TenantCode)
+	// 解析租户：优先使用请求体中的 tenant_code，为空时从 Host 识别
+	tenantCode, err := h.resolveTenantCode(c, req.TenantCode)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 40000, "data": nil, "message": err.Error()})
 		return
 	}
 
-	// 校验验证码
-	if err := h.smsService.VerifyCode(req.Phone, req.TenantCode, req.Code); err != nil {
+	// 验证 tenant_code → 查 admin_tenant 获取 tenant_id
+	tenantID, err := h.resolveTenant(tenantCode)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40000, "data": nil, "message": err.Error()})
+		return
+	}
+
+	// 校验验证码（account 可以是手机号或邮箱）
+	if err := h.smsService.VerifyCode(req.Account, tenantCode, req.Code); err != nil {
 		if errors.Is(err, service.ErrCodeInvalid) {
 			c.JSON(http.StatusUnauthorized, gin.H{"code": 40101, "data": nil, "message": "验证码错误"})
 			return
@@ -112,8 +121,8 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// 查找或创建用户
-	user, err := h.findOrCreateUser(tenantID, req.Phone)
+	// 查找或创建用户（支持手机号或邮箱）
+	user, err := h.findOrCreateUserByAccount(tenantID, req.Account)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 50000, "data": nil, "message": "用户处理失败"})
 		return
@@ -133,11 +142,24 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// 签发 refresh_token
+	refreshToken, err := authStrategy.GenerateRefreshToken(h.cfg, &authStrategy.RefreshTokenOptions{
+		UserID:       user.ID,
+		TenantID:     tenantID,
+		UserPool:     authStrategy.UserPoolUser,
+		TokenVersion: user.TokenVersion,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 50000, "data": nil, "message": "签发刷新令牌失败"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
 		"data": dto.SmsLoginResponse{
-			AccessToken: accessToken,
-			ExpiresIn:   int64(tokenTTL.Seconds()),
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			ExpiresIn:    int64(tokenTTL.Seconds()),
 		},
 		"message": "success",
 	})
@@ -177,6 +199,45 @@ func (h *UserAuthHandler) GetMenu(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": tree, "message": "success"})
+}
+
+// resolveTenantCode 解析租户编码
+// 1. 如果请求体中 tenant_code 非空，直接使用并验证
+// 2. 如果 tenant_code 为空，从 Host 头识别租户
+func (h *UserAuthHandler) resolveTenantCode(c *gin.Context, tenantCodeFromBody string) (string, error) {
+	// 优先使用请求体中的 tenant_code
+	if tenantCodeFromBody != "" {
+		// 验证 tenant_code 有效性
+		if err := h.validateTenantCode(tenantCodeFromBody); err != nil {
+			return "", err
+		}
+		return tenantCodeFromBody, nil
+	}
+
+	// 从 Host 头获取域名，查 tenant_domain 表
+	host := c.Request.Host
+	// 去掉端口号（如果有）
+	if idx := strings.Index(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+
+	// 查 tenant_domain 表获取 tenant_code
+	var result struct {
+		TenantCode string
+	}
+	err := h.db.Table("tenant_domain").
+		Select("t.tenant_code").
+		Joins("JOIN admin_tenant t ON t.id = tenant_domain.tenant_id").
+		Where("tenant_domain.domain = ? AND tenant_domain.deleted_at IS NULL AND t.status = 1", host).
+		Scan(&result).Error
+	if err != nil {
+		return "", errors.New("域名查询失败")
+	}
+	if result.TenantCode == "" {
+		return "", errors.New("无法识别租户，请确认请求域名或传入 tenant_code")
+	}
+
+	return result.TenantCode, nil
 }
 
 // validateTenantCode 验证 tenant_code 是否有效且为 ACTIVE 状态
@@ -245,4 +306,60 @@ func (h *UserAuthHandler) findOrCreateUser(tenantID int64, phone string) (*model
 		return nil, err
 	}
 	return newUser, nil
+}
+
+// findOrCreateUserByAccount 按账号（手机号或邮箱）查找用户，不存在则自动创建
+func (h *UserAuthHandler) findOrCreateUserByAccount(tenantID int64, account string) (*model.BizUser, error) {
+	// 先尝试查找已有用户
+	user, err := h.bizUserSvc.GetBizUserByTenantAccount(tenantID, account)
+	if err == nil {
+		return user, nil
+	}
+
+	// 不存在，创建新用户
+	isEmail := isEmailFormat(account)
+	
+	var phone, email string
+	var nickname string
+	
+	if isEmail {
+		email = account
+		// 邮箱用户，昵称取 @ 前面部分
+		if idx := strings.Index(account, "@"); idx > 0 {
+			nickname = "用户" + account[:idx]
+			if len(nickname) > 20 {
+				nickname = nickname[:20]
+			}
+		} else {
+			nickname = "用户"
+		}
+	} else {
+		phone = account
+		// 手机用户，昵称取后4位
+		if len(account) >= 4 {
+			nickname = "用户" + account[len(account)-4:]
+		} else {
+			nickname = "用户" + account
+		}
+	}
+	
+	newUser, err := h.bizUserSvc.CreateBizUserByAccount(&dto.CreateBizUserByAccountRequest{
+		TenantID: tenantID,
+		Phone:    phone,
+		Email:    email,
+		Nickname: nickname,
+	})
+	if err != nil {
+		// 唯一约束冲突 → 重新查询
+		if errors.Is(err, service.ErrDuplicatePhone) || errors.Is(err, service.ErrDuplicateEmail) {
+			return h.bizUserSvc.GetBizUserByTenantAccount(tenantID, account)
+		}
+		return nil, err
+	}
+	return newUser, nil
+}
+
+// isEmailFormat 判断是否为邮箱格式
+func isEmailFormat(s string) bool {
+	return len(s) > 3 && strings.Contains(s, "@") && strings.Contains(s, ".")
 }

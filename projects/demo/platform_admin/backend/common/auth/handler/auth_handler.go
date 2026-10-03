@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"fmt"
+	"log"
 	"strings"
 
+	"go-admin/common/auth/errors"
 	"go-admin/common/auth/middleware"
 	"go-admin/common/auth/service"
 	"go-admin/common/auth/strategy"
@@ -13,10 +16,13 @@ import (
 
 // AuthHandler 认证 HTTP Handler
 type AuthHandler struct {
-	authSvc     *service.AuthService
-	userSvc     *service.UserService
-	router      *strategy.StrategyRouter
-	loginLogSvc *service.LoginLogService
+	authSvc        *service.AuthService
+	userSvc        *service.UserService
+	router         *strategy.StrategyRouter
+	loginLogSvc    *service.LoginLogService
+	tokenRecorder  *service.TokenRecordService
+	loginGuard     *service.LoginAttemptGuard // v2-cr11: 登录失败 IP 黑名单防护
+	adminConfigSvc *service.AdminConfigService // v2-cr11: 阈值/时长配置读取
 }
 
 // NewAuthHandler 构造认证 Handler
@@ -33,10 +39,39 @@ func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
 	return h
 }
 
+// SetTokenRecordService 注入令牌操作审计日志服务
+func (h *AuthHandler) SetTokenRecordService(svc *service.TokenRecordService) {
+	h.tokenRecorder = svc
+}
+
 // SetLoginLogService 注入登录日志服务（用于写入登录记录）
 func (h *AuthHandler) SetLoginLogService(svc *service.LoginLogService) {
 	h.loginLogSvc = svc
 }
+
+// SetLoginGuard 注入登录防护守卫（v2-cr11：失败计数 + IP 黑名单）
+func (h *AuthHandler) SetLoginGuard(guard *service.LoginAttemptGuard) {
+	h.loginGuard = guard
+}
+
+// SetAdminConfigService 注入系统配置服务（v2-cr11：阈值/时长配置读取）
+func (h *AuthHandler) SetAdminConfigService(svc *service.AdminConfigService) {
+	h.adminConfigSvc = svc
+}
+
+// 登录失败封禁配置项 key（系统配置 admin_config，平台级）
+const (
+	configKeyLoginFailBanThreshold = "auth.login_fail_ban_threshold"      // 一级阈值（次），0=关闭
+	configKeyLoginFailIPBanThreshold = "auth.login_fail_ip_ban_threshold" // 二级阈值（同 IP 组合封禁数），0=关闭
+	configKeyLoginFailBanHours     = "auth.login_fail_ban_hours"          // 封禁时长（小时）
+)
+
+// 登录失败计数的默认值（admin_config 无记录时生效）
+const (
+	defaultLoginFailBanThreshold   = 10
+	defaultLoginFailIPBanThreshold = 5
+	defaultLoginFailBanHours       = 24
+)
 
 // SetUserService 注入用户服务（用于修改密码）
 func (h *AuthHandler) SetUserService(svc *service.UserService) {
@@ -118,7 +153,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	Success(c, respVal)
 }
 
-// handlePasswordLogin 处理密码登录（保持原有逻辑不变）
+// handlePasswordLogin 处理密码登录
+// v2-cr11: 黑名单校验（验证码后、密码校验前）→ 失败计数 → 达标封禁
 func (h *AuthHandler) handlePasswordLogin(c *gin.Context, req *LoginRequest) {
 	if req.Username == "" || req.Password == "" {
 		Error(c, &errBadRequest{message: "用户名和密码不能为空"})
@@ -137,7 +173,24 @@ func (h *AuthHandler) handlePasswordLogin(c *gin.Context, req *LoginRequest) {
 		}
 	}
 
-	resp, err := h.authSvc.Login(req.Username, req.Password)
+	clientIP := c.ClientIP()
+
+	// v2-cr11: 两级黑名单前置校验（密码 bcrypt 计算之前，防刷省算力）：
+	// 一级=整 IP 封禁（该 IP 任意用户名全拒）；二级=IP+用户名 组合封禁（仅该组合拒）
+	if h.loginGuard != nil {
+		if banned, remaining := h.loginGuard.CheckBanned(clientIP, req.Username); banned {
+			remainingMin := int(remaining.Minutes()) + 1
+			message := fmt.Sprintf("登录失败次数过多，已被封禁，剩余约 %d 分钟，请稍后重试或联系管理员", remainingMin)
+			// 拦截也写登录日志（可审计）
+			if h.loginLogSvc != nil {
+				h.loginLogSvc.CreateAsync(0, req.Username, clientIP, c.Request.UserAgent(), 0, "已被封禁，登录拦截")
+			}
+			Error(c, errors.NewAuthError(errors.ErrIPBlacklisted, message))
+			return
+		}
+	}
+
+	resp, err := h.authSvc.Login(req.Username, req.Password, clientIP, c.Request.UserAgent())
 
 	// 写登录日志
 	if h.loginLogSvc != nil {
@@ -148,15 +201,60 @@ func (h *AuthHandler) handlePasswordLogin(c *gin.Context, req *LoginRequest) {
 			message = "用户名或密码错误"
 		}
 		userID := h.authSvc.GetUserIDByUsername(req.Username)
-		h.loginLogSvc.CreateAsync(userID, req.Username, c.ClientIP(), c.Request.UserAgent(), status, message)
+		h.loginLogSvc.CreateAsync(userID, req.Username, clientIP, c.Request.UserAgent(), status, message)
 	}
 
 	if err != nil {
+		// v2-cr11: 凭证错误时累计失败计数，达标触发两级封禁
+		h.recordLoginFailure(clientIP, req.Username)
 		Error(c, err)
 		return
 	}
 
+	// v2-cr11: 登录成功清零失败计数
+	if h.loginGuard != nil {
+		h.loginGuard.Reset(clientIP, req.Username)
+	}
+
 	Success(c, resp)
+}
+
+// recordLoginFailure 记录一次登录失败；组合达标触发一级封禁（IP+用户名），
+// 同 IP 组合封禁数达到二级阈值时升级封禁整个 IP。阈值=0 关闭对应层级。
+// 封禁失败仅记日志（降级放行，不影响错误响应）。
+func (h *AuthHandler) recordLoginFailure(ip, username string) {
+	if h.loginGuard == nil {
+		return
+	}
+	threshold := defaultLoginFailBanThreshold
+	if h.adminConfigSvc != nil {
+		threshold = h.adminConfigSvc.ResolveInt(0, configKeyLoginFailBanThreshold, defaultLoginFailBanThreshold)
+	}
+	if threshold <= 0 {
+		return // 一级关闭（RG-5）
+	}
+
+	count := h.loginGuard.RecordFailure(ip, username)
+	if count < threshold {
+		return
+	}
+
+	hours := defaultLoginFailBanHours
+	if h.adminConfigSvc != nil {
+		hours = h.adminConfigSvc.ResolveInt(0, configKeyLoginFailBanHours, defaultLoginFailBanHours)
+	}
+
+	// 一级：封 IP+用户名 组合（幂等）
+	h.loginGuard.BanCombo(ip, username, count, hours)
+
+	// 二级：同 IP 生效中的组合封禁数达到阈值 → 升级封整个 IP
+	ipThreshold := defaultLoginFailIPBanThreshold
+	if h.adminConfigSvc != nil {
+		ipThreshold = h.adminConfigSvc.ResolveInt(0, configKeyLoginFailIPBanThreshold, defaultLoginFailIPBanThreshold)
+	}
+	if ipThreshold > 0 && h.loginGuard.CountActiveComboBans(ip) >= ipThreshold {
+		h.loginGuard.BanIP(ip, count, hours)
+	}
 }
 
 // SelectTenantRequest 选择租户请求
@@ -178,7 +276,7 @@ func (h *AuthHandler) SelectTenant(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.authSvc.SelectTenant(tokenStr, req.TenantID)
+	resp, err := h.authSvc.SelectTenant(tokenStr, req.TenantID, c.ClientIP(), c.Request.UserAgent())
 	if err != nil {
 		Error(c, err)
 		return
@@ -189,10 +287,11 @@ func (h *AuthHandler) SelectTenant(c *gin.Context) {
 
 // RefreshRequest 刷新请求
 type RefreshRequest struct {
-	TenantID int64 `json:"tenant_id,string" binding:"required"`
+	TenantID     int64  `json:"tenant_id,string"`
+	RefreshToken string `json:"refresh_token"`
 }
 
-// Refresh 刷新 access_token
+// Refresh 刷新 access_token + refresh_token
 func (h *AuthHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -200,13 +299,17 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	tokenStr := extractBearerToken(c)
-	if tokenStr == "" {
-		Error(c, &errUnauthorized{message: "缺少认证信息"})
+	refreshToken := req.RefreshToken
+	if refreshToken == "" {
+		// 兼容旧版：从 Authorization header 获取
+		refreshToken = extractBearerToken(c)
+	}
+	if refreshToken == "" {
+		Error(c, &errUnauthorized{message: "缺少 refresh_token"})
 		return
 	}
 
-	resp, err := h.authSvc.Refresh(tokenStr, req.TenantID)
+	resp, err := h.authSvc.Refresh(refreshToken, req.TenantID, c.ClientIP(), c.Request.UserAgent())
 	if err != nil {
 		Error(c, err)
 		return
@@ -217,17 +320,28 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 
 // Logout 登出
 func (h *AuthHandler) Logout(c *gin.Context) {
+	log.Printf("[auth-handler] Logout called from %s", c.ClientIP())
 	tokenStr := extractBearerToken(c)
 	if tokenStr == "" {
+		log.Printf("[auth-handler] Logout: no token found")
 		Error(c, &errUnauthorized{message: "缺少认证信息"})
 		return
 	}
 
+	log.Printf("[auth-handler] Logout: calling authSvc.Logout")
 	if err := h.authSvc.Logout(tokenStr); err != nil {
+		log.Printf("[auth-handler] Logout: authSvc.Logout error: %v", err)
 		Error(c, err)
 		return
 	}
 
+	// 记录令牌操作审计日志
+	if h.tokenRecorder != nil {
+		log.Printf("[auth-handler] Logout: recording logout audit")
+		_ = h.tokenRecorder.RecordLogout(0, 0, "access", "", c.ClientIP(), c.Request.UserAgent())
+	}
+
+	log.Printf("[auth-handler] Logout: success")
 	Success(c, nil)
 }
 
@@ -282,5 +396,14 @@ type errUnauthorized struct {
 }
 
 func (e *errUnauthorized) Error() string {
+	return e.message
+}
+
+// errNotFound 内部错误类型，用于资源不存在
+type errNotFound struct {
+	message string
+}
+
+func (e *errNotFound) Error() string {
 	return e.message
 }

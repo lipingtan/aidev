@@ -62,5 +62,5 @@ func (h *LoginLogHandler) Delete(c *gin.Context) {
 		Error(c, err)
 		return
 	}
-	Success(c, gin.H{"id": id})
+	Success(c, gin.H{"id": strconv.FormatInt(id, 10)})
 }

@@ -41,6 +41,8 @@ type CreateUserRequest struct {
 	Phone    string `json:"phone"`
 	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
+	AccessTokenExpireMinutes      *int `json:"access_token_expire_minutes"`      // Access Token 过期时间（分钟），NULL 表示使用全局默认值
+	RefreshTokenExpireMinutes     *int `json:"refresh_token_expire_minutes"`     // Refresh Token 过期时间（分钟），NULL 表示使用全局默认值
 }
 
 // UpdateUserRequest 更新用户请求参数
@@ -52,6 +54,8 @@ type UpdateUserRequest struct {
 	Avatar   string `json:"avatar"`
 	Status   *int   `json:"status"`
 	Version  int    `json:"version" binding:"required"` // 乐观锁版本号
+	AccessTokenExpireMinutes      *int `json:"access_token_expire_minutes"`      // Access Token 过期时间（分钟），NULL 表示使用全局默认值
+	RefreshTokenExpireMinutes     *int `json:"refresh_token_expire_minutes"`     // Refresh Token 过期时间（分钟），NULL 表示使用全局默认值
 }
 
 // AssociateTenantRequest 关联用户到租户请求参数（支持批量）
@@ -78,14 +82,16 @@ func (s *UserService) CreateUser(req *CreateUserRequest) (*model.User, error) {
 	}
 
 	user := &model.User{
-		Username: req.Username,
-		Password: string(hashedPwd),
-		Email:    req.Email,
-		Phone:    req.Phone,
-		Nickname: req.Nickname,
-		Avatar:   req.Avatar,
-		Status:   1,
-		Version:  1,
+		Username:                  req.Username,
+		Password:                  string(hashedPwd),
+		Email:                     req.Email,
+		Phone:                     req.Phone,
+		Nickname:                  req.Nickname,
+		Avatar:                    req.Avatar,
+		Status:                    1,
+		Version:                   1,
+		AccessTokenExpireMinutes:  req.AccessTokenExpireMinutes,
+		RefreshTokenExpireMinutes: req.RefreshTokenExpireMinutes,
 	}
 
 	if err := s.userRepo.Create(s.db, user); err != nil {
@@ -126,6 +132,12 @@ func (s *UserService) UpdateUser(id int64, req *UpdateUserRequest) (*model.User,
 	}
 	if req.Status != nil {
 		user.Status = *req.Status
+	}
+	if req.AccessTokenExpireMinutes != nil {
+		user.AccessTokenExpireMinutes = req.AccessTokenExpireMinutes
+	}
+	if req.RefreshTokenExpireMinutes != nil {
+		user.RefreshTokenExpireMinutes = req.RefreshTokenExpireMinutes
 	}
 
 	if err := s.userRepo.Update(s.db, user); err != nil {

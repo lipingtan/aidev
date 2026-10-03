@@ -123,6 +123,7 @@ export function setupRouterGuard(router: Router): void {
         } catch {
           localStorage.removeItem('access_token')
           localStorage.removeItem('platform_token')
+          localStorage.removeItem('refresh_token')
           localStorage.removeItem('current_tenant_id')
           userInfoLoaded = false
           stopLoading()

@@ -51,6 +51,10 @@ type Dependencies struct {
 	LoginLogService *service.LoginLogService
 	LoginLogHandler *handler.LoginLogHandler
 
+	// v2-cr11: 登录失败 IP 黑名单
+	LoginBlacklistService *service.LoginBlacklistService
+	LoginBlacklistHandler *handler.LoginBlacklistHandler
+
 	FieldPermissionService *service.FieldPermissionService
 	FieldPermissionHandler *handler.FieldPermissionHandler
 
@@ -157,6 +161,10 @@ func RegisterRoutes(rg *gin.RouterGroup, deps *Dependencies) {
 		}
 		if deps.LoginLogHandler != nil {
 			deps.LoginLogHandler.RegisterRoutes(admin)
+		}
+		// v2-cr11: 登录黑名单管理路由
+		if deps.LoginBlacklistHandler != nil {
+			deps.LoginBlacklistHandler.RegisterRoutes(admin)
 		}
 		if deps.FieldPermissionHandler != nil {
 			deps.FieldPermissionHandler.RegisterRoutes(admin)

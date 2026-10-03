@@ -21,6 +21,8 @@ const STATIC_MENUS: MenuItem[] = [
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>(localStorage.getItem('access_token') || '')
   const phone = ref<string>(localStorage.getItem('user_phone') || '')
+  const tenantCode = ref<string>(localStorage.getItem('user_tenant_code') || '')
+  const tenantName = ref<string>(localStorage.getItem('user_tenant_name') || '')
 
   /** 动态菜单（登录后追加） */
   const dynamicMenus = ref<MenuItem[]>([])
@@ -65,12 +67,16 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /** 登录 */
-  async function login(phoneVal: string, code: string, tenantCode: string) {
-    const res = await loginApi(phoneVal, code, tenantCode)
-    token.value = res.token
+  async function login(phoneVal: string, code: string, tenantCodeVal: string, tenantNameVal: string = '') {
+    const res = await loginApi(phoneVal, code, tenantCodeVal)
+    token.value = res.access_token
     phone.value = phoneVal
-    localStorage.setItem('access_token', res.token)
+    tenantCode.value = tenantCodeVal
+    tenantName.value = tenantNameVal
+    localStorage.setItem('access_token', res.access_token)
     localStorage.setItem('user_phone', phoneVal)
+    localStorage.setItem('user_tenant_code', tenantCodeVal)
+    localStorage.setItem('user_tenant_name', tenantNameVal)
     await fetchMenu()
     onLoginSuccess()
   }
@@ -80,10 +86,14 @@ export const useUserStore = defineStore('user', () => {
     try { await logoutApi() } catch {}
     token.value = ''
     phone.value = ''
+    tenantCode.value = ''
+    tenantName.value = ''
     dynamicMenus.value = []
     clearPluginRouteCache()
     localStorage.removeItem('access_token')
     localStorage.removeItem('user_phone')
+    localStorage.removeItem('user_tenant_code')
+    localStorage.removeItem('user_tenant_name')
     router.push('/home')  // 登出后回首页而不是登录页
   }
 
@@ -124,6 +134,8 @@ export const useUserStore = defineStore('user', () => {
   return {
     token,
     phone,
+    tenantCode,
+    tenantName,
     menus,
     isLoggedIn,
     showLoginDialog,

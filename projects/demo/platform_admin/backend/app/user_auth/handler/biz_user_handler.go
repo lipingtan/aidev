@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	licenseSvc "go-admin/app/license/service"
 	"go-admin/app/user_auth/dto"
 	"go-admin/app/user_auth/service"
 	"go-admin/common/auth/middleware"
@@ -14,11 +15,17 @@ import (
 // BizUserHandler 管理端 biz_user CRUD Handler
 type BizUserHandler struct {
 	bizUserSvc *service.BizUserService
+	licenseSvc *licenseSvc.MembershipService
 }
 
 // NewBizUserHandler 创建 BizUserHandler 实例
 func NewBizUserHandler(bizUserSvc *service.BizUserService) *BizUserHandler {
 	return &BizUserHandler{bizUserSvc: bizUserSvc}
+}
+
+// SetLicenseService 注入 license 服务（用于 TTL 缓存失效）
+func (h *BizUserHandler) SetLicenseService(svc *licenseSvc.MembershipService) {
+	h.licenseSvc = svc
 }
 
 // RegisterRoutes 注册管理端 biz_user 路由
@@ -33,6 +40,8 @@ func (h *BizUserHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		bizUsers.POST("/:id/reset-password", h.ResetPassword)
 		bizUsers.POST("/:id/force-logout", h.ForceLogout)
 		bizUsers.POST("/:id/toggle-status", h.ToggleStatus)
+		// 兼容历史前端实现（biz-user.ts 用 PUT）：与 POST 等价
+		bizUsers.PUT("/:id/toggle-status", h.ToggleStatus)
 	}
 }
 
@@ -57,7 +66,7 @@ func (h *BizUserHandler) List(c *gin.Context) {
 		pageSize = 20
 	}
 
-	list, total, err := h.bizUserSvc.ListBizUsers(authCtx.TenantID, page, pageSize, phone)
+	list, total, err := h.bizUserSvc.ListBizUsersWithStatus(authCtx.TenantID, page, pageSize, phone)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "data": nil, "message": "查询失败"})
 		return
@@ -163,6 +172,11 @@ func (h *BizUserHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// 如果修改了 token TTL，清 Redis 缓存让下次登录生效
+	if (req.AccessTokenExpireMinutes != nil || req.RefreshTokenExpireMinutes != nil) && h.licenseSvc != nil {
+		h.licenseSvc.InvalidateUserTTLCache(authCtx.TenantID, id)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": user, "message": "ok"})
 }
 
@@ -241,14 +255,30 @@ func (h *BizUserHandler) ToggleStatus(c *gin.Context) {
 	}
 
 	var req struct {
-		Status int `json:"status"`
+		Status       int    `json:"status"`
+		AdminReason  string `json:"admin_reason"`   // 管理端内部原因（禁用时必填）
+		UserReason   string `json:"user_reason"`    // 展示给 C 端的原因（禁用时必填）
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 40000, "data": nil, "message": "请求参数错误: " + err.Error()})
 		return
 	}
+	// FR-21：禁用时原因必填
+	if req.Status == 0 && (req.AdminReason == "" || req.UserReason == "") {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40000, "data": nil, "message": "禁用时必须填写管理端原因和用户展示原因"})
+		return
+	}
+	if len(req.AdminReason) > 500 || len(req.UserReason) > 500 {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40000, "data": nil, "message": "原因最长 500 字"})
+		return
+	}
 
-	if err := h.bizUserSvc.ToggleStatus(id, req.Status); err != nil {
+	operator := int64(0)
+	if authCtx := middleware.GetAuthContext(c); authCtx != nil {
+		operator = authCtx.UserID
+	}
+
+	if err := h.bizUserSvc.ToggleStatus(id, req.Status, req.AdminReason, req.UserReason, operator); err != nil {
 		switch err {
 		case service.ErrUserNotFound:
 			c.JSON(http.StatusNotFound, gin.H{"code": 40002, "data": nil, "message": "用户不存在"})

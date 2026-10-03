@@ -40,9 +40,9 @@ async function handleSwitchTenant() {
 }
 
 /** 退出登录 */
-function handleLogout() {
+async function handleLogout() {
   menuStore.resetMenu()
-  authStore.logout()
+  await authStore.logout()
   userStore.resetState()
   router.push('/login')
 }

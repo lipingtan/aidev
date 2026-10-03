@@ -103,6 +103,16 @@ func Init(cfg *config.Config, db *gorm.DB, engine *gin.Engine) error {
 	if err := SeedCR10Menus(db); err != nil {
 		log.Printf("[auth-rbac] Seed CR-10 菜单失败: %v", err)
 	}
+	// Seed Token 管理菜单（增量，幂等）
+	if err := SeedTokenManagementMenu(db); err != nil {
+		log.Printf("[auth-rbac] Seed Token 管理菜单失败: %v", err)
+	}
+	// Seed v2-cr11 登录黑名单菜单 + 配置项（增量，幂等）
+	if err := SeedCR11LoginBlacklist(db); err != nil {
+		log.Printf("[auth-rbac] Seed 登录黑名单菜单/配置失败: %v", err)
+	}
+	// 回填 admin_config 新列 config_name/remark（幂等，AutoMigrate 之后执行）
+	backfillAdminConfigNames(db)
 
 	// 字段权限自动注册
 	registerFieldPermModels(deps.FieldRegistry)
@@ -188,6 +198,8 @@ func autoMigrate(db *gorm.DB) error {
 		&model.DataScope{},
 		&model.DataScopeConfig{},
 		&model.LoginLog{},
+		// v2-cr11: 登录失败 IP 黑名单表
+		&model.LoginBlacklist{},
 		&model.FieldObject{},
 		&model.FieldDefinition{},
 		&model.FieldPermission{},
@@ -205,6 +217,8 @@ func autoMigrate(db *gorm.DB) error {
 		&abacmodel.AbacPolicy{},
 		&abacmodel.AbacRowPolicy{},
 		&abacmodel.AbacColPolicy{},
+		// 令牌操作审计日志表
+		&model.TokenRecord{},
 	)
 }
 
@@ -247,10 +261,22 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 	orgUnitSvc := service.NewOrgUnitService(db, orgUnitRepo)
 	adminConfigSvc := service.NewAdminConfigService(db)
 
+	// v2-cr11: 登录失败 IP 黑名单（DB 持久化 + Redis 缓存，无 Redis 降级纯 DB）
+	var blacklistCache service.BlacklistCacheAdapter
+	if cacheAdapter := sdk.Runtime.GetCacheAdapter(); cacheAdapter != nil {
+		blacklistCache = authCache.NewBlacklistCacheAdapter(cacheAdapter)
+	}
+	loginBlacklistSvc := service.NewLoginBlacklistService(db, blacklistCache)
+	loginGuard := service.NewLoginAttemptGuard(loginBlacklistSvc)
+
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
 	authHandler.SetLoginLogService(loginLogSvc)
 	authHandler.SetUserService(userSvc)
+	authHandler.SetTokenRecordService(service.NewTokenRecordService(db))
+	// v2-cr11: 注入登录防护守卫与配置服务
+	authHandler.SetLoginGuard(loginGuard)
+	authHandler.SetAdminConfigService(adminConfigSvc)
 	tenantHandler := handler.NewTenantHandler(tenantSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	userHandler.SetRoleService(userRoleSvc)
@@ -261,6 +287,8 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 	dataScopeHandler := handler.NewDataScopeHandler(dataScopeSvc)
 	opLogHandler := handler.NewOperationLogHandler(opLogQuerySvc)
 	loginLogHandler := handler.NewLoginLogHandler(loginLogSvc)
+	// v2-cr11: 登录黑名单 Handler
+	loginBlacklistHandler := handler.NewLoginBlacklistHandler(loginBlacklistSvc)
 	fieldPermHandler := handler.NewFieldPermissionHandler(fieldPermSvc)
 	recordShareHandler := handler.NewRecordShareHandler(recordShareSvc)
 	orgUnitHandler := handler.NewOrgUnitHandler(orgUnitSvc)
@@ -327,6 +355,10 @@ func buildDependencies(cfg *config.Config, db *gorm.DB, blacklistStore ...spi.To
 
 		LoginLogService: loginLogSvc,
 		LoginLogHandler: loginLogHandler,
+
+		// v2-cr11: 登录失败 IP 黑名单
+		LoginBlacklistService: loginBlacklistSvc,
+		LoginBlacklistHandler: loginBlacklistHandler,
 
 		FieldPermissionService: fieldPermSvc,
 		FieldPermissionHandler: fieldPermHandler,
@@ -396,7 +428,7 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 	pluginRouter.SetBizUserChecker(bizUserSvc)
 
 	// 实例化 Handler
-	uaHandler := userAuthHandler.NewUserAuthHandler(smsSvc, bizUserSvc, menuSvc, cfg, db)
+	uHandler := userAuthHandler.NewUserAuthHandler(smsSvc, bizUserSvc, menuSvc, cfg, db)
 	bizHandler := userAuthHandler.NewBizUserHandler(bizUserSvc)
 
 	// C端公开路由（无需认证）
@@ -415,10 +447,16 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 	adminGroup.Use(middleware.DynamicPermissionMiddlewareWithCache(db, cfg, deps.PermCodeCache, deps.AdminConfigService))
 
 	// 注册路由
-	userAuth.RegisterRoutes(publicGroup, userGroup, adminGroup, uaHandler, bizHandler)
+	userAuth.RegisterRoutes(publicGroup, userGroup, adminGroup, uHandler, bizHandler)
 
 	// 注册 SmsStrategy 到 AuthHandler 的 StrategyRouter
 	userAuth.RegisterSmsStrategy(deps.AuthHandler.GetStrategyRouter(), smsStrategy)
+
+	// ── Token 管理路由（管理员查看/禁用 Token）──────────────────────────────
+	tokenRecordSvc := service.NewTokenRecordService(db)
+	tokenMgmtHandler := handler.NewTokenManagementHandler(tokenRecordSvc, deps.AuthService)
+	tokenMgmtHandler.RegisterRoutes(adminGroup)
+	// ────────────────────────────────────────────────────────────────────────────
 
 	// ── 内嵌插件注册（方式一示例：bulletin 公告板）──────────────────────────────
 	// 创建 bulletin 插件实例并注册到主框架路由
@@ -446,7 +484,9 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 
 	// ── 内嵌插件注册（方式一：license 会员制激活）──────────────────────────────
 	// 创建 license 插件实例并注册到主框架路由
-	licensePlugin := license.NewPlugin(db)
+	licensePlugin := license.NewPlugin(db, cfg)
+	// 注入 MembershipService 到 biz_user handler（用于 TTL 缓存失效）
+	bizHandler.SetLicenseService(licensePlugin.GetMembershipService())
 	// 注册 admin 端路由（已挂载了 auth + 权限中间件的 adminGroup）
 	licensePlugin.RegisterAdminRoutes(adminGroup)
 	// 注册 user 端公开路由（无需登录）

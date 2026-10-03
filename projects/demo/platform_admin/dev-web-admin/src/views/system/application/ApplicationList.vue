@@ -1,34 +1,63 @@
 <template>
-  <div class="app-layout">
+  <div class="app-layout" :class="{ 'mobile-layout': isMobile }">
     <!-- 左侧：应用列表 -->
     <el-card shadow="never" class="app-list-card">
-      <template #header>
+      <!-- 固定头部区域（手机端） -->
+      <div class="sticky-header">
         <div class="card-header">
           <span>应用列表</span>
-          <el-button type="primary" size="small" @click="handleAdd">新增</el-button>
+          <el-button type="primary" size="small" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            <span v-if="!isMobile">新增</span>
+          </el-button>
         </div>
-      </template>
-      <el-table
-        v-loading="loading"
-        :data="tableData"
-        row-key="id"
-        highlight-current-row
-        @current-change="handleRowSelect"
-        size="small"
-      >
-        <template #empty>
-          <el-empty description="暂无数据" :image-size="60" />
-        </template>
-        <el-table-column prop="name" label="应用名称" min-width="100" />
-        <el-table-column prop="app_code" label="编码" min-width="80" />
-        <el-table-column label="状态" width="60">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
+      </div>
+
+      <!-- 可滚动的列表区域 -->
+      <div class="scrollable-content">
+        <ResponsiveList ref="listRef" :data="tableData" :loading="loading">
+          <!-- 桌面端表格 -->
+          <template #table>
+            <el-table-column prop="name" label="应用名称" min-width="100" />
+            <el-table-column prop="app_code" label="编码" min-width="80" />
+            <el-table-column label="状态" width="60">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                  {{ row.status === 1 ? '启用' : '禁用' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="70" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" link size="small" @click="handleRowSelect(row)">选择</el-button>
+              </template>
+            </el-table-column>
           </template>
-        </el-table-column>
-      </el-table>
+
+          <!-- 手机端卡片 -->
+          <template #card="{ row }">
+            <div class="card-title">
+              {{ row.name }}
+              <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small" class="card-tag">
+                {{ row.status === 1 ? '启用' : '禁用' }}
+              </el-tag>
+            </div>
+            <div class="card-row">
+              <span class="card-label">编码</span>
+              <span class="card-value">{{ row.app_code }}</span>
+            </div>
+            <div class="card-row">
+              <span class="card-label">描述</span>
+              <span class="card-value">{{ row.description || '-' }}</span>
+            </div>
+          </template>
+
+          <!-- 手机端操作按钮 -->
+          <template #actions="{ row }">
+            <el-button size="small" type="primary" @click="handleRowSelect(row)">管理</el-button>
+          </template>
+        </ResponsiveList>
+      </div>
     </el-card>
 
     <!-- 右侧：详情 Tabs -->
@@ -38,7 +67,7 @@
         <el-tabs v-model="activeTab">
           <!-- Tab 1: 基本信息 -->
           <el-tab-pane label="基本信息" name="info">
-            <el-form ref="infoFormRef" :model="infoForm" :rules="infoRules" label-width="80px" style="max-width: 500px">
+            <el-form ref="infoFormRef" :model="infoForm" :rules="infoRules" label-width="80px" :style="isMobile ? '' : 'max-width: 500px'">
               <el-form-item label="名称" prop="name">
                 <el-input v-model="infoForm.name" />
               </el-form-item>
@@ -71,9 +100,9 @@
           <!-- Tab 4: 租户订阅 -->
           <el-tab-pane label="租户订阅" name="subscription">
             <div class="sub-section">
-              <el-form inline>
+              <el-form :inline="!isMobile">
                 <el-form-item label="选择租户">
-                  <el-select v-model="selectedTenantId" placeholder="请选择租户" @change="handleTenantChange">
+                  <el-select v-model="selectedTenantId" placeholder="请选择租户" :style="isMobile ? 'width: 100%' : ''" @change="handleTenantChange">
                     <el-option v-for="t in tenantList" :key="t.id" :label="t.name" :value="t.id" />
                   </el-select>
                 </el-form-item>
@@ -96,7 +125,7 @@
     </el-card>
 
     <!-- 新增应用弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="isEditDialog ? '编辑应用' : '新增应用'" width="500px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="isEditDialog ? '编辑应用' : '新增应用'" :width="isMobile ? '95%' : '500px'" destroy-on-close>
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入应用名称" />
@@ -117,8 +146,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
   listApplications,
@@ -133,6 +163,25 @@ import { listTenants } from '@/api/tenant'
 import type { TenantItem } from '@/api/tenant'
 import ResourceTree from '@/views/system/resource/ResourceTree.vue'
 import ApiPermissionTree from '@/views/system/api-permission/ApiPermissionTree.vue'
+import ResponsiveList from '@/components/ResponsiveList.vue'
+
+// ==================== 响应式检测 ====================
+const isMobile = ref(false)
+const MOBILE_BREAKPOINT = 768
+const listRef = ref()
+
+function checkMobile() {
+  isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 // ==================== 应用列表 ====================
 const loading = ref(false)
@@ -317,15 +366,61 @@ onMounted(async () => {
 .sub-section {
   padding: 8px 0;
 }
-/* 窄屏：上下堆叠 */
-@media (max-width: 767px) {
+.sticky-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--el-border-color-light);
+  margin-bottom: 12px;
+}
+.scrollable-content {
+  width: 100%;
+}
+
+/* 手机端布局 - 上下堆叠 + 固定头部 */
+@media (max-width: 768px) {
   .app-layout {
     flex-direction: column;
+    padding: 0;
     height: auto;
+    gap: 12px;
+    min-height: 0;
   }
-  .app-list-card {
+
+  .app-layout .app-list-card {
     width: 100%;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    overflow: hidden;
+    max-height: 60vh;
+  }
+
+  .app-layout .app-list-card :deep(.el-card__body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .app-layout .app-list-card .sticky-header {
+    flex-shrink: 0;
+    background: var(--el-bg-color);
+    z-index: 10;
+    padding: 12px;
+    margin-bottom: 0;
+  }
+
+  .app-layout .app-list-card .scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-detail-card {
+    width: 100%;
+    border-radius: 0;
   }
 }
 </style>

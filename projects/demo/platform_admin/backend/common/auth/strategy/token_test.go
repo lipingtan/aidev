@@ -16,6 +16,7 @@ func testConfig() *config.Config {
 			Secret:           "test-secret-for-strategy",
 			PlatformTokenTTL: 168 * time.Hour,
 			AccessTokenTTL:   2 * time.Hour,
+			RefreshTokenTTL:  7 * 24 * time.Hour,
 			Issuer:           "test-issuer",
 		},
 	}
@@ -127,6 +128,83 @@ func TestGeneratePlatformToken(t *testing.T) {
 	}
 	if claims.Tenants[2].ID != 3 {
 		t.Fatalf("期望第三个租户 ID=3，实际: %d", claims.Tenants[2].ID)
+	}
+}
+
+// TestGenerateRefreshToken 生成 refresh_token → 解析后字段正确
+func TestGenerateRefreshToken(t *testing.T) {
+	cfg := testConfig()
+	opts := &RefreshTokenOptions{
+		UserID:       100,
+		TenantID:     200,
+		UserPool:     UserPoolAdmin,
+		TokenVersion: 0,
+	}
+
+	tokenStr, err := GenerateRefreshToken(cfg, opts)
+	if err != nil {
+		t.Fatalf("生成 refresh_token 失败: %v", err)
+	}
+
+	claims, err := ParseRefreshToken(cfg, tokenStr)
+	if err != nil {
+		t.Fatalf("解析 refresh_token 失败: %v", err)
+	}
+
+	if claims.UserID != 100 {
+		t.Fatalf("期望 UserID=100，实际: %d", claims.UserID)
+	}
+	if claims.TenantID != 200 {
+		t.Fatalf("期望 TenantID=200，实际: %d", claims.TenantID)
+	}
+	if claims.UserPool != UserPoolAdmin {
+		t.Fatalf("期望 UserPool=%q，实际: %q", UserPoolAdmin, claims.UserPool)
+	}
+	if claims.TokenVersion != 0 {
+		t.Fatalf("期望 TokenVersion=0，实际: %d", claims.TokenVersion)
+	}
+	// refresh_token 应该有 JTI
+	if claims.ID == "" {
+		t.Fatal("refresh_token 应有 JTI")
+	}
+}
+
+// TestGenerateRefreshToken_CustomExpiresIn 自定义 refresh_token 过期时间
+func TestGenerateRefreshToken_CustomExpiresIn(t *testing.T) {
+	cfg := testConfig()
+	opts := &RefreshTokenOptions{
+		UserID:       100,
+		TenantID:     200,
+		UserPool:     UserPoolAdmin,
+		TokenVersion: 0,
+		ExpiresIn:    3600, // 1 小时
+	}
+
+	tokenStr, err := GenerateRefreshToken(cfg, opts)
+	if err != nil {
+		t.Fatalf("生成 refresh_token 失败: %v", err)
+	}
+
+	claims, err := ParseRefreshToken(cfg, tokenStr)
+	if err != nil {
+		t.Fatalf("解析 refresh_token 失败: %v", err)
+	}
+
+	// 验证过期时间大约是 1 小时
+	now := time.Now()
+	remaining := claims.ExpiresAt.Time.Sub(now)
+	if remaining < 55*time.Minute || remaining > 65*time.Minute {
+		t.Fatalf("期望过期时间约 1 小时，实际剩余: %v", remaining)
+	}
+}
+
+// TestParseRefreshToken_Invalid 无效 refresh_token → 报错
+func TestParseRefreshToken_Invalid(t *testing.T) {
+	cfg := testConfig()
+
+	_, err := ParseRefreshToken(cfg, "invalid-token-string")
+	if err == nil {
+		t.Fatal("期望解析无效 refresh_token 报错，实际: 无错误")
 	}
 }
 

@@ -12,11 +12,13 @@ const userStore = useUserStore()
 
 const resolvingTenant = ref(true)
 const tenantCode = ref('')
+const tenantName = ref('')
 
 onMounted(async () => {
   try {
     const result = await resolveTenantCodeAsync()
     tenantCode.value = result.tenantCode
+    tenantName.value = result.tenantName
   } catch {
     tenantCode.value = resolveTenantCode()
   } finally {
@@ -56,7 +58,7 @@ async function handleLogin() {
   if (!form.value.code)  { ElMessage.warning('请输入验证码'); return }
   loading.value = true
   try {
-    await userStore.login(form.value.phone, form.value.code, tenantCode.value)
+    await userStore.login(form.value.phone, form.value.code, tenantCode.value, tenantName.value)
     ElMessage.success('登录成功')
     router.replace((route.query.redirect as string) || '/')
   } catch {

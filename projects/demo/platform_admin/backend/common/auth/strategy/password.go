@@ -6,7 +6,7 @@ import (
 )
 
 // LoginFunc 密码登录执行函数（由外部注入，避免循环依赖）
-type LoginFunc func(username, password string) (*LoginResponse, error)
+type LoginFunc func(username, password, ip, userAgent string) (*LoginResponse, error)
 
 // PasswordStrategy 管理端密码登录策略
 type PasswordStrategy struct {
@@ -49,7 +49,7 @@ func (s *PasswordStrategy) Authenticate(c *gin.Context) (*AuthResult, error) {
 	}
 
 	// 调用注入的登录函数
-	resp, err := s.loginFn(req.Username, req.Password)
+	resp, err := s.loginFn(req.Username, req.Password, c.ClientIP(), c.Request.UserAgent())
 	if err != nil {
 		return nil, err
 	}

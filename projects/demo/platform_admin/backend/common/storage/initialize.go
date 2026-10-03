@@ -27,6 +27,7 @@ type CacheConfig struct {
 	Addr     string `yaml:"addr"`
 	Password string `yaml:"password"`
 	DB       int    `yaml:"db"`
+	Prefix   string `yaml:"prefix"` // Redis key 全局前缀，默认 fa_
 }
 
 // loadCacheConfig 从 settings.yml 加载 cache 配置
@@ -68,7 +69,7 @@ func setupCache() {
 		if addr == "" {
 			addr = "127.0.0.1:6379"
 		}
-		adapter, err := NewRedisAdapter(addr, cacheCfg.Password, cacheCfg.DB)
+		adapter, err := NewRedisAdapter(addr, cacheCfg.Password, cacheCfg.DB, cacheCfg.Prefix)
 		if err != nil {
 			log.Printf("warning: failed to create Redis adapter: %v, falling back to memory cache", err)
 			adapter = nil

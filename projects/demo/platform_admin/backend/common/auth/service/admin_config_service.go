@@ -183,6 +183,17 @@ func (s *AdminConfigService) List(scope, key string, isFeatureFlag *int, tenantI
 
 // Create 创建配置（先清理同 key 的软删除残留，再插入，避免 unique index 冲突）
 func (s *AdminConfigService) Create(cfg *model.AdminConfig) error {
+	// 新旧字段双写：前端只传 config_name/remark，旧列保持同步
+	if cfg.ConfigName != "" && cfg.DisplayName == "" {
+		cfg.DisplayName = cfg.ConfigName
+	}
+	if cfg.DisplayName != "" && cfg.ConfigName == "" {
+		cfg.ConfigName = cfg.DisplayName
+	}
+	if cfg.Remark != "" && cfg.Description == "" {
+		cfg.Description = cfg.Remark
+	}
+
 	// 清理可能存在的软删除残留（unique key 相同但 deleted_at 非 NULL 的记录）
 	s.db.Unscoped().
 		Where("config_key = ? AND scope = ? AND scope_id = ? AND tenant_id = ? AND deleted_at IS NOT NULL",
@@ -196,6 +207,43 @@ func (s *AdminConfigService) Create(cfg *model.AdminConfig) error {
 	return nil
 }
 
+// configUpdateWhitelist 前端提交字段 → 模型列白名单（防任意列名注入 GORM Updates）。
+// config_name/display_name、remark/description 双写保持新旧字段一致。
+var configUpdateWhitelist = map[string]string{
+	"config_name":   "config_name",
+	"display_name":  "display_name",
+	"remark":        "remark",
+	"description":   "description",
+	"config_value":  "config_value",
+	"config_type":   "config_type",
+	"status":        "status",
+	"is_feature_flag": "is_feature_flag",
+}
+
+// sanitizeConfigUpdates 过滤 updates：仅保留白名单列，并做新旧字段双写同步
+func sanitizeConfigUpdates(updates map[string]interface{}) map[string]interface{} {
+	safe := make(map[string]interface{}, len(updates))
+	for k, v := range updates {
+		col, ok := configUpdateWhitelist[k]
+		if !ok {
+			continue // 未知字段丢弃
+		}
+		safe[col] = v
+	}
+	// 双写：config_name ↔ display_name，remark ↔ description
+	if v, ok := safe["config_name"]; ok {
+		safe["display_name"] = v
+	} else if v, ok := safe["display_name"]; ok {
+		safe["config_name"] = v
+	}
+	if v, ok := safe["remark"]; ok {
+		safe["description"] = v
+	} else if v, ok := safe["description"]; ok {
+		safe["remark"] = v
+	}
+	return safe
+}
+
 // Update 更新配置
 func (s *AdminConfigService) Update(id int64, updates map[string]interface{}) error {
 	// 查出旧 key 用于清除缓存
@@ -203,7 +251,11 @@ func (s *AdminConfigService) Update(id int64, updates map[string]interface{}) er
 	if err := s.db.First(&old, id).Error; err != nil {
 		return err
 	}
-	if err := s.db.Model(&model.AdminConfig{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+	safe := sanitizeConfigUpdates(updates)
+	if len(safe) == 0 {
+		return nil
+	}
+	if err := s.db.Model(&model.AdminConfig{}).Where("id = ?", id).Updates(safe).Error; err != nil {
 		return err
 	}
 	s.InvalidateCache(old.ConfigKey)
