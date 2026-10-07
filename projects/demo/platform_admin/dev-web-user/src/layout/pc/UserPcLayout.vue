@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
@@ -15,16 +15,32 @@ const showSidebar = computed(() => {
   return userStore.isLoggedIn && route.path !== '/home'
 })
 
+// CMS standalone：body 自然高度；管理后台：用 layout-fixed class 锁定
+function syncBodyScroll() {
+  // 先清掉可能残留的内联样式
+  document.body.style.overflow = ''
+  document.body.style.height = ''
+  document.documentElement.style.overflow = ''
+  document.documentElement.style.height = ''
+  if (showSidebar.value) {
+    document.body.classList.add('layout-fixed')
+  } else {
+    document.body.classList.remove('layout-fixed')
+  }
+}
+
+watch(showSidebar, syncBodyScroll)
+
 onMounted(() => {
-  // 有 token 时加载动态菜单，无 token 时仍显示静态菜单
+  syncBodyScroll()
   if (userStore.token) {
     userStore.fetchMenu()
   }
-  // 点击外部关闭下拉菜单
   document.addEventListener('click', handleDocumentClick)
 })
 
 onUnmounted(() => {
+  document.body.classList.remove('layout-fixed')
   document.removeEventListener('click', handleDocumentClick)
 })
 
@@ -579,13 +595,20 @@ function toggleUserMenu() {
 /* 全屏内容（无侧边栏时，CMS主站页面） */
 .page-content--full {
   padding: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1;
+  overflow: visible; /* 让内容自然撑开，不截断 */
 }
 
-/* main-wrap 在 no-sidebar 时不裁剪内容 */
+/* standalone 模式：整个 main-wrap 和 pc-layout 不限制高度，允许页面自然滚动 */
+.pc-layout--no-sidebar {
+  height: auto;
+  min-height: 100vh;
+  overflow-y: auto;
+}
 .pc-layout--no-sidebar .main-wrap {
   overflow: visible;
+  height: auto;
+  min-height: 100vh;
 }
 
 /* ── 底部备案信息（仅非standalone模式显示）── */
