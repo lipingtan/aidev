@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>btcola.com — 方案B：现代简约白色</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f8f9fc;
+    --bg3: #f1f3f8;
+    --primary: #2563eb;
+    --primary-light: #eff6ff;
+    --primary-dark: #1d4ed8;
+    --accent: #10b981;
+    --accent-light: #ecfdf5;
+    --text: #0f172a;
+    --text2: #64748b;
+    --text3: #94a3b8;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
+    --radius: 12px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; line-height: 1.6; }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; width: 100%; z-index: 100;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 6%;
+    display: flex; align-items: center; justify-content: space-between; height: 68px;
+    box-shadow: var(--shadow-sm);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 700; color: var(--text); text-decoration: none; }
+  .logo-mark { width: 34px; height: 34px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 800; }
+  .nav-links { display: flex; gap: 36px; list-style: none; }
+  .nav-links a { color: var(--text2); text-decoration: none; font-size: 0.92rem; font-weight: 500; transition: color 0.18s; }
+  .nav-links a:hover { color: var(--primary); }
+  .nav-actions { display: flex; gap: 10px; align-items: center; }
+  .btn { padding: 8px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.18s; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh; display: flex; align-items: center;
+    padding: 120px 6% 80px;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    position: relative;
+  }
+  .hero-content { max-width: 580px; }
+  .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 20px; }
+  .eyebrow-dot { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; }
+  .hero h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 800; line-height: 1.12; letter-spacing: -0.02em; margin-bottom: 20px; color: var(--text); }
+  .hero h1 em { font-style: normal; color: var(--primary); }
+  .hero p { font-size: 1.1rem; color: var(--text2); margin-bottom: 36px; line-height: 1.72; }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-lg { padding: 13px 28px; font-size: 0.97rem; border-radius: 10px; }
+  .hero-visual {
+    position: absolute; right: 6%; top: 50%; transform: translateY(-50%);
+    width: 42%; max-width: 520px;
+  }
+  .dashboard-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: var(--shadow-lg); padding: 24px; overflow: hidden;
+  }
+  .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .dash-title { font-weight: 600; font-size: 0.95rem; }
+  .dash-badge { background: var(--accent-light); color: var(--accent); font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .metric-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .metric-item { background: var(--bg2); border-radius: 10px; padding: 14px; }
+  .metric-val { font-size: 1.5rem; font-weight: 800; color: var(--text); }
+  .metric-label { font-size: 0.75rem; color: var(--text3); margin-top: 3px; }
+  .chart-bar { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
+  .bar { flex: 1; background: var(--primary-light); border-radius: 4px 4px 0 0; position: relative; transition: all 0.3s; }
+  .bar-fill { position: absolute; bottom: 0; width: 100%; background: var(--primary); border-radius: 4px 4px 0 0; }
+
+  /* SECTION BASE */
+  section { padding: 88px 6%; }
+  .container { max-width: 1140px; margin: 0 auto; }
+  .section-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--primary); margin-bottom: 12px; }
+  .section-title { font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px; line-height: 1.2; }
+  .section-sub { color: var(--text2); font-size: 1.05rem; max-width: 500px; }
+
+  /* SPLIT SECTION */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+  .split.reverse { direction: rtl; }
+  .split.reverse > * { direction: ltr; }
+
+  /* PRODUCT LIST */
+  .product-list { display: flex; flex-direction: column; gap: 16px; }
+  .product-row {
+    display: flex; gap: 20px; padding: 24px; border: 1.5px solid var(--border);
+    border-radius: var(--radius); background: #fff; transition: all 0.2s; align-items: flex-start;
+  }
+  .product-row:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateX(4px); }
+  .product-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .product-body { flex: 1; }
+  .product-body h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 5px; }
+  .product-body p { color: var(--text2); font-size: 0.88rem; line-height: 1.6; }
+  .product-links { display: flex; gap: 8px; margin-top: 12px; }
+  .link-sm { padding: 5px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 500; text-decoration: none; cursor: pointer; border: none; }
+  .link-blue { background: var(--primary-light); color: var(--primary); }
+  .link-blue:hover { background: #dbeafe; }
+  .link-gray { background: var(--bg3); color: var(--text2); }
+  .link-gray:hover { background: var(--border); }
+  .product-badge { font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin-left: auto; flex-shrink: 0; height: fit-content; }
+
+  /* FEATURES GRID */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .feature-card { padding: 28px; border: 1.5px solid var(--border); border-radius: var(--radius); transition: all 0.2s; }
+  .feature-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+  .feature-icon { font-size: 28px; margin-bottom: 14px; }
+  .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .feature-card p { color: var(--text2); font-size: 0.87rem; line-height: 1.65; }
+
+  /* ABOUT */
+  .about-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 32px; }
+  .stat-card { padding: 20px; background: var(--bg2); border-radius: var(--radius); }
+  .stat-num { font-size: 2rem; font-weight: 800; color: var(--primary); }
+  .stat-desc { font-size: 0.83rem; color: var(--text2); margin-top: 4px; }
+
+  /* TEAM */
+  .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .team-card { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1.5px solid var(--border); border-radius: var(--radius); }
+  .team-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .team-info h4 { font-size: 0.92rem; font-weight: 600; }
+  .team-info span { font-size: 0.78rem; color: var(--text3); }
+
+  /* CMS CONFIG */
+  .cms-layout { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+  .cms-sidebar { background: var(--bg2); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .cms-menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 0.88rem; cursor: pointer; color: var(--text2); transition: all 0.15s; }
+  .cms-menu-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+  .cms-menu-item:hover:not(.active) { background: var(--bg3); }
+  .cms-content { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 28px; }
+  .form-group { margin-bottom: 20px; }
+  .form-label { display: block; font-size: 0.83rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .form-input { width: 100%; padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; color: var(--text); outline: none; transition: border-color 0.18s; }
+  .form-input:focus { border-color: var(--primary); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-hint { font-size: 0.76rem; color: var(--text3); margin-top: 5px; }
+  .cms-section-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+  /* FOOTER */
+  footer { background: var(--bg2); border-top: 1px solid var(--border); padding: 56px 6% 28px; }
+  .footer-inner { max-width: 1140px; margin: 0 auto; }
+  .footer-top { display: grid; grid-template-columns: 2.5fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+  .footer-brand p { color: var(--text2); font-size: 0.87rem; margin-top: 14px; max-width: 240px; line-height: 1.7; }
+  .footer-col h5 { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.5px; color: var(--text); margin-bottom: 14px; }
+  .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .footer-col a { color: var(--text2); text-decoration: none; font-size: 0.86rem; transition: color 0.18s; }
+  .footer-col a:hover { color: var(--primary); }
+  .footer-bottom { border-top: 1px solid var(--border); padding-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .footer-bottom p { color: var(--text3); font-size: 0.82rem; }
+
+  /* PAGE SWITCH */
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-switcher { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 200; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 4px; display: flex; box-shadow: var(--shadow-md); }
+  .page-btn { padding: 7px 18px; border-radius: 7px; cursor: pointer; font-size: 0.85rem; color: var(--text2); border: none; background: transparent; font-weight: 500; transition: all 0.18s; }
+  .page-btn.active { background: var(--primary); color: #fff; }
+
+  /* RESPONSIVE */
+  @media (max-width: 960px) {
+    .hero-visual { display: none; }
+    .split { grid-template-columns: 1fr; gap: 40px; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+    .footer-top { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .footer-top { grid-template-columns: 1fr; }
+    .cms-layout { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="#">
+    <div class="logo-mark">B</div>
+    btcola
+  </a>
+  <ul class="nav-links">
+    <li><a href="#">首页</a></li>
+    <li><a href="#">产品服务</a></li>
+    <li><a href="#">关于我们</a></li>
+    <li><a href="#">文档</a></li>
+    <li><a href="#">联系我们</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="btn btn-outline">登录</button>
+    <button class="btn btn-primary">免费试用</button>
+  </div>
+</nav>
+
+<div class="page-switcher">
+  <button class="page-btn active" onclick="showPage('home',this)">首页</button>
+  <button class="page-btn" onclick="showPage('products',this)">产品页</button>
+  <button class="page-btn" onclick="showPage('about',this)">关于页</button>
+  <button class="page-btn" onclick="showPage('config',this)">CMS配置</button>
+</div>
+
+<!-- ══ 首页 ══ -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-eyebrow"><span class="eyebrow-dot"></span>AI 驱动 · 企业级解决方案</div>
+      <h1>让 AI 成为您的<br><em>核心竞争力</em></h1>
+      <p>btcola 提供 RAG 智能客服、AI 软件交付、游戏娱乐平台等前沿产品，助力企业实现数字化跃升。</p>
+      <div class="hero-cta">
+        <button class="btn btn-primary btn-lg">开始免费试用</button>
+        <button class="btn btn-outline btn-lg">查看产品 →</button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="dashboard-card">
+        <div class="dash-header">
+          <span class="dash-title">实时客服数据</span>
+          <span class="dash-badge">● 运行中</span>
+        </div>
+        <div class="metric-row">
+          <div class="metric-item"><div class="metric-val">1.2k</div><div class="metric-label">今日对话</div></div>
+          <div class="metric-item"><div class="metric-val">95%</div><div class="metric-label">解决率</div></div>
+          <div class="metric-item"><div class="metric-val">0.8s</div><div class="metric-label">响应时间</div></div>
+        </div>
+        <div class="chart-bar">
+          <div class="bar" style="height:100%"><div class="bar-fill" style="height:60%"></div></div>
+          <div class="bar" style="height:100%"><div class="bar-fill" style="height:80%"></div></div>
+          <div class="bar" style="height:100%"><div class="bar-fill" style="height:50%"></div></div>
+          <div class="bar" style="height:100%"><div class="bar-fill" style="height:90%"></div></div>
+          <div class="bar" style="height:100%"><div class="bar-fill" style="height:70%"></div></div>
+          <div class="bar" style="height:100%"><div class="bar-fill" style="height:85%"></div></div>
+          <div class="bar" style="height:100%"><div class="bar-fill" style="height:65%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section style="background:var(--bg2);">
+    <div class="container">
+      <div style="margin-bottom:48px;">
+        <div class="section-label">核心能力</div>
+        <h2 class="section-title">为什么选择 btcola</h2>
+        <p class="section-sub">从技术到服务，我们提供全方位的企业级支持</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <h3>大模型驱动</h3>
+          <p>基于最新 LLM 技术，深度理解业务场景，提供精准、智能的解决方案。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>企业级安全</h3>
+          <p>私有化部署选项，数据本地存储，符合企业合规要求，保障数据安全。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>极速响应</h3>
+          <p>毫秒级响应速度，99.9% 服务可用性，保障业务稳定运行不中断。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔗</div>
+          <h3>无缝集成</h3>
+          <p>开放 API 接口，轻松对接现有系统，最小化改造成本，快速上线。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>数据洞察</h3>
+          <p>实时数据看板，深度分析报告，帮助企业做出更好的数据驱动决策。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛠️</div>
+          <h3>专业服务</h3>
+          <p>技术专家团队，7×24 小时响应支持，提供从实施到运维的全程服务。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══ 产品页 ══ -->
+<div id="page-products" class="page" style="padding-top:80px;">
+  <section>
+    <div class="container">
+      <div style="margin-bottom:48px;">
+        <div class="section-label">产品与服务</div>
+        <h2 class="section-title">选择适合您的解决方案</h2>
+        <p class="section-sub">每一款产品都经过精心设计，满足企业真实业务需求</p>
+      </div>
+      <div class="product-list">
+        <div class="product-row">
+          <div class="product-icon" style="background:#eff6ff;">🤖</div>
+          <div class="product-body">
+            <h3>RAG Agent 智能客服</h3>
+            <p>基于 LLM 与检索增强生成技术，为企业提供 7×24 小时自动化客服。意图识别准确率 95%+，支持私有知识库接入，多轮对话上下文理解，显著降低人工客服成本。</p>
+            <div class="product-links">
+              <a class="link-sm link-blue" href="#">申请试用</a>
+              <a class="link-sm link-gray" href="#">查看文档</a>
+              <a class="link-sm link-gray" href="#">案例研究</a>
+            </div>
+          </div>
+          <span class="product-badge" style="background:#fee2e2;color:#dc2626;">热门</span>
+        </div>
+        <div class="product-row">
+          <div class="product-icon" style="background:#ecfdf5;">⚡</div>
+          <div class="product-body">
+            <h3>AI 赋能软件交付</h3>
+            <p>将 AI 融入软件开发全生命周期，覆盖需求分析、架构设计、代码生成、自动化测试和 CI/CD 部署。开发效率提升 60%，缺陷率降低 40%，让软件交付更快更稳。</p>
+            <div class="product-links">
+              <a class="link-sm link-blue" href="#">了解更多</a>
+              <a class="link-sm link-gray" href="#">产品演示</a>
+            </div>
+          </div>
+          <span class="product-badge" style="background:#ecfdf5;color:#059669;">新品</span>
+        </div>
+        <div class="product-row">
+          <div class="product-icon" style="background:#f5f3ff;">🎮</div>
+          <div class="product-body">
+            <h3>街机时代游戏平台</h3>
+            <p>收录 2987 款经典街机游戏，提供高清画质、云存档、多人联机等会员特权。移动端与 PC 端双端支持，随时随地畅享经典游戏乐趣，会员专区持续更新。</p>
+            <div class="product-links">
+              <a class="link-sm link-blue" href="#">下载 App</a>
+              <a class="link-sm link-gray" href="#">会员介绍</a>
+            </div>
+          </div>
+          <span class="product-badge" style="background:#f5f3ff;color:#7c3aed;">会员</span>
+        </div>
+        <div class="product-row">
+          <div class="product-icon" style="background:#fffbeb;">🏗️</div>
+          <div class="product-body">
+            <h3>企业数字化管理平台</h3>
+            <p>一体化企业管理平台，涵盖权限管理、多租户架构、工作流审批、数据大屏展示等核心功能。支持私有化部署，满足企业合规和数据安全要求。</p>
+            <div class="product-links">
+              <a class="link-sm link-blue" href="#">联系销售</a>
+              <a class="link-sm link-gray" href="#">方案详情</a>
+            </div>
+          </div>
+          <span class="product-badge" style="background:#fffbeb;color:#d97706;">企业</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══ 关于页 ══ -->
+<div id="page-about" class="page" style="padding-top:80px;">
+  <section>
+    <div class="container">
+      <div class="split">
+        <div>
+          <div class="section-label">关于 btcola</div>
+          <h2 class="section-title" style="margin-top:12px;">技术赋能<br>创造真实价值</h2>
+          <p style="color:var(--text2);margin-bottom:16px;line-height:1.78;">btcola 成立于 2020 年，专注于 AI 驱动的企业级解决方案。我们相信，好的技术产品应该真实解决业务问题，而不只是展示技术能力。</p>
+          <p style="color:var(--text2);margin-bottom:28px;line-height:1.78;">从智能客服到软件交付，从游戏娱乐到企业管理，我们在每个垂直领域深耕打磨，为客户提供可靠、高效的解决方案。</p>
+          <div class="about-stats">
+            <div class="stat-card"><div class="stat-num">200+</div><div class="stat-desc">服务企业</div></div>
+            <div class="stat-card"><div class="stat-num">50+</div><div class="stat-desc">技术专家</div></div>
+            <div class="stat-card"><div class="stat-num">99.9%</div><div class="stat-desc">服务可用性</div></div>
+            <div class="stat-card"><div class="stat-num">4年</div><div class="stat-desc">深耕 AI 领域</div></div>
+          </div>
+        </div>
+        <div>
+          <div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:16px;padding:28px;">
+            <h4 style="font-size:0.88rem;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;">核心团队</h4>
+            <div class="team-grid">
+              <div class="team-card"><div class="team-avatar">👨‍💻</div><div class="team-info"><h4>张伟</h4><span>创始人 & CEO</span></div></div>
+              <div class="team-card"><div class="team-avatar">👩‍🔬</div><div class="team-info"><h4>李明</h4><span>CTO</span></div></div>
+              <div class="team-card"><div class="team-avatar">👨‍🎨</div><div class="team-info"><h4>王芳</h4><span>设计总监</span></div></div>
+              <div class="team-card"><div class="team-avatar">👩‍💼</div><div class="team-info"><h4>陈静</h4><span>产品总监</span></div></div>
+            </div>
+            <div style="margin-top:24px;padding:20px;background:#fff;border:1.5px solid var(--border);border-radius:12px;">
+              <p style="font-size:0.88rem;color:var(--text2);line-height:1.7;">我们的使命：用前沿 AI 技术，帮助每一家企业提升效率、降低成本，在数字化转型中赢得竞争优势。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══ CMS配置 ══ -->
+<div id="page-config" class="page" style="padding-top:80px;">
+  <section>
+    <div class="container">
+      <div style="margin-bottom:36px;">
+        <div class="section-label">管理端</div>
+        <h2 class="section-title">主站 CMS 配置</h2>
+        <p class="section-sub">在管理后台配置主站的所有展示内容</p>
+      </div>
+      <div class="cms-layout">
+        <div class="cms-sidebar">
+          <div class="cms-menu-item active">🏠 基础信息</div>
+          <div class="cms-menu-item">🧭 导航配置</div>
+          <div class="cms-menu-item">📦 产品管理</div>
+          <div class="cms-menu-item">👥 团队成员</div>
+          <div class="cms-menu-item">🔍 SEO 设置</div>
+          <div class="cms-menu-item">🎨 外观主题</div>
+          <div class="cms-menu-item">📬 联系方式</div>
+        </div>
+        <div class="cms-content">
+          <div class="cms-section-title">基础信息配置</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">网站名称</label>
+              <input class="form-input" value="btcola" />
+              <div class="form-hint">显示在浏览器标签和导航栏</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">网站域名</label>
+              <input class="form-input" value="https://btcola.com" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Logo 图片 URL</label>
+              <input class="form-input" value="https://btcola.com/logo.svg" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Favicon URL</label>
+              <input class="form-input" value="https://btcola.com/favicon.ico" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">公司简介（首页 Hero 副标题）</label>
+            <textarea class="form-input" rows="3">btcola 提供前沿 AI 驱动的产品与服务，帮助企业在数字化转型中保持竞争优势。</textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">备案号</label>
+              <input class="form-input" value="粤ICP备XXXXXXXX号" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">客服邮箱</label>
+              <input class="form-input" value="support@btcola.com" />
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid var(--border);">
+            <button class="btn btn-outline">取消</button>
+            <button class="btn btn-primary">保存更改</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a class="logo" href="#" style="font-size:1.1rem;"><div class="logo-mark" style="width:30px;height:30px;font-size:14px;">B</div>btcola</a>
+        <p>用 AI 技术赋能企业数字化转型，让每一家企业都能享受科技带来的效率红利。</p>
+      </div>
+      <div class="footer-col">
+        <h5>产品</h5>
+        <ul>
+          <li><a href="#">RAG 智能客服</a></li>
+          <li><a href="#">AI 软件交付</a></li>
+          <li><a href="#">游戏平台</a></li>
+          <li><a href="#">企业平台</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>资源</h5>
+        <ul>
+          <li><a href="#">开发文档</a></li>
+          <li><a href="#">API 参考</a></li>
+          <li><a href="#">更新日志</a></li>
+          <li><a href="#">博客</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>公司</h5>
+        <ul>
+          <li><a href="#">关于我们</a></li>
+          <li><a href="#">联系我们</a></li>
+          <li><a href="#">隐私政策</a></li>
+          <li><a href="#">服务条款</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 btcola. All rights reserved. 粤ICP备XXXXXXXX号</p>
+      <p>深圳市 · support@btcola.com</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page-btn').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
