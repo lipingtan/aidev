@@ -30,6 +30,7 @@ import (
 	"go-admin/common/auth/repository"
 	"go-admin/common/auth/service"
 	"go-admin/common/auth/spi"
+	authStrategy "go-admin/common/auth/strategy"
 	"go-admin/common/event"
 	"go-admin/common/plugin"
 
@@ -535,6 +536,39 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 		} else {
 			log.Println("[cms] 内嵌插件已注册并启动")
 		}
+	}
+	// ────────────────────────────────────────────────────────────────────────────
+
+	// ── 微信扫码登录（PC QR，开放平台）──────────────────────────────────────────
+	// 使用 CMS svcV2 读取配置，jwtSign 复用 C 端 JWT 签发逻辑
+	{
+		wechatQRJwtSign := func(userID, tenantID int64) (string, string, error) {
+			var bizUser userAuthModel.BizUser
+			if err := db.First(&bizUser, userID).Error; err != nil {
+				return "", "", err
+			}
+			accessToken, err := authStrategy.GenerateAccessToken(cfg, &authStrategy.AccessTokenOptions{
+				UserID:       userID,
+				TenantID:     tenantID,
+				UserPool:     authStrategy.UserPoolUser,
+				TokenVersion: bizUser.TokenVersion,
+			})
+			if err != nil {
+				return "", "", err
+			}
+			refreshToken, err := authStrategy.GenerateRefreshToken(cfg, &authStrategy.RefreshTokenOptions{
+				UserID:       userID,
+				TenantID:     tenantID,
+				UserPool:     authStrategy.UserPoolUser,
+				TokenVersion: bizUser.TokenVersion,
+			})
+			return accessToken, refreshToken, err
+		}
+		wechatQRHandler := cms.NewWechatQRHandler(db, wechatQRJwtSign)
+		wechatQRPublicGroup := engine.Group("/api/v1/user/public/wechat")
+		wechatQRPublicGroup.GET("/qr", wechatQRHandler.GetWechatQRAuthURL)
+		wechatQRPublicGroup.GET("/qr/callback", wechatQRHandler.WechatQRCallback)
+		log.Println("[cms] 微信扫码登录路由已注册")
 	}
 	// ────────────────────────────────────────────────────────────────────────────
 

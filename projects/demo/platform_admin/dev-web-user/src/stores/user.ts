@@ -131,6 +131,14 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /** 设置 token（微信等第三方登录回调用）*/
+  function setTokens(accessToken: string, refreshToken: string) {
+    token.value = accessToken
+    localStorage.setItem('access_token', accessToken)
+    if (refreshToken) localStorage.setItem('refresh_token', refreshToken)
+    fetchMenu()
+  }
+
   return {
     token,
     phone,
@@ -142,7 +150,8 @@ export const useUserStore = defineStore('user', () => {
     requireLogin,
     login,
     logout,
-    fetchMenu
+    fetchMenu,
+    setTokens
   }
 })
 

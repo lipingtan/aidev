@@ -65,6 +65,13 @@ const routes: RouteRecordRaw[] = [
     name: 'AppUpgrade',
     component: () => import('@/views/upgrade/index.vue'),
     meta: { title: 'App 升级', requiresAuth: false, standalone: true }
+  },
+  // 微信扫码登录回调页
+  {
+    path: '/wechat-callback',
+    name: 'WechatCallback',
+    component: () => import('@/views/login/WechatCallback.vue'),
+    meta: { title: '微信登录', requiresAuth: false, standalone: true }
   }
 ]
 

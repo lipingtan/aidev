@@ -69,6 +69,26 @@ async function handleLogin() {
 }
 
 onUnmounted(() => { if (timer) clearInterval(timer) })
+
+// ── 微信扫码登录 ──
+const wechatQRLoading = ref(false)
+
+async function handleWechatQRLogin() {
+  wechatQRLoading.value = true
+  try {
+    const res = await fetch(`/api/v1/user/public/wechat/qr?tenant_id=${encodeURIComponent(tenantCode.value || '')}`)
+    const data = await res.json()
+    if (data.code === 0 && data.data?.auth_url) {
+      window.location.href = data.data.auth_url
+    } else {
+      ElMessage.error(data.msg || '微信扫码登录暂不可用')
+    }
+  } catch {
+    ElMessage.error('微信扫码登录暂不可用')
+  } finally {
+    wechatQRLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -175,6 +195,15 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         </button>
 
         <p class="login-tip">登录即代表您同意<a href="#" class="link">服务协议</a>和<a href="#" class="link">隐私政策</a></p>
+
+        <!-- 微信扫码登录入口（仅 PC，配置了才显示）-->
+        <div class="divider"><span>或</span></div>
+        <button class="wechat-btn" :disabled="wechatQRLoading" @click="handleWechatQRLogin">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px;flex-shrink:0">
+            <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c-.156-.53-.24-1.082-.24-1.65 0-3.679 3.595-6.662 8.024-6.662.27 0 .534.015.796.04C16.084 4.957 12.679 2.188 8.69 2.188zm-1.947 3.87a1.094 1.094 0 1 1 0 2.188 1.094 1.094 0 0 1 0-2.188zm4.55 0a1.094 1.094 0 1 1 0 2.188 1.094 1.094 0 0 1 0-2.188zM23.3 15.375c0-3.379-3.237-6.12-7.228-6.12-4.001 0-7.24 2.741-7.24 6.12 0 3.38 3.239 6.12 7.24 6.12.774 0 1.518-.103 2.218-.293a.682.682 0 0 1 .564.075l1.487.873a.254.254 0 0 0 .131.044.23.23 0 0 0 .229-.23c0-.057-.024-.11-.037-.167l-.307-1.155a.465.465 0 0 1 .165-.522C22.254 19.228 23.3 17.385 23.3 15.375zm-9.565-.984a.86.86 0 1 1 0-1.72.86.86 0 0 1 0 1.72zm4.354 0a.86.86 0 1 1 0-1.72.86.86 0 0 1 0 1.72z"/>
+          </svg>
+          <span>{{ wechatQRLoading ? '跳转中...' : '微信扫码登录' }}</span>
+        </button>
       </div>
     </div>
   </div>
@@ -496,4 +525,39 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   .mobile-logo { display: flex; }
   .card-header { margin-bottom: 24px; }
 }
+
+/* ── 分隔线 ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 12px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+/* ── 微信扫码按钮 ── */
+.wechat-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 11px 0;
+  border: 1px solid #07c160;
+  border-radius: 10px;
+  background: #fff;
+  color: #07c160;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.wechat-btn:hover:not(:disabled) { background: #07c160; color: #fff; }
+.wechat-btn:disabled { opacity: .5; cursor: not-allowed; }
 </style>
