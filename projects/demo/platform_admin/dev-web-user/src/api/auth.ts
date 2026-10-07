@@ -17,7 +17,11 @@ export function sendCode(phone: string, tenantCode: string) {
 
 /** 登录 */
 export function login(phone: string, code: string, tenantCode: string) {
-  return request.post<any, { access_token: string }>('/auth/login', { phone, code, tenant_code: tenantCode })
+  return request.post<any, { access_token: string }>('/auth/login', {
+    account: phone,   // 后端 SmsLoginRequest.Account 字段
+    code,
+    tenant_code: tenantCode
+  })
 }
 
 /** 登出 */
