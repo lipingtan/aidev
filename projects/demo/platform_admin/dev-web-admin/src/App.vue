@@ -35,6 +35,9 @@ onUnmounted(() => mq.removeEventListener('change', onMQChange))
     
     <!-- 路由出口 -->
     <router-view />
+
+    <!-- 全局 MediaPicker 弹窗（挂载在根节点，供全局调用） -->
+    <MediaPicker />
   </div>
 </template>
 

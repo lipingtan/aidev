@@ -5,6 +5,7 @@
 -->
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import UploadQueue from '@/components/UploadQueue/index.vue'
 
 const H5Layout = defineAsyncComponent(() => import('./h5/H5Layout.vue'))
 const PcLayout = defineAsyncComponent(() => import('./pc/PcLayout.vue'))
@@ -30,4 +31,6 @@ onUnmounted(() => {
 
 <template>
   <component :is="isNarrow ? H5Layout : PcLayout" />
+  <!-- 全局上传进度浮层 -->
+  <UploadQueue />
 </template>

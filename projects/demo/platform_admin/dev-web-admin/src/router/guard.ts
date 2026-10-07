@@ -78,8 +78,19 @@ export function setupRouterGuard(router: Router): void {
         return next()
       }
 
-      // 未登录
+      // 未登录：尝试用 refresh_token 自动续签
       if (!accessToken) {
+        const refreshToken = localStorage.getItem('refresh_token')
+        if (refreshToken) {
+          try {
+            const { refreshTokenWithRetry } = await import('@/utils/token-manager')
+            await refreshTokenWithRetry()
+            // 刷新成功，继续导航（新 access_token 已存入 localStorage）
+            return next()
+          } catch {
+            // 刷新失败，跳登录页
+          }
+        }
         if (platformToken && to.path !== '/tenant-select') {
           stopLoading()
           return next({ path: '/tenant-select' })

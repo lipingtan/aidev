@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"go-admin/app/bulletin"
+	"go-admin/app/cms"
 	"go-admin/app/license"
+	"go-admin/app/media"
 	userAuth "go-admin/app/user_auth"
 	userAuthHandler "go-admin/app/user_auth/handler"
 	userAuthModel "go-admin/app/user_auth/model"
@@ -504,6 +506,34 @@ func initUserAuth(cfg *config.Config, deps *Dependencies, engine *gin.Engine) {
 			log.Printf("[license] Start 失败: %v", err)
 		} else {
 			log.Println("[license] 内嵌插件已注册并启动")
+		}
+	}
+	// ────────────────────────────────────────────────────────────────────────────
+
+	// ── 内嵌插件注册（media 素材管理）──────────────────────────────────────────
+	mediaPlugin := media.NewPlugin(db)
+	mediaPlugin.RegisterAdminRoutes(adminGroup)
+	if err := deps.PluginManager.RegisterDirect("media", mediaPlugin); err != nil {
+		log.Printf("[media] RegisterDirect 失败: %v", err)
+	} else if err := deps.PluginManager.Start("media"); err != nil {
+		log.Printf("[media] Start 失败: %v", err)
+	} else {
+		log.Println("[media] 内嵌插件已注册并启动")
+	}
+	// ────────────────────────────────────────────────────────────────────────────
+
+	// ── 内嵌插件注册（cms 主站内容管理）─────────────────────────────────────────
+	cmsPlugin := cms.NewPlugin(db)
+	cmsPlugin.RegisterAdminRoutes(adminGroup)
+	cmsPublicGroup := engine.Group("/api/v1/public")
+	cmsPlugin.RegisterPublicRoutes(cmsPublicGroup)
+	if deps.PluginManager != nil {
+		if err := deps.PluginManager.RegisterDirect("cms", cmsPlugin); err != nil {
+			log.Printf("[cms] RegisterDirect 失败: %v", err)
+		} else if err := deps.PluginManager.Start("cms"); err != nil {
+			log.Printf("[cms] Start 失败: %v", err)
+		} else {
+			log.Println("[cms] 内嵌插件已注册并启动")
 		}
 	}
 	// ────────────────────────────────────────────────────────────────────────────

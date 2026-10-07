@@ -30,22 +30,36 @@ const appStore = useAppStore()
 
 <style scoped>
 .app-layout {
-  height: 100%;
+  height: 100vh;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-layout__body {
-  height: calc(100% - var(--header-height));
-  overflow: hidden;
+  flex: 1;
+  overflow: hidden;    /* 防止任何子元素撑开整体 */
+  display: flex;
 }
 
 .app-main {
   padding: 0;
-  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;  /* TagsView 固定在顶，内容区独立滚动 */
+  min-width: 0;
+  overflow: hidden;
   background-color: var(--color-bg-page);
 }
 
+/* TagsView 和 Breadcrumb 固定，不参与滚动 */
+.app-main :deep(.tags-view),
+.app-main :deep(.app-breadcrumb) {
+  flex-shrink: 0;
+}
+
 .app-main__content {
+  flex: 1;
+  overflow-y: auto;        /* 只有内容区上下滚动 */
   padding: var(--content-padding);
   position: relative;
   z-index: 1;

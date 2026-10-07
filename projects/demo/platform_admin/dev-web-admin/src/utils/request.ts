@@ -54,8 +54,12 @@ service.interceptors.response.use(
     const res = response.data
     // 业务状态码：0 或 200 均为成功
     if (res.code !== 0 && res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      // 提取后端 error_code（若存在），方便上层组件做精细化处理
+      const errorCode: number | undefined = (res as any).error_code ?? res.code
+      const msg = (res as any).msg || res.message || '请求失败'
+      ElMessage.error(msg)
+      const err = Object.assign(new Error(msg), { error_code: errorCode, response })
+      return Promise.reject(err)
     }
     // 分页响应：包含 total 字段时返回完整对象（保留分页元数据）
     if ((res as any).total !== undefined) {

@@ -121,40 +121,48 @@ onMounted(() => {
 
 <template>
   <el-aside class="app-sidebar" :class="{ 'aurora-local': appStore.themeMode === 'aurora-local' }" :width="appStore.sidebarCollapsed ? '64px' : '220px'">
-    <el-menu :default-active="activeMenu" :collapse="appStore.sidebarCollapsed" :collapse-transition="false" router class="app-sidebar__menu">
-      <template v-for="item in dynamicMenuTree" :key="item.id || item.path || item.name">
-        <!-- 有子菜单：渲染为 sub-menu -->
-        <el-sub-menu v-if="item.children && item.children.length" :index="item.path || item.name">
-          <template #title>
+    <el-scrollbar class="app-sidebar__scroll">
+      <el-menu :default-active="activeMenu" :collapse="appStore.sidebarCollapsed" :collapse-transition="false" router class="app-sidebar__menu">
+        <template v-for="item in dynamicMenuTree" :key="item.id || item.path || item.name">
+          <!-- 有子菜单：渲染为 sub-menu -->
+          <el-sub-menu v-if="item.children && item.children.length" :index="item.path || item.name">
+            <template #title>
+              <el-icon v-if="item.icon"><component :is="item.icon" /></el-icon>
+              <span>{{ item.name }}</span>
+            </template>
+            <el-menu-item v-for="child in item.children" :key="child.id || child.path" :index="child.path">
+              <el-icon v-if="child.icon"><component :is="child.icon" /></el-icon>
+              <template #title>{{ child.name }}</template>
+            </el-menu-item>
+          </el-sub-menu>
+          <!-- 无子菜单：渲染为独立菜单项 -->
+          <el-menu-item v-else :index="item.path">
             <el-icon v-if="item.icon"><component :is="item.icon" /></el-icon>
-            <span>{{ item.name }}</span>
-          </template>
-          <el-menu-item v-for="child in item.children" :key="child.id || child.path" :index="child.path">
-            <el-icon v-if="child.icon"><component :is="child.icon" /></el-icon>
-            <template #title>{{ child.name }}</template>
+            <template #title>{{ item.name }}</template>
           </el-menu-item>
-        </el-sub-menu>
-        <!-- 无子菜单：渲染为独立菜单项 -->
-        <el-menu-item v-else :index="item.path">
-          <el-icon v-if="item.icon"><component :is="item.icon" /></el-icon>
-          <template #title>{{ item.name }}</template>
-        </el-menu-item>
-      </template>
-    </el-menu>
+        </template>
+      </el-menu>
+    </el-scrollbar>
   </el-aside>
 </template>
 
 <style scoped>
 .app-sidebar {
-  overflow-x: hidden;
-  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
   background: linear-gradient(180deg, var(--color-surface), var(--color-surface-elevated));
   border-right: 1px solid var(--color-border);
   transition: width 0.3s;
   box-shadow: var(--shadow-sm);
 }
+
+.app-sidebar__scroll {
+  flex: 1;   /* 占满侧边栏剩余高度，内部菜单超出时 el-scrollbar 自己滚动 */
+}
+
 .app-sidebar__menu {
-  height: 100%;
   border-right: none;
   background: transparent;
 }

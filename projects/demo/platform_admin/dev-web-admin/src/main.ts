@@ -81,6 +81,10 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
 
+// 全局注册 MediaPicker（供其他模块通过 openMediaPicker() 调用）
+import MediaPickerVue from '@/components/MediaPicker/index.vue'
+app.component('MediaPicker', MediaPickerVue)
+
 const appStore = useAppStore()
 appStore.initTheme()
 

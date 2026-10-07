@@ -149,7 +149,14 @@ func AuthMiddleware(authSvc *service.AuthService, bizUserChecker ...BizUserCheck
 	}
 	return func(c *gin.Context) {
 		// 从 Authorization header 获取 Bearer token
+		// WebSocket 握手时无法设置 header，支持 ?token= query param 降级
 		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			// 降级：从 query param 读 token（供 WebSocket 等升级协议使用）
+			if qToken := c.Query("token"); qToken != "" {
+				authHeader = "Bearer " + qToken
+			}
+		}
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code":    40101,
@@ -263,12 +270,18 @@ func AuthMiddleware(authSvc *service.AuthService, bizUserChecker ...BizUserCheck
 				return
 			}
 			if status != 1 {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"code":    40104,
-					"data":    nil,
-					"message": "账号已禁用",
-				})
-				return
+				// 客服接口豁免：账号禁用仍可联系客服
+				csPath := c.FullPath()
+				if strings.Contains(csPath, "/cs/session") || strings.Contains(csPath, "/cs/messages") || strings.Contains(csPath, "/cs/merge-session") {
+					// 允许通过，禁用用户可以发客服消息
+				} else {
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+						"code":    40104,
+						"data":    nil,
+						"message": "账号已禁用",
+					})
+					return
+				}
 			}
 			if dbTokenVersion != claims.TokenVersion {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{

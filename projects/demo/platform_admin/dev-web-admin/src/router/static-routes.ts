@@ -193,6 +193,20 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '公告管理', icon: 'Bell', permission: 'bulletin:list' }
       },
 
+      // 内嵌插件：CMS 主站内容管理
+      {
+        path: 'cms/settings',
+        name: 'cms-settings',
+        component: () => import('@/views/cms/CmsSettings.vue'),
+        meta: { title: '主站配置', icon: 'Setting', permission: 'cms:site-config' }
+      },
+      {
+        path: 'cms/products',
+        name: 'cms-products',
+        component: () => import('@/views/cms/CmsProducts.vue'),
+        meta: { title: '产品服务', icon: 'Grid', permission: 'cms:products' }
+      },
+
       // 内嵌插件：License 管理（方式一：内嵌编译）
       {
         path: 'license/code-types',
@@ -253,6 +267,63 @@ export const asyncRoutes: RouteRecordRaw[] = [
         name: 'license-prices',
         component: () => import('@/views/license/Prices.vue'),
         meta: { title: '套餐定价', icon: 'PriceTag', permission: 'license:prices' }
+      },
+      // v2-cr12: 游戏中心内容管理
+      {
+        path: 'license/game-categories',
+        name: 'license-game-categories',
+        component: () => import('@/views/license/GameCategories.vue'),
+        meta: { title: '游戏分类', icon: 'Menu', permission: 'license:game-categories' }
+      },
+      {
+        path: 'license/game-notices',
+        name: 'license-game-notices',
+        component: () => import('@/views/license/GameNotices.vue'),
+        meta: { title: '公告管理', icon: 'Bell', permission: 'license:notices' }
+      },
+      {
+        path: 'license/game-banners',
+        name: 'license-game-banners',
+        component: () => import('@/views/license/GameBanners.vue'),
+        meta: { title: 'Banner管理', icon: 'Picture', permission: 'license:banners' }
+      },
+      {
+        path: 'license/game-tags',
+        name: 'license-game-tags',
+        component: () => import('@/views/license/GameTags.vue'),
+        meta: { title: '标签管理', icon: 'CollectionTag', permission: 'license:game-tags' }
+      },
+      {
+        path: 'license/customer-service',
+        name: 'license-customer-service',
+        component: () => import('@/views/license/CustomerService.vue'),
+        meta: { title: '客服工作台', icon: 'ChatDotRound', permission: 'license:cs' }
+      },
+      {
+        path: 'license/cs-agents',
+        name: 'license-cs-agents',
+        component: () => import('@/views/license/CsAgents.vue'),
+        meta: { title: '客服人员配置', icon: 'Service', permission: 'license:cs:agents' }
+      },
+      {
+        path: 'license/app-versions',
+        name: 'license-app-versions',
+        component: () => import('@/views/license/AppVersions.vue'),
+        meta: { title: 'App版本管理', icon: 'Cellphone', permission: 'license:app-versions' }
+      },
+
+      // 素材管理
+      {
+        path: 'media/files',
+        name: 'media-files',
+        component: () => import('@/views/media/MediaManager.vue'),
+        meta: { title: '文件管理', icon: 'FolderOpened', permission: 'media:files' }
+      },
+      {
+        path: 'media/storage',
+        name: 'media-storage',
+        component: () => import('@/views/media/StorageAccounts.vue'),
+        meta: { title: '存储配置', icon: 'Setting', permission: 'media:config' }
       },
 
       // 应用目录

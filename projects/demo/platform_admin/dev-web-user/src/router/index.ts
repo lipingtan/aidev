@@ -25,8 +25,20 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/home',
     name: 'Home',
-    component: () => import('@/views/home/index.vue'),
-    meta: { title: '首页', requiresAuth: false }
+    component: () => import('@/views/cms/HomePage.vue'),
+    meta: { title: '首页', requiresAuth: false, standalone: true }
+  },
+  {
+    path: '/products',
+    name: 'Products',
+    component: () => import('@/views/cms/ProductsPage.vue'),
+    meta: { title: '产品服务', requiresAuth: false, standalone: true }
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/cms/AboutPage.vue'),
+    meta: { title: '关于我们', requiresAuth: false, standalone: true }
   },
   {
     path: '/bulletin',
@@ -46,6 +58,13 @@ const routes: RouteRecordRaw[] = [
     name: 'Profile',
     component: () => import('@/views/home/index.vue'), // 占位，后续替换
     meta: { title: '个人中心', requiresAuth: true }
+  },
+  // App 升级页 — 公开，无需登录
+  {
+    path: '/app/upgrade',
+    name: 'AppUpgrade',
+    component: () => import('@/views/upgrade/index.vue'),
+    meta: { title: 'App 升级', requiresAuth: false, standalone: true }
   }
 ]
 

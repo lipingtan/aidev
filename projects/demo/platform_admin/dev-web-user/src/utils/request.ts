@@ -33,8 +33,12 @@ service.interceptors.response.use(
     const res = response.data
     // 后端成功码：0 或 200 均视为成功
     if (res.code !== 0 && res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      // 提取 error_code 附到 Error 对象，方便上层组件精细化处理
+      const errorCode: number | undefined = (res as any).error_code ?? res.code
+      const msg = (res as any).msg || res.message || '请求失败'
+      ElMessage.error(msg)
+      const err = Object.assign(new Error(msg), { error_code: errorCode, response })
+      return Promise.reject(err)
     }
     return res.data
   },
@@ -44,7 +48,7 @@ service.interceptors.response.use(
       window.location.href = '/login'
       return Promise.reject(error)
     }
-    ElMessage.error(error.response?.data?.message || error.message || '网络异常')
+    ElMessage.error(error.response?.data?.msg || error.response?.data?.message || error.message || '网络异常')
     return Promise.reject(error)
   }
 )

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>街机时代 — 游戏详情页原型 v2</title>
+<style>
+/* ============================================================
+   街机时代 mjarch 游戏详情页原型
+   参考业界最佳实践：App Store / TapTap / Google Play 游戏详情页
+   结构：沉浸式头图 → 评分行 → 首屏通栏主按钮（业界主流：头部主按钮+滚动后吸底浮现）→ 截图 → Tab（简介/评分/评价）
+   ============================================================ */
+:root{
+  --bg:#121216; --card:#1d1d24; --card2:#25252e;
+  --txt:#e8e8ee; --sub:#9a9aa8; --line:#2e2e3a;
+  --gold:#f5a623; --blue:#4c8dff; --green:#34c77b; --red:#ff5a5a;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a0d;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--txt);
+     display:flex;justify-content:center;min-height:100vh}
+.phone{width:400px;background:var(--bg);min-height:100vh;position:relative;box-shadow:0 0 40px #000;padding-bottom:16px}
+
+/* ─── 状态栏 + 沉浸式头图 ─── */
+.hero{position:relative;height:230px}
+.hero .backdrop{position:absolute;inset:0;
+  background:linear-gradient(180deg,#3b2a6d 0%,#2a1f52 55%,var(--bg) 100%)}
+.hero .cover{position:absolute;left:50%;top:36px;transform:translateX(-50%);
+  width:118px;height:158px;border-radius:14px;overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.12)}
+.hero .cover .ph{width:100%;height:100%;background:linear-gradient(135deg,#7b5cd6,#4633a0);
+  display:flex;align-items:center;justify-content:center;font-size:40px}
+.navbar{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;z-index:2}
+.navbar .icon-btn{width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.35);
+  display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;border:none;cursor:pointer}
+.hero-vip{position:absolute;top:56px;right:20px;background:linear-gradient(135deg,var(--gold),#e8890c);
+  color:#3a2500;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.5px}
+
+/* ─── 标题区 ─── */
+.title-block{padding:14px 20px 10px}
+.title-row{display:flex;justify-content:space-between;align-items:flex-start}
+h1{font-size:21px;font-weight:700}
+.meta-line{margin-top:6px;font-size:12.5px;color:var(--sub)}
+.meta-line .dot{margin:0 6px;opacity:.5}
+.fav-share{display:flex;gap:14px}
+.fav-share button{background:none;border:none;color:var(--sub);font-size:11.5px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;cursor:pointer}
+.fav-share .ic{font-size:19px}
+.fav-share .fav.on .ic{color:var(--gold)}
+
+/* ─── 评分/体积/年龄 行（App Store 式三列）─── */
+.stat-row{display:flex;margin:12px 20px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{flex:1;text-align:center;position:relative}
+.stat+.stat::before{content:"";position:absolute;left:0;top:15%;height:70%;width:1px;background:var(--line)}
+.stat .v{font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px}
+.stat .v .star{color:var(--gold);font-size:13px}
+.stat .k{font-size:11px;color:var(--sub);margin-top:3px}
+.stat.score .v{color:var(--gold)}
+
+/* ─── 截图横滑 ─── */
+.section{margin-top:18px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 20px;margin-bottom:10px}
+.sec-head h2{font-size:16px;font-weight:700}
+.sec-head a{font-size:12.5px;color:var(--blue);text-decoration:none}
+.shots{display:flex;gap:10px;overflow-x:auto;padding:0 20px 4px;scroll-snap-type:x mandatory}
+.shots::-webkit-scrollbar{display:none}
+.shot{flex:0 0 218px;height:128px;border-radius:10px;overflow:hidden;scroll-snap-align:start;
+  background:linear-gradient(135deg,#2b2b38,#1a1a24);position:relative;border:1px solid var(--line)}
+.shot .ph-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#55556a;font-size:26px}
+.shot .cap{position:absolute;bottom:0;left:0;right:0;font-size:11px;color:#aaaabd;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));padding:16px 8px 6px;text-align:center}
+
+/* ─── Tab：简介 / 评分分布 / 评价 ─── */
+.tabs{display:flex;margin-top:4px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+.tab{flex:1;text-align:center;padding:12px 0;font-size:14px;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent}
+.tab.on{color:var(--txt);font-weight:700;border-bottom-color:var(--gold)}
+.pane{display:none;padding:16px 20px}
+.pane.on{display:block}
+
+/* 简介 */
+.desc{font-size:14px;line-height:1.75;color:#cfcfda}
+.desc .fold{color:var(--blue);cursor:pointer;white-space:nowrap}
+.tag-row{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:11.5px;color:var(--sub);background:var(--card2);padding:4px 10px;border-radius:6px}
+.info-table{margin-top:16px;font-size:13px}
+.info-table .row{display:flex;padding:9px 0;border-bottom:1px solid var(--line)}
+.info-table .k{width:92px;color:var(--sub);flex:none}
+.info-table .v{color:#cfcfda}
+
+/* 评分区 */
+.score-hero{display:flex;align-items:center;gap:22px;padding:6px 0 14px}
+.score-big{font-size:44px;font-weight:800;color:var(--gold)}
+.score-side .stars{color:var(--gold);font-size:16px;letter-spacing:2px}
+.score-side .cnt{font-size:12px;color:var(--sub);margin-top:4px}
+.bars{flex:1;display:flex;flex-direction:column;gap:5px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--sub)}
+.bar{flex:1;height:6px;border-radius:3px;background:var(--card2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold);border-radius:3px}
+.my-rate{margin-top:6px;padding:14px;background:var(--card);border-radius:12px}
+.my-rate .q{font-size:13.5px;margin-bottom:10px}
+.rate-stars{font-size:26px;color:#4a4a5a;letter-spacing:6px;cursor:pointer}
+.rate-stars .on{color:var(--gold)}
+
+/* 评价列表 */
+.review{padding:14px 0;border-bottom:1px solid var(--line)}
+.review:last-child{border-bottom:none}
+.rv-head{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#4c8dff,#7b5cd6);
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.rv-name{font-size:13.5px;font-weight:600}
+.rv-stars{color:var(--gold);font-size:11px;margin-top:2px}
+.rv-time{margin-left:auto;font-size:11px;color:var(--sub)}
+.rv-body{font-size:13.5px;line-height:1.7;color:#cfcfda;margin:9px 0 8px}
+.rv-foot{display:flex;gap:18px;font-size:12px;color:var(--sub)}
+.rv-foot span{cursor:pointer}
+.rv-foot .liked{color:var(--blue)}
+.write-btn{display:block;width:100%;margin-top:14px;padding:11px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--txt);font-size:13.5px;text-align:center;cursor:pointer}
+
+/* ─── 首屏通栏主按钮（头部，业界游戏中心主流）─── */
+.inline-action{display:flex;gap:10px;align-items:center;padding:4px 20px 0}
+.inline-action .btn-side{width:46px;height:46px}
+.inline-action .btn-main{flex:1}
+
+/* ─── 吸底主按钮：滚动超过一屏后才浮现（JS 控制 .show）─── */
+.bottom-bar{position:fixed;bottom:0;width:400px;background:rgba(20,20,26,.96);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));z-index:10;
+  display:flex;gap:10px;align-items:center;
+  transform:translateY(110%);transition:transform .28s ease}
+.bottom-bar.show{transform:translateY(0)}
+.btn-main{flex:1;height:46px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--green),#1fa563);
+  color:#fff;font-size:15.5px;font-weight:700;cursor:pointer;position:relative;overflow:hidden}
+.btn-main.paused{background:linear-gradient(135deg,var(--blue),#2f6fd8)}
+.btn-main.vip{background:linear-gradient(135deg,var(--gold),#e8890c);color:#3a2500}
+.btn-main:active{transform:scale(.985)}
+.btn-main .sub{display:block;font-size:10.5px;font-weight:400;opacity:.85;margin-top:1px}
+.progress-track{position:absolute;left:0;top:0;bottom:0;width:62%;background:rgba(255,255,255,.18)}
+.progress-track::after{content:"";position:absolute;right:0;top:0;bottom:0;width:3px;background:#fff;opacity:.9}
+.btn-side{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);
+  color:var(--sub);font-size:18px;cursor:pointer;flex:none}
+
+/* 交互提示 toast */
+#toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:rgba(0,0,0,.85);
+  color:#fff;font-size:13px;padding:9px 18px;border-radius:20px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 沉浸式头图：封面 + 返回 -->
+  <div class="hero">
+    <div class="backdrop"></div>
+    <div class="navbar">
+      <button class="icon-btn" onclick="toast('返回大厅')">←</button>
+      <button class="icon-btn" onclick="toast('分享')">⋯</button>
+    </div>
+    <div class="cover"><div class="ph">🀄</div></div>
+    <div class="hero-vip">VIP</div>
+  </div>
+
+  <!-- 标题 + 收藏/分享 -->
+  <div class="title-block">
+    <div class="title-row">
+      <div>
+        <h1>麻将三国 · 街机版</h1>
+        <div class="meta-line">mjsangu<span class="dot">·</span>棋牌桌游<span class="dot">·</span>需要 VIP 会员</div>
+      </div>
+      <div class="fav-share">
+        <button class="fav on" id="favBtn" onclick="toggleFav()"><span class="ic">★</span>已收藏</button>
+        <button onclick="toast('分享')"><span class="ic">↗</span>分享</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 评分 / 体积 / 下载量 三列统计（App Store 式） -->
+  <div class="stat-row">
+    <div class="stat score"><div class="v">4.7 <span class="star">★</span></div><div class="k">1,284 人评分</div></div>
+    <div class="stat"><div class="v">18.2 MB</div><div class="k">ROM 体积</div></div>
+    <div class="stat"><div class="v">3.2 万</div><div class="k">下载次数</div></div>
+  </div>
+
+  <!-- 首屏通栏主按钮（第一眼可按；删除入口放这里） -->
+  <div class="inline-action">
+    <button class="btn-side" onclick="toast('删除下载')">🗑</button>
+    <button class="btn-main" id="mainBtnTop" onclick="cycleState()">
+      <div class="progress-track" id="progTop" style="display:none"></div>
+      <span id="mainLabelTop">开始游戏</span>
+      <span class="sub" id="mainSubTop">已就绪</span>
+    </button>
+  </div>
+
+  <!-- 截图横滑 -->
+  <div class="section">
+    <div class="sec-head"><h2>预览</h2><a onclick="toast('全屏预览')">查看全部</a></div>
+    <div class="shots">
+      <div class="shot"><div class="ph-label">🎮</div><div class="cap">对局画面</div></div>
+      <div class="shot"><div class="ph-label">🃏</div><div class="cap">出牌选择</div></div>
+      <div class="shot"><div class="ph-label">🏆</div><div class="cap">结算排名</div></div>
+      <div class="shot"><div class="ph-label">⚙️</div><div class="cap">机台设置</div></div>
+    </div>
+  </div>
+
+  <!-- Tab 区 -->
+  <div class="tabs">
+    <div class="tab on" data-pane="p-intro" onclick="switchTab(this)">简介</div>
+    <div class="tab" data-pane="p-rate" onclick="switchTab(this)">评分</div>
+    <div class="tab" data-pane="p-review" onclick="switchTab(this)">评价 326</div>
+  </div>
+
+  <!-- 简介 -->
+  <div class="pane on" id="p-intro">
+    <div class="desc" id="desc">
+      经典街机麻将与三国题材的融合之作。以 1998 年 IGS 同名机台为蓝本完整移植，
+      保留原始搓牌手感与连庄爆机机制。支持单人闯关与本地双人对战，内置 12 位
+      三国武将技能系统，胡牌触发武将专属演出动画。<span class="fold"
+      onclick="toast('展开全部简介')">展开</span>
+    </div>
+    <div class="tag-row">
+      <span class="tag">棋牌桌游</span><span class="tag">双人同屏</span><span class="tag">怀旧街机</span>
+      <span class="tag">支持按键自定义</span>
+    </div>
+    <div class="info-table">
+      <div class="row"><div class="k">ROM 文件</div><div class="v">mjsangu.zip（18.2 MB）</div></div>
+      <div class="row"><div class="k">依赖 ROM</div><div class="v">无</div></div>
+      <div class="row"><div class="k">MD5 校验</div><div class="v">a3f9…e27b</div></div>
+      <div class="row"><div class="k">操作方式</div><div class="v">虚拟摇杆 + 实体手柄</div></div>
+      <div class="row"><div class="row k" style="display:none"></div><div class="k">更新时间</div><div class="v">2026-09-28</div></div>
+    </div>
+  </div>
+
+  <!-- 评分 -->
+  <div class="pane" id="p-rate">
+    <div class="score-hero">
+      <div class="score-big">4.7</div>
+      <div class="score-side">
+        <div class="stars">★★★★★</div>
+        <div class="cnt">共 1,284 人评分</div>
+      </div>
+      <div class="bars">
+        <div class="bar-row">5<i class="bar"><i style="width:78%"></i></i></div>
+        <div class="bar-row">4<i class="bar"><i style="width:14%"></i></i></div>
+        <div class="bar-row">3<i class="bar"><i style="width:5%"></i></i></div>
+        <div class="bar-row">2<i class="bar"><i style="width:2%"></i></i></div>
+        <div class="bar-row">1<i class="bar"><i style="width:1%"></i></i></div>
+      </div>
+    </div>
+    <div class="my-rate">
+      <div class="q">为这个游戏打个分吧</div>
+      <div class="rate-stars" id="rateStars">
+        <span class="on" onclick="rate(1)">★</span><span class="on" onclick="rate(2)">★</span>
+        <span class="on" onclick="rate(3)">★</span><span class="on" onclick="rate(4)">★</span>
+        <span onclick="rate(5)">★</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 评价 -->
+  <div class="pane" id="p-review">
+    <div class="review">
+      <div class="rv-head">
+        <div class="avatar">L</div>
+        <div><div class="rv-name">连庄小能手</div><div class="rv-stars">★★★★★</div></div>
+        <div class="rv-time">10-02</div>
+      </div>
+      <div class="rv-body">手感还原度很高，虚拟按键布局也合理，搓牌的连打判定和街机厅几乎一样。希望后续加个在线排行榜。</div>
+      <div class="rv-foot"><span class="liked">👍 有用 42</span><span>💬 回复</span></div>
+    </div>
+    <div class="review">
+      <div class="rv-head">
+        <div class="avatar" style="background:linear-gradient(135deg,#34c77b,#1fa563)">K</div>
+        <div><div class="rv-name">kk_wu</div><div class="rv-stars">★★★★☆</div></div>
+        <div class="rv-time">09-25</div>
+      </div>
+      <div class="rv-body">双人模式很欢乐，就是下载 18MB 走的 CDN 有点慢，其他都好。</div>
+      <div class="rv-foot"><span>👍 有用 17</span><span>💬 回复</span></div>
+    </div>
+    <div class="review">
+      <div class="rv-head">
+        <div class="avatar" style="background:linear-gradient(135deg,#f5a623,#e8890c)">M</div>
+        <div><div class="rv-name">麻将老张</div><div class="rv-stars">★★★★★</div></div>
+        <div class="rv-time">09-19</div>
+      </div>
+      <div class="rv-body">童年的回忆，爆机音效一响鸡皮疙瘩都起来了。VIP 值得开。</div>
+      <div class="rv-foot"><span>👍 有用 9</span><span>💬 回复</span></div>
+    </div>
+    <button class="write-btn" onclick="toast('写评价（敬请期待）')">✍️ 写评价</button>
+  </div>
+
+  <!-- 吸底主按钮：滚动超过首屏后浮现，与头部按钮同状态 -->
+  <div class="bottom-bar" id="bottomBar">
+    <button class="btn-side" onclick="toast('删除下载')">🗑</button>
+    <button class="btn-main" id="mainBtn" onclick="cycleState()">
+      <div class="progress-track" id="prog" style="display:none"></div>
+      <span id="mainLabel">开始游戏</span>
+      <span class="sub" id="mainSub">已就绪</span>
+    </button>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ── Tab 切换 ── */
+function switchTab(el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t===el));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id===el.dataset.pane));
+}
+/* ── 收藏 ── */
+let fav=true;
+function toggleFav(){
+  fav=!fav;
+  const b=document.getElementById('favBtn');
+  b.classList.toggle('on',fav);
+  b.innerHTML=fav?'<span class="ic">★</span>已收藏':'<span class="ic">☆</span>收藏';
+  toast(fav?'已加入收藏夹':'已取消收藏');
+}
+/* ── 打分 ── */
+function rate(n){
+  document.querySelectorAll('#rateStars span').forEach((s,i)=>s.classList.toggle('on',i<n));
+  toast('感谢评分：'+n+' 星');
+}
+/* ── 主按钮状态机（对应 CR12 FR-12 七态，此处演示核心流转）── */
+const STATES=[
+  {label:'下载',        sub:'免费 · 需登录', cls:''},
+  {label:'暂停',        sub:'下载中 62% · 11.3/18.2 MB', cls:'', prog:.62},
+  {label:'继续',        sub:'已暂停 · 62%', cls:'paused', prog:.62},
+  {label:'校验中',      sub:'MD5 校验…', cls:'paused', prog:1},
+  {label:'开始游戏',    sub:'已就绪', cls:'', prog:0},
+];
+let si=4; // 默认已就绪，点击循环演示
+function cycleState(){
+  si=(si+1)%STATES.length;
+  renderState();
+  toast('状态机演示：'+STATES[si].label);
+}
+function renderState(){
+  const st=STATES[si];
+  [['mainBtn','mainLabel','mainSub','prog'],['mainBtnTop','mainLabelTop','mainSubTop','progTop']].forEach(
+    ([bId,lId,sId,pId])=>{
+      const b=document.getElementById(bId);
+      document.getElementById(lId).textContent=st.label;
+      document.getElementById(sId).textContent=st.sub;
+      b.className='btn-main '+st.cls;
+      const p=document.getElementById(pId);
+      p.style.display=st.prog?'block':'none';
+      p.style.width=(st.prog*100)+'%';
+    });
+}
+renderState();
+/* 滚动超过首屏（约 420px）后吸底栏浮现；回到顶部则隐藏 */
+const bottomBar=document.getElementById('bottomBar');
+window.addEventListener('scroll',()=>{
+  bottomBar.classList.toggle('show', window.scrollY>420);
+},{passive:true});
+/* ── toast ── */
+let tT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),1600);
+}
+</script>
+</body>
+</html>
