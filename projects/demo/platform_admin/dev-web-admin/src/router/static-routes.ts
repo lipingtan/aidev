@@ -201,10 +201,28 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '主站配置', icon: 'Setting', permission: 'cms:site-config' }
       },
       {
+        path: 'cms/pages',
+        name: 'cms-pages',
+        component: () => import('@/views/cms/CmsPageManager.vue'),
+        meta: { title: '页面管理', icon: 'Document', permission: 'cms:site-config' }
+      },
+      {
         path: 'cms/products',
         name: 'cms-products',
         component: () => import('@/views/cms/CmsProducts.vue'),
         meta: { title: '产品服务', icon: 'Grid', permission: 'cms:products' }
+      },
+      {
+        path: 'cms/integrations',
+        name: 'cms-integrations',
+        component: () => import('@/views/cms/CmsIntegrations.vue'),
+        meta: { title: '集成配置', icon: 'Connection', permission: 'cms:site-config' }
+      },
+      {
+        path: 'cms/ads',
+        name: 'cms-ads',
+        component: () => import('@/views/cms/CmsAds.vue'),
+        meta: { title: '广告管理', icon: 'Promotion', permission: 'cms:site-config' }
       },
 
       // 内嵌插件：License 管理（方式一：内嵌编译）

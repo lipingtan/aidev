@@ -351,6 +351,11 @@ function toggleUserMenu() {
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
+/* standalone模式（CMS主站页面）隐藏系统topbar，CMS页面有自己的CmsNav */
+.pc-layout--no-sidebar .topbar {
+  display: none;
+}
+
 .topbar-left { display: flex; align-items: center; gap: 16px; }
 
 /* 顶部 Logo */
@@ -571,17 +576,29 @@ function toggleUserMenu() {
   padding: 24px;
 }
 
-/* 全屏内容（无侧边栏时） */
+/* 全屏内容（无侧边栏时，CMS主站页面） */
 .page-content--full {
   padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-/* ── 底部备案信息 ── */
+/* main-wrap 在 no-sidebar 时不裁剪内容 */
+.pc-layout--no-sidebar .main-wrap {
+  overflow: visible;
+}
+
+/* ── 底部备案信息（仅非standalone模式显示）── */
 .pc-footer {
   background: #fff;
   border-top: 1px solid #f0f0f5;
   padding: 16px 24px;
   flex-shrink: 0;
+}
+
+/* standalone模式（CMS页面）隐藏系统页脚，CMS页面有自己的Footer */
+.pc-layout--no-sidebar .pc-footer {
+  display: none;
 }
 
 .footer-content {
