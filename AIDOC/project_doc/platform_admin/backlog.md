@@ -48,3 +48,36 @@
 - CR-B：管理端素材库 UI + 游戏编辑页图片选择器 + App 端 screenshots 字段生效
 
 ---
+
+
+## 游戏中心（game-center）
+
+### BACKLOG-GC-02：同名 ROM 不同修改版本支持
+
+**优先级：** 低  
+**来源：** 2026-10-23 架构讨论  
+**状态：** 待规划
+
+**背景：**
+当前 `games` 表以 `(tenant_id, rom_name)` 为联合唯一键，同一租户内同名 ROM 只能有一条记录。
+实际存在同一驱动名但内容不同的修改版本（如不同补丁版、不同地区版），当前架构无法区分。
+
+**问题描述：**
+1. **数据层**：`(tenant_id, rom_name)` 唯一约束导致同名 ROM 只能存一条
+2. **文件层**：不同版本 ROM zip 文件名相同，下载到同一目录会互相覆盖
+3. **MAME 层**：驱动名（rom_name）是 MAME 内核识别游戏的唯一标识，不能修改
+
+**方案方向（待细化）：**
+- **数据层**：唯一键改为 `(tenant_id, rom_name, variant)`，`variant` 默认空字符串代表主版本
+- **文件层**：下载目录按 `game_id`（雪花 ID）隔离，路径从 `roms/{rom_name}.zip` 改为 `roms/{game_id}/{rom_name}.zip`；parent ROM 放公共 `roms/shared/` 目录避免重复下载
+- **App 层**：`launchGame` 启动前将 `PREF_ROMsDIR_2` 设为该 game_id 对应的隔离目录
+
+**注意：**
+- `Emulator.ROM_PATH` 是单路径字符串，MAME native 层是否支持 `;` 分隔多路径**未验证**
+- 方案B（game_id 目录隔离）不依赖多路径，每次启动只设一个目录，规避了该风险
+- 改动涉及：后端 DDL + service + CDN 路径生成 + App DownloadManager + launchGame
+
+**依赖：**
+- 需明确实际有几个同名 ROM 不同版本的游戏，评估优先级
+- 建议有具体案例时再立 CR
+

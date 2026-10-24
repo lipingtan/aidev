@@ -312,6 +312,12 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '标签管理', icon: 'CollectionTag', permission: 'license:game-tags' }
       },
       {
+        path: 'license/game-reviews',
+        name: 'license-game-reviews',
+        component: () => import('@/views/license/GameReviews.vue'),
+        meta: { title: '评价管理', icon: 'ChatLineRound', permission: 'license:game-reviews' }
+      },
+      {
         path: 'license/customer-service',
         name: 'license-customer-service',
         component: () => import('@/views/license/CustomerService.vue'),

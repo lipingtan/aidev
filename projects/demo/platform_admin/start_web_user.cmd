@@ -1,6 +1,6 @@
 @echo off
 title Platform Admin - Web User (http://localhost:5174)
-cd /d C:\data\developer\studio\games\aidev\projects\demo\platform_admin\dev-web-user
+cd /d "%~dp0dev-web-user"
 
 echo Starting user frontend on :5174 ...
 pnpm dev

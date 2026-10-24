@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能客服集成方案 · platform_admin v4</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; background: #f5f6fa; color: #1a1a2e; line-height: 1.7; }
+
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%); color: #fff; padding: 40px 48px 32px; }
+  .header h1 { font-size: 26px; font-weight: 700; }
+  .header .subtitle { margin-top: 8px; color: #94a3b8; font-size: 14px; }
+  .header .meta { margin-top: 16px; display: flex; gap: 24px; flex-wrap: wrap; }
+  .header .meta span { font-size: 12px; color: #64748b; background: rgba(255,255,255,0.07); padding: 3px 10px; border-radius: 12px; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  .toc { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 32px; }
+  .toc h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 12px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { font-size: 14px; margin: 5px 0; }
+  .toc a { color: #3b82f6; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  h2 { font-size: 20px; font-weight: 700; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+  h2 .num { background: #3b82f6; color: #fff; font-size: 12px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  h3 { font-size: 15px; font-weight: 600; margin: 24px 0 10px; color: #1e293b; }
+
+  p { margin-bottom: 12px; font-size: 14.5px; color: #334155; }
+
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .card.blue  { border-left: 4px solid #3b82f6; }
+  .card.green { border-left: 4px solid #10b981; }
+  .card.amber { border-left: 4px solid #f59e0b; }
+  .card.red   { border-left: 4px solid #ef4444; }
+  .card.purple{ border-left: 4px solid #8b5cf6; }
+  .card.teal  { border-left: 4px solid #14b8a6; }
+  .card.slate { border-left: 4px solid #64748b; }
+  .card.rose  { border-left: 4px solid #f43f5e; }
+
+  .arch-box { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 24px; font-family: "JetBrains Mono","Fira Code","Courier New",monospace; font-size: 13px; line-height: 1.7; overflow-x: auto; white-space: pre; margin-bottom: 20px; }
+  .arch-box .c1 { color: #7dd3fc; }
+  .arch-box .c2 { color: #86efac; }
+  .arch-box .c3 { color: #fde68a; }
+  .arch-box .c4 { color: #f9a8d4; }
+  .arch-box .c5 { color: #a5b4fc; }
+  .arch-box .cm { color: #64748b; }
+
+  code { background: #f1f5f9; color: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: "JetBrains Mono",monospace; }
+  pre.code { background: #0f172a; color: #e2e8f0; padding: 20px; border-radius: 8px; font-size: 13px; font-family: monospace; overflow-x: auto; margin: 12px 0; line-height: 1.6; }
+  pre.code .kw  { color: #7dd3fc; }
+  pre.code .str { color: #86efac; }
+  pre.code .cm  { color: #64748b; font-style: italic; }
+  pre.code .fn  { color: #fde68a; }
+  pre.code .tp  { color: #f9a8d4; }
+  pre.code .key { color: #a5b4fc; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 16px; }
+  th { background: #f8fafc; text-align: left; padding: 10px 14px; font-weight: 600; border-bottom: 2px solid #e2e8f0; color: #475569; }
+  td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge.done    { background: #dcfce7; color: #166534; }
+  .badge.todo    { background: #fef3c7; color: #92400e; }
+  .badge.changed { background: #fef3c7; color: #b45309; }
+  .badge.new     { background: #d1fae5; color: #065f46; }
+  .badge.small   { background: #dbeafe; color: #1e40af; }
+  .badge.big     { background: #fce7f3; color: #9d174d; }
+  .badge.newft   { background: #fae8ff; color: #86198f; }
+
+  .q-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+  .q-answered { background: #f0fdf4; padding: 12px 20px; display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid #bbf7d0; }
+  .q-num-g { background: #10b981; color: #fff; font-size: 11px; font-weight: 700; min-width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .q-title { font-weight: 600; font-size: 14px; color: #1a1a2e; }
+  .q-body  { padding: 14px 20px; }
+  .q-answer { padding: 10px 14px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 7px; font-size: 13.5px; color: #166534; }
+  .q-answer strong { display: block; margin-bottom: 3px; color: #065f46; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .q-impact { margin-top: 8px; padding: 9px 12px; background: #fefce8; border: 1px solid #fde68a; border-radius: 7px; font-size: 13px; color: #854d0e; }
+  .q-impact strong { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px; }
+
+  ul, ol { padding-left: 20px; margin-bottom: 12px; }
+  li { font-size: 14px; color: #334155; margin: 5px 0; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+  .divider { height: 1px; background: #e2e8f0; margin: 36px 0; }
+  .section-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13.5px; color: #1d4ed8; }
+
+  .flow-step { display: flex; gap: 0; margin-bottom: 8px; align-items: stretch; }
+  .flow-num  { background: #3b82f6; color: #fff; font-size: 12px; font-weight: 700; min-width: 26px; display: flex; align-items: center; justify-content: center; border-radius: 6px 0 0 6px; }
+  .flow-body { background: #f8fafc; border: 1px solid #e2e8f0; border-left: none; border-radius: 0 6px 6px 0; padding: 8px 14px; font-size: 13.5px; color: #334155; flex: 1; }
+
+  .config-box { background: #0f172a; border-radius: 8px; padding: 16px 20px; font-family: monospace; font-size: 13px; margin: 12px 0; line-height: 1.8; }
+  .config-box .ck { color: #a5b4fc; }
+  .config-box .cv { color: #86efac; }
+  .config-box .cc { color: #64748b; }
+
+  .footer { text-align: center; color: #94a3b8; font-size: 12px; padding: 24px; border-top: 1px solid #e2e8f0; margin-top: 32px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>智能客服集成方案</h1>
+  <div class="subtitle">go-rag-agent 接入 platform_admin 客服模块 · 设计草案 v5</div>
+  <div class="meta">
+    <span>📅 2026-10-24</span>
+    <span>📌 状态：全部问题已确认，设计完整</span>
+    <span>🔧 Kiro</span>
+    <span>🔄 v5 — Session永久保存 / 禁言改小时 / 策略2细化</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#sec1">整体架构</a></li>
+      <li><a href="#sec2">数据模型变更</a></li>
+      <li><a href="#sec3">Agent 鉴权配置化机制</a></li>
+      <li><a href="#sec4">Session 持久化</a></li>
+      <li><a href="#sec5">转人工触发策略（可配置）</a></li>
+      <li><a href="#sec6">禁言功能</a></li>
+      <li><a href="#sec7">platform_admin MCP Server</a></li>
+      <li><a href="#sec8">完整改动清单</a></li>
+      <li><a href="#sec9">问题记录（全部已答复）</a></li>
+    </ol>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec1"><span class="num">1</span>整体架构</h2>
+
+  <div class="arch-box"><span class="cm">┌──────────────────────────────────────────────────────────────────┐</span>
+<span class="cm">│                          App 用户                                 │</span>
+<span class="cm">└─────────────────────────────┬────────────────────────────────────┘</span>
+                              │ POST /user/auth/cs/messages
+                              │ <span class="c3">（先检查是否被禁言，禁言则拒绝）</span>
+                              ▼
+<span class="c2">┌──────────── platform_admin :8080 ──────────────────────────────────┐</span>
+<span class="c2">│  UserSendCsMessage                                                  │</span>
+<span class="c2">│    ① 禁言检查：user 是否在禁言期 → 拒绝并返回禁言结束时间          │</span>
+<span class="c2">│    ② 存消息 cs_messages                                             │</span>
+<span class="c2">│    ③ WS 广播管理端工作台                                            │</span>
+<span class="c2">│    ④ session.mode == "bot" → goroutine 触发 AI                     │</span>
+<span class="c2">└──────────────────────┬──────────────────────────────────────────────┘</span>
+                       │ POST http://agent:8081/api/chat（异步）
+                       ▼
+<span class="c1">┌──────────── go-rag-agent :8081 ───────────────────────────────────┐</span>
+<span class="c1">│  Agent 处理：RAG → LLM → 工具调用                                  │</span>
+<span class="c1">│  TokenManager（后台）：agent_bot 登录/刷新 → access_token          │</span>
+<span class="c1">│  转人工触发策略检测：关键词 / 超轮次 / LLM判断 / 用户指令           │</span>
+<span class="c1">└──────────────────────┬────────────────────────────────────────────┘</span>
+                       │ MCP（携带 access_token）
+                       ▼
+<span class="c4">┌──────────── MCP Server :9001 ─────────────────────────────────────┐</span>
+<span class="c4">│  send_bot_message / handoff_to_human                               │</span>
+<span class="c4">│  query_member_info / query_orders                                  │</span>
+<span class="c4">│  → 调 platform_admin 管理端 API（JWT Bearer）                      │</span>
+<span class="c4">└──────────────────────┬────────────────────────────────────────────┘</span>
+                       │ JWT（agent_bot / ai_agent 角色）
+                       ▼
+<span class="c2">┌──────────── platform_admin :8080 管理端 API ───────────────────────┐</span>
+<span class="c2">│  存 bot 消息 / 触发转人工 / 查会员 / 查订单                         │</span>
+<span class="c2">│  WS 广播 → 管理端工作台 + App 轮询拉取                              │</span>
+<span class="c2">└────────────────────────────────────────────────────────────────────┘</span>
+
+<span class="cm">管理端工作台额外操作：</span>
+<span class="cm">  ├─ 手动接管会话（AdminHandoffToHuman）</span>
+<span class="cm">  ├─ 切换 bot/human 模式（AdminSetSessionMode）</span>
+<span class="cm">  └─ 禁言用户（AdminMuteUser）── 设置禁言时长，写 cs_mutes 表</span></div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec2"><span class="num">2</span>数据模型变更</h2>
+
+  <h3>CsAgent — 新增 agent_type 字段</h3>
+  <div class="card green">
+    <pre class="code"><span class="cm">// models.go — CsAgent 追加字段</span>
+<span class="kw">type</span> <span class="tp">CsAgent</span> <span class="kw">struct</span> {
+    <span class="cm">// ... 现有字段不变 ...</span>
+    AgentType <span class="kw">string</span> `gorm:<span class="str">"type:varchar(20);not null;default:'human'"</span> json:<span class="str">"agent_type"</span>`
+    <span class="cm">// 值："human"（默认）| "bot"</span>
+    <span class="cm">// bot 类型的 CsAgent 对应 agent_bot 管理端账号</span>
+    <span class="cm">// 管理端工作台列表展示时带 🤖 标识，不计入人工客服在线数</span>
+}</pre>
+    <ul style="margin-top:10px">
+      <li>新建会话时，自动将 <code>session.agent_id</code> 设为 bot 类型的 CsAgent ID（表示「bot 正在处理」）</li>
+      <li>转人工时，将 <code>session.agent_id</code> 换为人工客服 ID，<code>mode</code> 改为 <code>human</code></li>
+      <li>管理端工作台会话列表：可清楚区分「bot 处理中」/ 「人工处理中」/ 「未分配」三种状态</li>
+    </ul>
+  </div>
+
+  <h3>CsSession — mode 状态流转</h3>
+  <div class="arch-box" style="font-size:12px"><span class="c3">新会话创建</span>
+    mode = "bot", agent_id = &lt;bot CsAgent ID&gt;
+         │
+         │ 触发转人工（任意策略）
+         ▼
+    mode = "human", agent_id = &lt;人工客服 CsAgent ID 或 NULL&gt;
+         │
+         │ 管理端手动切回 bot（AdminSetSessionMode）
+         ▼
+    mode = "bot", agent_id = &lt;bot CsAgent ID&gt;</div>
+
+  <h3>CsMute — 新增禁言表</h3>
+  <div class="card rose">
+    <pre class="code"><span class="cm">// models.go — 新增 CsMute 表</span>
+<span class="kw">type</span> <span class="tp">CsMute</span> <span class="kw">struct</span> {
+    ID         <span class="kw">int64</span>      `gorm:<span class="str">"primaryKey;autoIncrement"</span> json:<span class="str">"id"</span>`
+    TenantID   <span class="kw">int64</span>      `gorm:<span class="str">"not null;uniqueIndex:uk_cs_mute_user"</span> json:<span class="str">"tenant_id"</span>`
+    UserID     <span class="kw">int64</span>      `gorm:<span class="str">"not null;uniqueIndex:uk_cs_mute_user"</span> json:<span class="str">"user_id,string"</span>`
+    <span class="cm">// 禁言结束时间（NULL = 永久禁言）</span>
+    MuteUntil  *time.Time `gorm:<span class="str">"index"</span> json:<span class="str">"mute_until"</span>`
+    Reason     <span class="kw">string</span>     `gorm:<span class="str">"type:varchar(255)"</span> json:<span class="str">"reason"</span>`
+    OperatorID <span class="kw">int64</span>      `json:<span class="str">"operator_id"</span>` <span class="cm">// 操作的管理端用户 ID</span>
+    CreatedAt  time.Time  `gorm:<span class="str">"autoCreateTime"</span> json:<span class="str">"created_at"</span>`
+    UpdatedAt  time.Time  `gorm:<span class="str">"autoUpdateTime"</span> json:<span class="str">"updated_at"</span>`
+}
+<span class="kw">func</span> (<span class="tp">CsMute</span>) <span class="fn">TableName</span>() <span class="kw">string</span> { <span class="kw">return</span> <span class="str">"cs_mutes"</span> }</pre>
+    <p style="font-size:13px;color:#64748b;margin-top:4px">唯一索引 <code>uk_cs_mute_user(tenant_id, user_id)</code> — 同一用户同一租户只有一条有效禁言记录，新禁言直接覆盖（upsert）。</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec3"><span class="num">3</span>Agent 鉴权配置化机制</h2>
+
+  <div class="section-note">
+    登录 URL、刷新 URL、请求报文模板全部在 go-rag-agent 管理页面配置，不写死代码，支持适配不同系统的登录接口。
+  </div>
+
+  <h3>管理页面「外部鉴权配置」区块</h3>
+  <table>
+    <thead><tr><th>配置项</th><th>类型</th><th>说明</th><th>示例值</th></tr></thead>
+    <tbody>
+      <tr><td><code>auth.login_url</code></td><td>string</td><td>登录接口完整 URL</td><td><code>http://127.0.0.1:8080/api/v1/admin/login</code></td></tr>
+      <tr><td><code>auth.login_body</code></td><td>JSON 模板</td><td>登录请求 body，支持 <code>{{username}}</code> <code>{{password}}</code></td><td><code>{"username":"{{username}}","password":"{{password}}"}</code></td></tr>
+      <tr><td><code>auth.login_token_path</code></td><td>string</td><td>从响应 JSON 提取 access_token 的路径（点分隔）</td><td><code>data.token</code></td></tr>
+      <tr><td><code>auth.login_refresh_path</code></td><td>string</td><td>从响应 JSON 提取 refresh_token 的路径</td><td><code>data.refresh_token</code></td></tr>
+      <tr><td><code>auth.login_expire_path</code></td><td>string</td><td>从响应 JSON 提取过期时间（Unix 秒或 ISO8601）</td><td><code>data.expire</code></td></tr>
+      <tr><td><code>auth.refresh_url</code></td><td>string</td><td>刷新 token 接口完整 URL</td><td><code>http://127.0.0.1:8080/api/v1/admin/refresh-token</code></td></tr>
+      <tr><td><code>auth.refresh_body</code></td><td>JSON 模板</td><td>刷新请求 body，支持 <code>{{refresh_token}}</code></td><td><code>{"refresh_token":"{{refresh_token}}"}</code></td></tr>
+      <tr><td><code>auth.username</code></td><td>string</td><td>登录账号（agent_bot）</td><td><code>agent_bot</code></td></tr>
+      <tr><td><code>auth.password</code></td><td>string 加密存储</td><td>登录密码，界面显示 ****</td><td>—</td></tr>
+      <tr><td><code>auth.advance_refresh_secs</code></td><td>int</td><td>提前多少秒刷新 token（默认 300）</td><td><code>300</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>TokenManager 行为</h3>
+  <div class="card teal">
+    <ul>
+      <li>启动时不立即登录（懒初始化），第一次工具调用时触发登录</li>
+      <li>后台 goroutine 定时检查，提前 <code>advance_refresh_secs</code> 秒自动刷新</li>
+      <li>刷新失败时重试 3 次，全失败则重新登录</li>
+      <li>管理页面保存新配置后，下次 token 操作时热更新生效</li>
+      <li>token 通过 <code>callctx</code> 注入每次 MCP 工具调用的 <code>Authorization: Bearer</code> header</li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec4"><span class="num">4</span>Session 持久化（SQLite / MySQL 可配）</h2>
+
+  <div class="section-note">
+    默认 SQLite（Agent 自带）；可配 MySQL。连接懒创建：启动不检测，实际使用时才建连。
+  </div>
+
+  <h3>管理页面「Session 存储配置」区块</h3>
+  <table>
+    <thead><tr><th>配置项</th><th>类型</th><th>说明</th><th>默认值</th></tr></thead>
+    <tbody>
+      <tr><td><code>session.store_type</code></td><td>enum</td><td><code>sqlite</code> / <code>mysql</code></td><td><code>sqlite</code></td></tr>
+      <tr><td><code>session.sqlite_path</code></td><td>string</td><td>SQLite 文件路径</td><td><code>./data/sessions.db</code></td></tr>
+      <tr><td><code>session.mysql_dsn</code></td><td>string 加密</td><td>MySQL DSN（store_type=mysql 时生效）</td><td>—</td></tr>
+      <tr><td><code>session.pool_max_open</code></td><td>int</td><td>最大连接数（mysql）</td><td><code>10</code></td></tr>
+      <tr><td><code>session.pool_max_idle</code></td><td>int</td><td>最大空闲连接数（mysql）</td><td><code>5</code></td></tr>
+      <tr><td><code>session.ttl_days</code></td><td>int</td><td>Session 保留天数，过期自动清理（<strong>0 = 永久保存，不清理</strong>）</td><td><code>0</code></td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:13px;color:#64748b">实现：<code>DBSessionStore</code> 用 <code>sync.Once</code> 懒初始化连接池；<code>agent_sessions</code> 表字段：<code>session_id, messages_json, created_at, updated_at</code>。默认永久保存，仅当 ttl_days &gt; 0 时启动定时清理 goroutine。</p>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec5"><span class="num">5</span>转人工触发策略（可配置）</h2>
+
+  <div class="section-note">
+    四种触发策略全部支持，触发规则（轮次数 N、关键词列表）在 go-rag-agent 管理页面配置，不写死代码。
+  </div>
+
+  <h3>策略清单</h3>
+  <table>
+    <thead><tr><th>策略</th><th>触发条件</th><th>配置项</th><th>执行路径</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>策略1：用户主动指令</strong></td>
+        <td>用户说「转人工」「联系客服」「要人工」等</td>
+        <td>语义识别（LLM 判断意图），无额外配置</td>
+        <td>Agent → <code>handoff_to_human</code> MCP 工具</td>
+      </tr>
+      <tr>
+        <td><strong>策略2：Agent 无法回答</strong></td>
+        <td>RAG 召回为空 + LLM 判断超出能力范围</td>
+        <td>
+          <code>handoff.no_answer_msg</code>（告知等待文案，可配）<br>
+          <code>handoff.no_human_msg</code>（无人工可用文案，可配）
+        </td>
+        <td>
+          ① Agent 先调 <code>send_bot_message</code> 发出等待提示（如「您的问题需要人工处理，正在为您转接，请稍候」）<br>
+          ② 再调 <code>handoff_to_human</code><br>
+          ③ platform_admin 侧：HandoffToHuman 检查是否有在线人工客服（<code>cs_agents</code> 中 <code>is_online=true AND agent_type=human</code> 的数量）<br>
+          &nbsp;&nbsp;- 有在线人工 → 正常排队，mode 变 human<br>
+          &nbsp;&nbsp;- 无在线人工 → mode 仍变 human（保留排队），但额外插入一条 bot 系统消息告知用户：「当前人工客服暂时不在线，您的问题已记录，客服上线后将第一时间回复您」（文案可配 <code>handoff.no_human_msg</code>）
+        </td>
+      </tr>
+      <tr>
+        <td><strong>策略3：超轮次自动转人工</strong></td>
+        <td>同一 session 内用户消息数 ≥ N 且 mode 仍为 bot</td>
+        <td><code>handoff.max_bot_turns</code>（默认 10，0=不限）</td>
+        <td>platform_admin AgentService 在触发 AI 前检查轮次，满足则直接调 HandoffToHuman</td>
+      </tr>
+      <tr>
+        <td><strong>策略4：关键词触发</strong></td>
+        <td>消息内容命中关键词列表</td>
+        <td><code>handoff.keywords</code>（逗号分隔，如 <code>投诉,退款失败,骗人,举报</code>）</td>
+        <td>platform_admin AgentService 在存消息后、触发 AI 前做关键词匹配，命中则直接转人工</td>
+      </tr>
+      <tr>
+        <td><strong>管理员手动接管</strong></td>
+        <td>管理端工作台点「接管」按钮</td>
+        <td>无配置，已有 AdminHandoffToHuman 接口</td>
+        <td>管理端直接调现有接口</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>平台管理端「AI 客服策略配置」区块（新增到客服设置页）</h3>
+  <table>
+    <thead><tr><th>配置项</th><th>类型</th><th>说明</th><th>默认值</th></tr></thead>
+    <tbody>
+      <tr><td><code>handoff.max_bot_turns</code></td><td>int</td><td>bot 最大处理轮次，超过自动转人工（0=不限）</td><td><code>10</code></td></tr>
+      <tr><td><code>handoff.keywords</code></td><td>string 列表</td><td>触发转人工的关键词，命中任意一个即触发</td><td><code>投诉, 举报, 退款失败</code></td></tr>
+      <tr><td><code>handoff.no_answer_msg</code></td><td>string</td><td>Agent 无法回答时先发给用户的等待提示文案</td><td><code>您的问题需要人工处理，正在为您转接，请稍候</code></td></tr>
+      <tr><td><code>handoff.no_human_msg</code></td><td>string</td><td>转人工时发现无在线人工客服时告知用户的文案</td><td><code>当前人工客服暂时不在线，您的问题已记录，客服上线后将第一时间回复您</code></td></tr>
+      <tr><td><code>handoff.timeout_secs</code></td><td>int</td><td>Agent 调用超时秒数，超时后走兜底降级</td><td><code>30</code></td></tr>
+      <tr><td><code>handoff.fallback_msg</code></td><td>string</td><td>Agent 超时/失败时的兜底消息文案</td><td><code>抱歉，智能客服暂时不可用，正在为您转接人工客服</code></td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:13px;color:#64748b">策略3和4的检测逻辑放在 platform_admin 的 AgentService 里，读取 cs_configs 表配置，热更新无需重启。</p>
+
+  <h3>触发流程</h3>
+  <div class="flow-step"><div class="flow-num">1</div><div class="flow-body">UserSendCsMessage 收到用户消息，先做禁言检查</div></div>
+  <div class="flow-step"><div class="flow-num">2</div><div class="flow-body">存消息到 cs_messages，WS 广播管理端</div></div>
+  <div class="flow-step"><div class="flow-num">3</div><div class="flow-body">AgentService 检查：关键词命中？→ 直接 HandoffToHuman，结束</div></div>
+  <div class="flow-step"><div class="flow-num">4</div><div class="flow-body">AgentService 检查：session 内用户消息轮次 ≥ max_bot_turns？→ 直接 HandoffToHuman，结束</div></div>
+  <div class="flow-step"><div class="flow-num">5</div><div class="flow-body">session.mode == "bot"？→ goroutine 调 go-rag-agent /api/chat</div></div>
+  <div class="flow-step"><div class="flow-num">6</div><div class="flow-body">Agent 内部：LLM 判断用户意图是「转人工」（策略1）→ 调 handoff_to_human MCP 工具</div></div>
+  <div class="flow-step"><div class="flow-num">6b</div><div class="flow-body">Agent 内部：RAG 召回空 + LLM 判断无法回答（策略2）→ 先调 send_bot_message 发等待提示 → 再调 handoff_to_human</div></div>
+  <div class="flow-step"><div class="flow-num">6c</div><div class="flow-body">platform_admin HandoffToHuman 检查在线人工数：有在线人工 → mode=human 正常排队；无在线人工 → mode=human 保留排队 + 额外插入「客服不在线」告知消息（文案取 handoff.no_human_msg）</div></div>
+  <div class="flow-step"><div class="flow-num">7</div><div class="flow-body">Agent 正常回答 → 调 send_bot_message MCP 工具写入消息</div></div>
+  <div class="flow-step"><div class="flow-num">8</div><div class="flow-body">超时/失败 → AgentService 写入兜底消息 + HandoffToHuman</div></div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec6"><span class="num">6</span>禁言功能</h2>
+
+  <div class="section-note">
+    管理端客服可以对指定用户设置禁言时长（或永久禁言）。用户被禁言后发消息会收到禁言提示，不会进入消息队列。
+  </div>
+
+  <h3>接口设计</h3>
+  <table>
+    <thead><tr><th>接口</th><th>方法</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>/admin/cs/sessions/:id/mute</code></td>
+        <td>POST</td>
+        <td>对该会话的用户设置禁言。body: <code>{ duration_hours: 1.5, reason: "..." }</code>，以小时为单位，支持 1 位小数（如 0.5=30分钟，1.5=90分钟）；duration_hours=0 表示永久禁言</td>
+      </tr>
+      <tr>
+        <td><code>/admin/cs/sessions/:id/unmute</code></td>
+        <td>POST</td>
+        <td>解除该会话用户的禁言</td>
+      </tr>
+      <tr>
+        <td><code>/admin/cs/mutes</code></td>
+        <td>GET</td>
+        <td>查询当前租户所有禁言列表（分页），可按 user_id / 是否有效过滤</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:13px;color:#64748b">前端 UI 时长选项：0.5h / 1h / 2h / 6h / 12h / 24h / 72h / 永久，也支持自定义输入（精度 0.1h）。换算：<code>mute_until = now + duration_hours × 3600s</code>，存储为 UTC 时间戳。</p>
+
+  <h3>禁言检查逻辑</h3>
+  <div class="card rose">
+    <pre class="code"><span class="cm">// UserSendCsMessage 最开头追加</span>
+<span class="kw">func</span> (h *<span class="tp">LicenseHandler</span>) <span class="fn">UserSendCsMessage</span>(c *gin.Context) {
+    authCtx := middleware.<span class="fn">GetAuthContext</span>(c)
+    tenantID, userID := authCtx.TenantID, authCtx.UserID
+
+    <span class="cm">// ① 禁言检查（优先，在存消息之前）</span>
+    muted, muteUntil, err := h.csSvc.<span class="fn">CheckMuted</span>(tenantID, userID)
+    <span class="kw">if</span> err == nil && muted {
+        msg := <span class="str">"您已被禁言"</span>
+        <span class="kw">if</span> muteUntil != nil {
+            msg = fmt.<span class="fn">Sprintf</span>(<span class="str">"您已被禁言，禁言将于 %s 结束"</span>, muteUntil.<span class="fn">Format</span>(<span class="str">"2006-01-02 15:04"</span>))
+        } <span class="kw">else</span> {
+            msg = <span class="str">"您已被永久禁言，如有疑问请联系平台"</span>
+        }
+        c.<span class="fn">JSON</span>(http.StatusForbidden, gin.H{<span class="str">"code"</span>: 403, <span class="str">"msg"</span>: msg,
+            <span class="str">"mute_until"</span>: muteUntil})
+        <span class="kw">return</span>
+    }
+    <span class="cm">// ... 后续正常逻辑</span>
+}</pre>
+  </div>
+
+  <h3>管理端操作位置</h3>
+  <p>在客服工作台会话详情侧边栏增加「禁言」操作入口：</p>
+  <ul>
+    <li>选择时长：10分钟 / 1小时 / 24小时 / 7天 / 永久（下拉选择）</li>
+    <li>填写禁言原因（可选）</li>
+    <li>当前被禁言用户在会话列表和会话详情有醒目标识 🔇</li>
+    <li>禁言到期自动解除（<code>CheckMuted</code> 对比当前时间和 <code>mute_until</code>）</li>
+  </ul>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec7"><span class="num">7</span>platform_admin MCP Server（独立部署）</h2>
+
+  <h3>工具清单</h3>
+  <table>
+    <thead><tr><th>工具名</th><th>对应 platform_admin 接口</th><th>入参</th></tr></thead>
+    <tbody>
+      <tr><td><code>send_bot_message</code></td><td>POST /admin/cs/sessions/:id/messages</td><td>session_id, content</td></tr>
+      <tr><td><code>handoff_to_human</code></td><td>POST /admin/cs/sessions/:id/handoff</td><td>session_id, reason</td></tr>
+      <tr><td><code>query_member_info</code></td><td>GET /admin/cs/users/:id/member-info</td><td>user_id</td></tr>
+      <tr><td><code>query_orders</code></td><td>GET /admin/license/orders?user_id=xxx</td><td>user_id, page, page_size</td></tr>
+    </tbody>
+  </table>
+
+  <div class="config-box">
+    <span class="cc"># 环境变量</span><br>
+    <span class="ck">PLATFORM_ADMIN_URL</span>=<span class="cv">http://127.0.0.1:8080</span>   <span class="cc"># platform_admin 主服务地址</span><br>
+    <span class="ck">MCP_SERVER_PORT</span>=<span class="cv">9001</span><br>
+    <br>
+    <span class="cc"># go-rag-agent 侧</span><br>
+    <span class="ck">PLATFORM_ADMIN_MCP_URL</span>=<span class="cv">http://127.0.0.1:9001</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec8"><span class="num">8</span>完整改动清单</h2>
+
+  <h3>platform_admin 侧</h3>
+  <table>
+    <thead><tr><th>#</th><th>改动项</th><th>规模</th><th>依赖</th></tr></thead>
+    <tbody>
+      <tr><td>PA-1</td><td>CsAgent 加 <code>agent_type</code> 字段（DDL + Model），新会话创建时自动绑定 bot agent_id</td><td><span class="badge small">小 ~30行</span></td><td>PA-5 账号创建后</td></tr>
+      <tr><td>PA-2</td><td>CsMute 表（新建 Model + AutoMigrate）</td><td><span class="badge small">小 ~30行</span></td><td>—</td></tr>
+      <tr><td>PA-3</td><td>禁言 service 方法：CheckMuted / MuteUser / UnmuteUser / ListMutes</td><td><span class="badge small">小 ~80行</span></td><td>PA-2</td></tr>
+      <tr><td>PA-4</td><td>禁言接口：AdminMuteUser / AdminUnmuteUser / AdminListMutes + 路由注册</td><td><span class="badge small">小 ~60行</span></td><td>PA-3</td></tr>
+      <tr><td>PA-5</td><td>agent_bot 账号 + ai_agent 角色 + 4 个权限点（管理端操作）</td><td><span class="badge small">管理端配置</span></td><td>—</td></tr>
+      <tr><td>PA-6</td><td>InternalSendBotMessage / InternalHandoffToHuman 改为 JWT 鉴权（移除 checkInternalToken）</td><td><span class="badge small">小 ~20行</span></td><td>PA-5</td></tr>
+      <tr><td>PA-7</td><td>UserSendCsMessage 加禁言检查 + bot 触发逻辑</td><td><span class="badge small">小 ~30行</span></td><td>PA-3、PA-9</td></tr>
+      <tr><td>PA-8</td><td>AgentService（调 /api/chat，策略3/4检测，超时降级）+ cs_configs 策略配置项</td><td><span class="badge big">中 ~150行</span></td><td>—</td></tr>
+      <tr><td>PA-9</td><td>platform_admin MCP Server（独立进程 :9001，4个工具）</td><td><span class="badge big">中 ~300行</span></td><td>PA-6</td></tr>
+      <tr><td>PA-10</td><td>管理端前端：客服设置页加「AI 客服策略配置」区块（max_bot_turns / keywords / timeout / fallback_msg）</td><td><span class="badge small">小 ~80行Vue</span></td><td>PA-8</td></tr>
+      <tr><td>PA-11</td><td>管理端前端：工作台会话侧边栏加禁言操作入口 + 禁言标识</td><td><span class="badge small">小 ~100行Vue</span></td><td>PA-4</td></tr>
+    </tbody>
+  </table>
+
+  <h3>go-rag-agent 侧</h3>
+  <table>
+    <thead><tr><th>#</th><th>改动项</th><th>规模</th><th>依赖</th></tr></thead>
+    <tbody>
+      <tr><td>AG-1</td><td>TokenManager（懒初始化，后台自动刷新，callctx 注入）</td><td><span class="badge big">中 ~200行</span></td><td>—</td></tr>
+      <tr><td>AG-2</td><td>管理页面「外部鉴权配置」区块 + 对应 Admin API（读写 auth_config）</td><td><span class="badge big">中 ~150行</span></td><td>AG-1</td></tr>
+      <tr><td>AG-3</td><td>Session 数据库持久化（SQLite/MySQL，懒创建连接池）</td><td><span class="badge big">中 ~200行</span></td><td>—</td></tr>
+      <tr><td>AG-4</td><td>管理页面「Session 存储配置」区块 + 对应 Admin API</td><td><span class="badge small">小 ~80行</span></td><td>AG-3</td></tr>
+      <tr><td>AG-5</td><td>mjarch domain YAML（系统提示 + MCP 工具 + 知识库占位）</td><td><span class="badge small">小 ~100行YAML</span></td><td>PA-9、知识库内容</td></tr>
+    </tbody>
+  </table>
+
+  <h3>工作量汇总</h3>
+  <div class="two-col">
+    <div class="card slate">
+      <strong>platform_admin（11项）</strong>
+      <ul style="margin-top:8px">
+        <li>小改动（&lt;100行）× 9</li>
+        <li>中改动（~150-300行）× 2（AgentService、MCP Server）</li>
+        <li>总计：约 900 行代码 + 180 行 Vue</li>
+      </ul>
+    </div>
+    <div class="card slate">
+      <strong>go-rag-agent（5项）</strong>
+      <ul style="margin-top:8px">
+        <li>中改动 × 3（TokenManager、管理页鉴权、Session持久化）</li>
+        <li>小改动 × 2</li>
+        <li>总计：约 730 行代码 + 230 行前端</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <h2 id="sec9"><span class="num">9</span>问题记录（全部已答复）</h2>
+
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">Q1</div><div class="q-title">Session 持久化</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>需要数据库持久化。→ AG-3/AG-4</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">Q2</div><div class="q-title">internal_token 废弃，改 JWT</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>Agent 用 agent_bot 账号登录，所有调用走 MCP + JWT。→ PA-5/PA-6/PA-9/AG-1/AG-2</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">Q3</div><div class="q-title">Agent 失败降级</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>兜底消息 + 自动转人工。→ PA-8</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">Q4</div><div class="q-title">mjarch 知识库</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>无现成文档，主链路跑通后异步推送 KB。→ AG-5（知识库占位先行）</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">Q5</div><div class="q-title">第一阶段工具调用</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>第一阶段就做，MCP Server 必选。→ PA-9</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">A</div><div class="q-title">登录接口路径可配</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>管理页面配置登录/刷新 URL 和报文模板，不写死。→ AG-1/AG-2</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">B</div><div class="q-title">MCP Server 独立部署</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>独立进程 :9001。→ PA-9</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">C</div><div class="q-title">Session 存储可配</div></div>
+    <div class="q-body"><div class="q-answer"><strong>✅ 已确认</strong>SQLite 默认 + MySQL 可选，懒创建连接。→ AG-3/AG-4</div></div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">D</div><div class="q-title">CsAgent 加 agent_type 区分人工/机器人</div></div>
+    <div class="q-body">
+      <div class="q-answer"><strong>✅ 已确认</strong>方案A：CsAgent 加 agent_type 字段（human/bot）；新会话自动绑定 bot agent_id；转人工时换为人工客服 ID。→ PA-1</div>
+      <div class="q-impact"><strong>设计影响</strong>管理端工作台会话列表可清楚区分「🤖 bot 处理中」/ 「👤 人工处理中」/ 「⏳ 未分配」三种状态。</div>
+    </div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">E</div><div class="q-title">转人工触发策略</div></div>
+    <div class="q-body">
+      <div class="q-answer"><strong>✅ 已确认</strong>四种策略全部支持：用户主动指令、Agent 判断无法回答、超轮次自动转、关键词触发。触发规则（N轮次、关键词列表）在管理端客服设置页配置。→ PA-8/PA-10</div>
+      <div class="q-impact"><strong>设计影响</strong>AgentService 在触发 AI 前先做策略3/4检测；Agent 端（go-rag-agent）负责策略1/2。</div>
+    </div>
+  </div>
+  <div class="q-box">
+    <div class="q-answered"><div class="q-num-g">新</div><div class="q-title">禁言功能</div></div>
+    <div class="q-body">
+      <div class="q-answer"><strong>✅ 已纳入设计</strong>新增 cs_mutes 表；管理端接口 3 个；UserSendCsMessage 首先做禁言检查；支持时长禁言和永久禁言。→ PA-2/PA-3/PA-4/PA-11</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">cs-integration-design.html · v5 · 2026-10-24 · 所有问题已确认 · 16项改动清单完整 · 可开始实现</div>
+
+</body>
+</html>
