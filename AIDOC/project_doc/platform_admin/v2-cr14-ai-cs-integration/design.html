@@ -341,7 +341,20 @@
     </tbody>
   </table>
 
-  <h3>平台管理端「AI 客服策略配置」区块（新增到客服设置页）</h3>
+  <h3>平台管理端「AI 客服机器人」区块（新增，客服设置页顶部）</h3>
+  <div class="section-note">
+    此区块控制是否启用 AI 客服机器人。<strong>默认关闭</strong>，关闭时 platform_admin 完全不感知机器人存在——新会话直接进人工队列，UserSendCsMessage 不触发 AI，前端不显示任何 bot 相关状态。
+  </div>
+  <table>
+    <thead><tr><th>配置项</th><th>类型</th><th>说明</th><th>默认值</th></tr></thead>
+    <tbody>
+      <tr><td><code>agent.enabled</code></td><td>bool</td><td>AI 客服总开关，关闭时所有 bot 逻辑均跳过</td><td><code>false</code></td></tr>
+      <tr><td><code>agent.base_url</code></td><td>string</td><td>go-rag-agent 服务地址，enabled=false 时置灰不可编辑</td><td><code>http://127.0.0.1:8081</code></td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:13px;color:#64748b">管理端保存时可选「测试连通性」（调 <code>GET {base_url}/api/admin/health</code>），结果实时展示。关闭开关时需二次确认。转人工策略配置区块在 <code>agent.enabled=false</code> 时整体置灰不可编辑。</p>
+
+  <h3>平台管理端「转人工策略配置」区块（客服设置页，enabled=true 时可编辑）</h3>
   <table>
     <thead><tr><th>配置项</th><th>类型</th><th>说明</th><th>默认值</th></tr></thead>
     <tbody>
@@ -474,9 +487,9 @@
       <tr><td>PA-5</td><td>agent_bot 账号 + ai_agent 角色 + 4 个权限点（管理端操作）</td><td><span class="badge small">管理端配置</span></td><td>—</td></tr>
       <tr><td>PA-6</td><td>InternalSendBotMessage / InternalHandoffToHuman 改为 JWT 鉴权（移除 checkInternalToken）</td><td><span class="badge small">小 ~20行</span></td><td>PA-5</td></tr>
       <tr><td>PA-7</td><td>UserSendCsMessage 加禁言检查 + bot 触发逻辑</td><td><span class="badge small">小 ~30行</span></td><td>PA-3、PA-9</td></tr>
-      <tr><td>PA-8</td><td>AgentService（调 /api/chat，策略3/4检测，超时降级）+ cs_configs 策略配置项</td><td><span class="badge big">中 ~150行</span></td><td>—</td></tr>
+      <tr><td>PA-8</td><td>AgentService（读 <code>agent.enabled</code> 做总开关检查；调 <code>{agent.base_url}/api/chat</code>，策略3/4检测，超时降级）+ cs_configs 新增 <code>agent.*</code> 和 <code>handoff.*</code> 配置项</td><td><span class="badge big">中 ~150行</span></td><td>—</td></tr>
       <tr><td>PA-9</td><td>platform_admin MCP Server（独立进程 :9001，4个工具）</td><td><span class="badge big">中 ~300行</span></td><td>PA-6</td></tr>
-      <tr><td>PA-10</td><td>管理端前端：客服设置页加「AI 客服策略配置」区块（max_bot_turns / keywords / timeout / fallback_msg）</td><td><span class="badge small">小 ~80行Vue</span></td><td>PA-8</td></tr>
+      <tr><td>PA-10</td><td>管理端前端：客服设置页新增两个区块——「AI 客服机器人」（enabled 开关 + base_url + 连通性测试，默认关闭）和「转人工策略配置」（max_bot_turns / keywords / timeout / fallback_msg 等，enabled=false 时置灰）</td><td><span class="badge small">小 ~120行Vue</span></td><td>PA-8</td></tr>
       <tr><td>PA-11</td><td>管理端前端：工作台会话侧边栏加禁言操作入口 + 禁言标识</td><td><span class="badge small">小 ~100行Vue</span></td><td>PA-4</td></tr>
     </tbody>
   </table>
