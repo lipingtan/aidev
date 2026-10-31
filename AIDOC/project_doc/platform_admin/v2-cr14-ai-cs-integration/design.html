@@ -425,14 +425,19 @@
   <h3>触发流程</h3>
   <div class="flow-step"><div class="flow-num">1</div><div class="flow-body">UserSendCsMessage 收到用户消息，先做禁言检查</div></div>
   <div class="flow-step"><div class="flow-num">2</div><div class="flow-body">存消息到 cs_messages，WS 广播管理端</div></div>
-  <div class="flow-step"><div class="flow-num">3</div><div class="flow-body">AgentService 检查：关键词命中？→ 直接 HandoffToHuman，结束</div></div>
-  <div class="flow-step"><div class="flow-num">4</div><div class="flow-body">AgentService 检查：session 内用户消息轮次 ≥ max_bot_turns？→ 直接 HandoffToHuman，结束</div></div>
-  <div class="flow-step"><div class="flow-num">5</div><div class="flow-body">session.mode == "bot"？→ goroutine 调 go-rag-agent /api/chat</div></div>
+  <div class="flow-step"><div class="flow-num">3</div><div class="flow-body">AgentService 检查：关键词命中？→ 写通知消息（<code>handoff.no_answer_msg</code>）→ HandoffToHuman，结束</div></div>
+  <div class="flow-step"><div class="flow-num">4</div><div class="flow-body">AgentService 检查：session 内用户消息轮次 ≥ max_bot_turns？→ 写通知消息（<code>handoff.no_answer_msg</code>）→ HandoffToHuman，结束</div></div>
+  <div class="flow-step"><div class="flow-num">5</div><div class="flow-body">session.mode == "bot"？→ goroutine 调 go-rag-agent <code>POST /api/chat</code>，<code>session_id = "cs-" + cs_session.id</code>（字符串前缀标识来源；切回 bot 时延续原 session，保留上下文）</div></div>
   <div class="flow-step"><div class="flow-num">6</div><div class="flow-body">Agent 内部：LLM 判断用户意图是「转人工」（策略1）→ 调 handoff_to_human MCP 工具</div></div>
   <div class="flow-step"><div class="flow-num">6b</div><div class="flow-body">Agent 内部：RAG 召回空 + LLM 判断无法回答（策略2）→ 先调 send_bot_message 发等待提示 → 再调 handoff_to_human</div></div>
   <div class="flow-step"><div class="flow-num">6c</div><div class="flow-body">platform_admin HandoffToHuman 检查在线人工数：有在线人工 → mode=human 正常排队；无在线人工 → mode=human 保留排队 + 额外插入「客服不在线」告知消息（文案取 handoff.no_human_msg）</div></div>
-  <div class="flow-step"><div class="flow-num">7</div><div class="flow-body">Agent 正常回答 → 调 send_bot_message MCP 工具写入消息</div></div>
-  <div class="flow-step"><div class="flow-num">8</div><div class="flow-body">超时/失败 → AgentService 写入兜底消息 + HandoffToHuman</div></div>
+  <div class="flow-step"><div class="flow-num">7</div><div class="flow-body">Agent 正常回答 → 调 send_bot_message MCP 工具写入消息（<strong>InternalSendBotMessage 走独立路由，不触发 AgentService，防止循环调用</strong>）</div></div>
+  <div class="flow-step"><div class="flow-num">8</div><div class="flow-body">超时/失败 → AgentService 写入兜底消息（<code>handoff.fallback_msg</code>）+ HandoffToHuman</div></div>
+
+  <h3>Token 注入机制（go-rag-agent → MCP Server → platform_admin）</h3>
+  <div class="card teal">
+    <p>go-rag-agent 的 TokenManager（AG-1）在调用 MCP 工具时，将 access_token 写入请求 header <code>X-Agent-Token: &lt;token&gt;</code>。MCP Server（PA-9）从该 header 取出 token，转发 platform_admin 时换为标准 <code>Authorization: Bearer &lt;token&gt;</code>。MCP Server 本身不登录、不维护 token，职责单一。</p>
+  </div>
 
   <div class="divider"></div>
 
