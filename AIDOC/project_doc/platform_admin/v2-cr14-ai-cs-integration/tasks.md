@@ -66,7 +66,8 @@
 - 涉及文件:
   - `app/license/models/models.go`（修改，新增 CsConfig model）
   - `app/license/service/cs_config_service.go`（新增）
-  - `app/license/plugin.go`（修改，AutoMigrate 加入 CsConfig，注入默认值）
+  - `app/license/apis/cs_config_api.go`（新增，`GET /api/v1/cs/configs` 和 `POST /api/v1/cs/configs`）
+  - `app/license/plugin.go`（修改，AutoMigrate 加入 CsConfig，注入默认值，注册路由）
 - 涉及模块: license
 - 不触碰: 其他已有 service、现有 model 字段
 
@@ -74,14 +75,18 @@
 - `cs_configs` 表结构：`(id, tenant_id, key VARCHAR(64), value TEXT, updated_at)`，唯一索引 `uk_cs_configs(tenant_id, key)`
 - 读取带进程内缓存，**TTL=30s**（多 Pod 最大不一致窗口），写入时失效本 Pod 缓存（其他 Pod 靠 TTL 自动刷新）
 - 提供三个类型安全读方法：`GetString / GetBool / GetInt`；写入时做格式校验（bool 只允许 "true"/"false"，int 只允许数字）
-- `plugin.go` 启动时用 UPSERT 写入 8 个默认配置项（不覆盖已有值）
+- `plugin.go` 启动时用 **`INSERT IGNORE`**（`INSERT IGNORE INTO cs_configs(tenant_id, key, value) VALUES(...)`）写入 8 个默认配置项——禁止用 `ON DUPLICATE KEY UPDATE`，防止每次重启覆盖已修改的配置
 - `value` 列类型为 TEXT，MySQL 8.x 禁止 TEXT 列有 DEFAULT，`gorm` tag 不加 `default`
+- cs_configs CRUD Admin API：`GET /api/v1/cs/configs`（按 tenant 返回键值 map）、`POST /api/v1/cs/configs`（批量写，调 SetConfig）
 
 **Acceptance（验证标准）:**
 - AC: `cs_configs` 表自动创建，唯一索引存在
+- AC: 重复执行 `INSERT IGNORE` 不覆盖已有配置值
 - AC: `GetBool(tenantID, "agent.enabled", false)` 返回 false（默认值）
 - AC: `SetConfig` 写入后，缓存失效，下次 `GetString` 返回新值
 - AC: 写入 bool 时传 "True" 应被规范化为 "true"
+- AC: `GET /api/v1/cs/configs` 返回当前租户所有配置键值
+- AC: `POST /api/v1/cs/configs` 批量写入后 `GetString` 返回新值
 - AC: `go build ./...` 零错误
 - AC: `go vet ./...` 无警告
 
@@ -200,7 +205,7 @@
 - 涉及文件:
   - `mcp-server-platform/main.go`（新增，独立 Go 模块）
   - `mcp-server-platform/go.mod`（新增）
-  - `deploy/start-mcp-server.sh`（新增，启动脚本）
+  - `mcp-server-platform/deploy/start-mcp-server.sh`（新增，启动脚本，与 main.go 同模块）
 - 涉及模块: 独立进程，不依赖 platform_admin 代码包
 - 不触碰: 现有 `mcp-server/` 目录
 
@@ -240,8 +245,9 @@
   - `token/manager.go`（新增）
   - `token/manager_test.go`（新增）
   - `callctx/callctx.go`（修改，新增 WithAgentToken / GetAgentToken）
+  - `connector/mcp_client.go`（修改，发请求前从 ctx 读 `X-Agent-Token`，加入请求 header）
   - `main.go`（修改，初始化 TokenManager，注入到 MCP 工具调用链）
-- 涉及模块: token, callctx
+- 涉及模块: token, callctx, connector
 - 不触碰: 现有 llm/client.go、agent/agent.go 逻辑
 
 **Constraints（约束）:**
@@ -256,6 +262,7 @@
 - AC: 模拟 token 过期前 300s，后台 goroutine 自动刷新
 - AC: 刷新失败 3 次后触发重登录
 - AC: `callctx.WithAgentToken` / `GetAgentToken` 正确传递 token
+- AC: `connector/mcp_client.go` 发 HTTP 请求时，请求 header 含 `X-Agent-Token: <token>`
 - AC: `go build ./...` 零错误
 
 **自测:**
@@ -264,6 +271,7 @@
 - ST: 模拟 token 即将过期 → 后台触发 refresh
 - ST: mock refresh 失败 3 次 → 触发 re-login
 - ST: callctx WithAgentToken → GetAgentToken 返回同值
+- ST: connector/mcp_client 发请求 → 请求 header 含 X-Agent-Token（通过 mock http server 验证）
 
 ---
 
@@ -286,7 +294,7 @@
 - 策略 3（超轮次）：`GetInt(tenantID, "handoff.max_bot_turns", 10)`，超过则先调 `InternalWriteSystemMsg`（取 `max_turns_msg`）再 `HandoffToHuman`，**不触发 AI**
 - 策略 4（关键词）：`GetString(tenantID, "handoff.keywords", "...")`，`strings.Contains` 包含匹配，命中则先写 `no_answer_msg` 再 `HandoffToHuman`，**不触发 AI**
 - 触发 AI：异步 goroutine，调 `POST {agent.base_url}/api/chat`（非流式），request body 含 `session_id="cs-{id}"`、`context.cs_session_id / user_id / tenant_id`
-- **per-tenant 信号量**：带缓冲 channel 限制并发 goroutine 数，默认上限=10（可配 `agent.max_concurrent`）；超限时直接写 `fallback_msg` + `HandoffToHuman`，不启动新 goroutine
+- **per-tenant 信号量**：用 `sync.Map`（key=tenantID int64，value=chan struct{}）管理各租户信号量，用 `LoadOrStore` 做懒初始化（避免 map 并发写）；默认 channel 缓冲大小=10（可配 `agent.max_concurrent`）；超限时直接写 `fallback_msg` + `HandoffToHuman`，不启动新 goroutine
 - 超时：`GetInt(tenantID, "handoff.timeout_secs", 30)` 秒；超时写 `fallback_msg` + `HandoffToHuman`
 - `InternalSendBotMessage`（bot 回复写入）走独立路由，不触发 `TriggerIfEnabled`（天然防循环）
 
@@ -401,7 +409,7 @@
 
 **Constraints（约束）:**
 - `CheckMuted(tenantID, userID int64) (bool, *time.Time, error)`：查询 `mute_until IS NULL OR mute_until > NOW()`
-- `MuteUser`：用 GORM `Save`（upsert），同一用户覆盖旧记录；禁言成功后向用户最近一条活跃 `cs_session` 写入系统消息（`sender_type=system`），内容为禁言提示
+- `MuteUser`：用 GORM `Save`（upsert），同一用户覆盖旧记录；禁言成功后向该用户**同一租户**下最近一条活跃 `cs_session`（按 `tenant_id` 过滤 + `last_message_at` 最新）写入系统消息（`sender_type=system`），内容为禁言提示；**必须加 `tenant_id` 过滤，防止跨租户写错会话**
 - `UnmuteUser`：硬删除该用户禁言记录（非软删除）
 - `ListMutes`：分页，支持按 `user_id` 过滤，返回 `([]CsMute, int64, error)`
 - 所有方法必须带 `tenant_id` 过滤（多租户隔离）
@@ -505,9 +513,10 @@
 **设计来源:** design.html §5「AI 客服机器人」区块；测试机器人功能；「转人工策略配置」区块
 
 **Scope（边界）:**
-- 涉及文件:
-  - `frontend/cs-settings.vue`（修改或新增，待确认路径）— 客服设置页
-  - `src/api/cs-config.ts`（新增，cs_configs 读写 API）
+- **⚠️ 执行前必须先 glob 确认实际路径**：`glob platform_admin/frontend/src/**/*.vue` 找到客服设置页真实路径，补入下方文件列表再动手
+- 涉及文件（路径待执行前确认，占位如下）:
+  - `frontend/src/views/cs/CsSettings.vue`（修改或新增，**执行前 glob 确认**）
+  - `frontend/src/api/cs-config.ts`（新增，cs_configs 读写 API）
 - 涉及模块: platform_admin 前端（Vue）
 - 不触碰: 其他设置页、现有工作台组件
 
@@ -520,8 +529,9 @@
   - 前端直接 fetch `{base_url}/api/chat`（stream:true），SSE 实时渲染 token/thinking/meta/tool_start/tool_end
   - 「重置」清空对话和 session_id
 - 区块2「转人工策略」：7 个配置项表单（`handoff.*`），enabled=false 时整体置灰
-- API 调用：`GET /api/v1/cs/configs`（读，返回键值 map）、`POST /api/v1/cs/configs`（批量写）
+- API 调用：`GET /api/v1/cs/configs`（读，返回键值 map，**由 Task 1 实现**）、`POST /api/v1/cs/configs`（批量写，**由 Task 1 实现**）；**Task 14 依赖 Task 1，执行前确认 Task 1 已完成**
 - int64 字段无需传，使用 string 类型 API key
+- 域列表请求失败降级：`GET {base_url}/api/admin/domains` 失败时，域选择下拉显示「⚠️ 无法获取域列表，请先确认 Agent 服务可达」提示文案，下拉置灰禁用
 
 **Acceptance（验证标准）:**
 - AC: 开关关闭 → base_url 置灰，策略配置区块置灰，测试面板仍可展开
@@ -529,7 +539,8 @@
 - AC: 测试面板多轮对话正常，流式渲染，thinking/meta/工具状态均显示
 - AC: 重置后 session_id 重新生成，历史消息清空
 - AC: 测试连通性成功 → 显示绿色 ✓；失败 → 显示红色 ✗ + 错误信息
-- AC: 策略配置保存后下次进入页面显示新值
+- AC: 域列表请求失败 → 下拉置灰 + 显示「⚠️ 无法获取域列表，请先确认 Agent 服务可达」
+- AC: 策略配置保存后（调 `POST /api/v1/cs/configs`）下次进入页面显示新值（依赖 Task 1 接口）
 
 ---
 
@@ -540,10 +551,11 @@
 **设计来源:** design.html §6 管理端操作位置
 
 **Scope（边界）:**
-- 涉及文件:
-  - `frontend/cs-workbench-sidebar.vue`（修改，待确认路径）— 会话侧边栏
-  - `frontend/cs-session-list.vue`（修改，待确认路径）— 会话列表卡片
-  - `src/api/cs-mute.ts`（新增，禁言 API）
+- **⚠️ 执行前必须先 glob 确认实际路径**：找到工作台侧边栏和会话列表卡片真实文件路径，补入下方再动手
+- 涉及文件（路径待执行前确认，占位如下）:
+  - `frontend/src/views/cs/CsWorkbenchSidebar.vue`（修改，**执行前 glob 确认**）
+  - `frontend/src/views/cs/CsSessionList.vue`（修改，**执行前 glob 确认**）
+  - `frontend/src/api/cs-mute.ts`（新增，禁言 API）
 - 涉及模块: platform_admin 前端（Vue）
 - 不触碰: 侧边栏其他区块、现有发消息逻辑
 
@@ -558,6 +570,7 @@
 - AC: 解除禁言后，WS 事件到达，🔇 在 5 秒内消失
 - AC: hover 🔇 显示到期时间
 - AC: 永久禁言 hover 显示「永久禁言」
+- AC: `POST mute` 失败（如 session 不存在、网络错误）→ 前端显示错误 toast，不静默失败
 
 ---
 
@@ -621,11 +634,14 @@
   - `is_test=true`（session_id 前缀 `admin-test-`）：**TTL=1h**，定时清理 goroutine 每小时执行
   - 普通会话：`SESSION_TTL_DAYS > 0` 时清理，默认 0（永久）
 - MySQL 8.x：`messages_json` 类型 TEXT，不加 `default` tag
+- **compaction 集成**：DBSessionStore 与现有内存 store 行为一致——`Load` 读出 messages 后，`agent/compaction.go` 的压缩逻辑正常触发（不需要在 DB 层截断）；`messages_json` 字段长度超过 1MB 时记录 WARN 日志（不报错，compaction 会在下一轮自动压缩）
 
 **Acceptance（验证标准）:**
 - AC: 重启 go-rag-agent 后，历史会话消息仍在（SQLite 持久化）
 - AC: `admin-test-` 前缀 session 超过 1h 后被清理
 - AC: `SESSION_TTL_DAYS=7` 时，7 天前的普通会话被清理
+- AC: Load 读出 messages 后，compaction 正常触发（不因 DB store 而跳过）
+- AC: messages_json 超 1MB 时日志含 WARN（不崩溃）
 - AC: `go build ./...` 零错误
 
 **自测:**
@@ -702,15 +718,23 @@ Task 18（Session 管理页）← 依赖 Task 17
 ## 推荐开工顺序
 
 ```
-第1步：Task 1 + Task 2 + Task 9 + Task 17（并行，互无依赖）
-第2步：Task 3 + Task 10 + Task 6（并行，依赖第1步部分）
-第3步：Task 4 + Task 11 + Task 5（并行）
-第4步：Task 7 + Task 12（并行，依赖第3步）
-第5步：Task 8 + Task 13（并行）
-第6步：联调主链路（P0 Task 1-8 验收）——————P0 完成
-第7步：Task 14 + Task 15 + Task 18（并行）
-第8步：Task 16（依赖 Task 6）
-第9步：P1/P2 集成验收————————————————P1/P2 完成
+── P0 主链路 ──────────────────────────────────────────────────
+第1步：Task 1 + Task 2 + Task 9（并行，互无依赖）
+第2步：Task 3 + Task 6（并行，依赖第1步部分）
+第3步：Task 4 + Task 5（并行）
+第4步：Task 7（依赖 Task 1 + Task 5 + Task 6）
+第5步：Task 8 + Task 13（并行，Task 8 依赖 Task 5，Task 13 依赖 Task 7）
+第6步：联调主链路（P0 Task 1-9 验收）——————P0 完成
+
+── P1 功能完整 ────────────────────────────────────────────────
+第7步：Task 10 + Task 17（并行，互无依赖）
+第8步：Task 11（依赖 Task 10）
+第9步：Task 12 + Task 14 + Task 15（并行，Task 12 依赖 Task 11，Task 14 依赖 Task 1）
+第10步：P1 集成验收————————————————P1 完成
+
+── P2 配置化 ──────────────────────────────────────────────────
+第11步：Task 16（依赖 Task 6）+ Task 18（依赖 Task 17）
+第12步：P2 集成验收————————————————P2 完成
 ```
 
 ---
