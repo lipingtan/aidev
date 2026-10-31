@@ -150,6 +150,16 @@ platform_admin 客服设置页需要独立的「AI 客服机器人」配置区�
 
 ### 后端
 
+#### AG-6
+**内容**：go-rag-agent 开放 CORS，允许 platform_admin 管理端 origin 直接调用 `/api/chat`（测试面板用），支持配置 `CORS_ALLOW_ORIGINS` 环境变量（逗号分隔，支持通配符，默认 `*` 仅限开发环境，生产必须配具体 origin）
+
+**文件**：`main.go`（在 HTTP handler 前加 CORS middleware）  
+**规模**：~10 行  
+**依赖**：无  
+**验收**：platform_admin 管理端页面 fetch `{base_url}/api/chat` 无 CORS 报错
+
+---
+
 #### PA-2
 **内容**：新建 `CsMute` model，`AutoMigrate`
 
@@ -223,6 +233,17 @@ type CsMute struct {
 - 「测试连通性」按钮（调 `GET {base_url}/api/admin/health`，显示 ok/失败）
 - 保存按钮
 
+**测试机器人面板**（嵌入区块1内，可折叠，默认折叠）：
+- 对话气泡列表，样式与客服工作台一致
+- 域选择下拉（默认第一个可用域）
+- 输入框 + 发送；支持多轮（共用临时 session_id `admin-test-{uuid}`）
+- 「重置」按钮清空对话和 session_id
+- 机器人回复实时流式渲染（前端直接 fetch `{base_url}/api/chat`，stream:true，无需后端中转）
+- thinking 区块（折叠/展开，与 agent 自带前端一致）
+- meta 信息行：`📚 命中 N 条 · score X.XX · 策略: xxx`
+- 工具调用状态行：`⚙️ 正在执行: xxx...`
+- CORS：go-rag-agent 需开放 platform_admin 的 origin（配置项，不写死）
+
 **区块2「转人工策略」**（原有设计，enabled=false 时整体置灰）：
 - max_bot_turns（数字输入，0=不限）
 - keywords（标签输入，逗号分隔）
@@ -231,9 +252,12 @@ type CsMute struct {
 - no_answer_msg（文本框）
 - no_human_msg（文本框）
 
-**规模**：~120 行 Vue  
-**依赖**：PA-8（后端 cs_configs API）  
-**验收**：开关关闭时所有策略项置灰；测试连通性功能正常
+**规模**：~200 行 Vue  
+**依赖**：PA-8（后端 cs_configs API），go-rag-agent CORS 开放  
+**验收**：
+- 开关关闭时所有策略项置灰，测试面板仍可使用（用于配置阶段预验证）
+- 测试面板多轮对话正常，流式渲染，thinking/meta/工具状态均显示
+- 重置后 session_id 重新生成，上下文清空
 
 ---
 
@@ -343,7 +367,7 @@ AG-3（DB Session）
 | 端 | P0 | P1 | P2 | 合计 |
 |----|----|----|----|----|
 | platform_admin 后端 | PA-1/5/6/7/8/9（~560行） | PA-2/3/4/7（~200行） | — | ~760行 |
-| platform_admin 前端 | — | PA-10/11（~220行 Vue） | — | ~220行 |
-| go-rag-agent 后端 | AG-1/5（~300行） | — | AG-2/3/4（~430行） | ~730行 |
+| platform_admin 前端 | — | PA-10/11（~300行 Vue） | — | ~300行 |
+| go-rag-agent 后端 | AG-1/5（~300行） | CORS配置（~10行） | AG-2/3/4（~430行） | ~740行 |
 | go-rag-agent 前端 | — | — | AG-2/4（~230行 HTML） | ~230行 |
-| **合计** | **~860行** | **~420行** | **~660行** | **~1940行** |
+| **合计** | **~860行** | **~510行** | **~660行** | **~2030行** |

@@ -354,6 +354,59 @@
   </table>
   <p style="font-size:13px;color:#64748b">管理端保存时可选「测试连通性」（调 <code>GET {base_url}/api/admin/health</code>），结果实时展示。关闭开关时需二次确认。转人工策略配置区块在 <code>agent.enabled=false</code> 时整体置灰不可编辑。</p>
 
+  <h3>测试机器人功能</h3>
+  <div class="card blue">
+    <p>「AI 客服机器人」区块内嵌一个对话测试面板，供管理员在保存配置后直接验证机器人效果，<strong>不走会话存储、不影响生产数据</strong>。</p>
+    <ul style="margin-top:8px">
+      <li>输入框 + 发送按钮，支持多轮连续对话（共用一个临时 session_id，刷新页面或点「重置」清空）</li>
+      <li>消息气泡样式与客服工作台一致，机器人回复实时流式渲染（SSE）</li>
+      <li>回复气泡顶部折叠展示思考过程（thinking 区块，与 agent 自带前端一致）</li>
+      <li>回复气泡底部显示 meta 信息：<code>RAG 命中 N 条 · score 0.73 · 策略: rag_answer</code></li>
+      <li>工具调用期间显示 <code>⚙️ 正在执行: xxx...</code> 状态行，工具完成后消失</li>
+      <li>面板可折叠（默认折叠），点「展开测试」打开</li>
+    </ul>
+  </div>
+
+  <h3>测试面板接入方式</h3>
+  <div class="card slate">
+    <p>管理端前端直接调用 go-rag-agent 的 <code>/api/chat</code>（stream:true），<strong>无需 platform_admin 后端中转</strong>：</p>
+    <pre class="code"><span class="cm">// 前端直接 fetch（CORS 需在 go-rag-agent 开放管理端 origin）</span>
+<span class="fn">fetch</span>(<span class="str">`${agentBaseUrl}/api/chat`</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+  body: <span class="fn">JSON.stringify</span>({
+    message: userInput,
+    session_id: testSessionId,   <span class="cm">// 临时 session，前端生成，格式: admin-test-{uuid}</span>
+    domain: selectedDomain,      <span class="cm">// 下拉选择域（默认第一个可用域）</span>
+    stream: <span class="kw">true</span>
+  })
+})</pre>
+    <p style="font-size:13px;margin-top:8px">临时 session_id 格式 <code>admin-test-{uuid}</code>，go-rag-agent 侧可识别并标记为测试会话（不写入生产 Session 存储，或写入但带 <code>is_test=true</code> 标记，定期清理）。</p>
+  </div>
+
+  <h3>测试面板 UI 示意</h3>
+  <div class="arch-box" style="font-size:12px"><span class="c3">┌─────────────────────────────────────────────────┐</span>
+<span class="c3">│  🤖 测试机器人                      [域: mjarch ▾] [重置] [▲ 收起] │</span>
+<span class="c3">├─────────────────────────────────────────────────┤</span>
+│                                                 │
+│   <span class="c2">🧑 退款多久到账？</span>                              │
+│                                                 │
+│   <span class="c1">🤖 思考 ▶  用户询问退款到账时间...              </span>│
+│      <span class="c1">📚 命中 8 条 · score 0.73 · rag_answer       </span>│
+│      <span class="c1">退款到账时间取决于支付方式：</span>                  │
+│      <span class="c1">• 余额支付：实时到账</span>                         │
+│      <span class="c1">• 微信/支付宝：1-2个工作日</span>                   │
+│      <span class="c1">• 银行卡：3-7个工作日</span>                        │
+│                                                 │
+│   <span class="c2">🧑 查一下订单 SO-001 的状态</span>                   │
+│                                                 │
+│   <span class="c1">⚙️ 正在执行: mcp:orders:lookup_order...</span>       │
+│   <span class="c1">🤖 您的订单 SO-001 当前状态：配送中</span>            │
+│                                                 │
+<span class="c3">├─────────────────────────────────────────────────┤</span>
+<span class="c3">│  [输入消息...                        ] [发送]    │</span>
+<span class="c3">└─────────────────────────────────────────────────┘</span></div>
+
   <h3>平台管理端「转人工策略配置」区块（客服设置页，enabled=true 时可编辑）</h3>
   <table>
     <thead><tr><th>配置项</th><th>类型</th><th>说明</th><th>默认值</th></tr></thead>
