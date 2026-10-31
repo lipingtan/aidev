@@ -77,7 +77,7 @@
 - 提供三个类型安全读方法：`GetString / GetBool / GetInt`；写入时做格式校验（bool 只允许 "true"/"false"，int 只允许数字）
 - `plugin.go` 启动时用 **`INSERT IGNORE`**（`INSERT IGNORE INTO cs_configs(tenant_id, key, value) VALUES(...)`）写入 8 个默认配置项——禁止用 `ON DUPLICATE KEY UPDATE`，防止每次重启覆盖已修改的配置
 - `value` 列类型为 TEXT，MySQL 8.x 禁止 TEXT 列有 DEFAULT，`gorm` tag 不加 `default`
-- cs_configs CRUD Admin API：`GET /api/v1/cs/configs`（按 tenant 返回键值 map）、`POST /api/v1/cs/configs`（批量写，调 SetConfig）
+- cs_configs CRUD Admin API：`GET /api/v1/cs/configs`（按 tenant 返回键值 map）、`POST /api/v1/cs/configs`（批量写，调 SetConfig）；两个接口均需**租户管理员权限**（与其他 cs 设置接口权限一致，使用现有 JWT 权限中间件校验）
 - `GET /api/v1/cs/configs`：`tenant_id` 从 JWT middleware 取（与其他管理端接口一致）；超级管理员（tenant_id=0）调用时需传 query param `?tenant_id=xxx` 指定目标租户，不传则返回 400
 - `POST /api/v1/cs/configs` 批量写：**先在事务里批量 UPSERT 所有 key，全部成功后再逐条失效缓存**；任何一条 DB 写失败则整体回滚，缓存不失效（防止部分更新导致 DB 与缓存不一致）
 
