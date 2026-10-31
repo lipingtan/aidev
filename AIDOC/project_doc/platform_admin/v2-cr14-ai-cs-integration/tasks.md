@@ -12,11 +12,41 @@
 | 指标 | 值 |
 |------|-----|
 | 总任务数 | 18 |
-| 已完成 | 13 |
+| 已完成 | 17 |
 | 进行中 | 0 |
-| 未开始 | 5 |
-| 完成率 | 13/18 (72%) |
-| 当前阶段 | P1→P2 收尾（Task14/15前端 + P2配置化） |
+| 未开始 | 1 |
+| 完成率 | 17/18 (94%) |
+| 当前阶段 | P2 收尾（Task16 TokenManager热更新）|
+
+### 已完成任务
+- ✅ Task1: cs_configs 键值表 + 配置服务 + Admin API（7个单测PASS）
+- ✅ Task2: cr14_ai_agent_permissions.sql 迁移脚本
+- ✅ Task3: InternalSendBotMessage/InternalHandoffToHuman 改 JWT 鉴权
+- ✅ Task4: CsAgent 加 agent_type 字段 + 新会话绑定 bot 逻辑
+- ✅ Task5: mcp-server-platform 独立进程（6个单测PASS）
+- ✅ Task6: TokenManager + callctx.WithAgentToken + AGENT_TOKEN env 注入（6个单测PASS）
+- ✅ Task7: AgentService（策略3/4检测 + 信号量 + 超时降级，4个单测PASS）
+- ✅ Task8: mjarch domain YAML
+- ✅ Task9: go-rag-agent CORS middleware
+- ✅ Task10: CsMute model + AutoMigrate
+- ✅ Task11: CheckMuted/MuteUser/UnmuteUser/ListMutes（7个单测PASS）
+- ✅ Task12: 禁言管理端接口 + 路由注册
+- ✅ Task13: UserSendCsMessage 加禁言检查 + AgentService 触发
+- ✅ Task14: CsAgents.vue 新增「AI 客服机器人」配置卡片 + 测试面板 + 策略配置卡片
+- ✅ Task15: CustomerService.vue 新增禁言按钮 + 🔇 标识 + WS 禁言变更事件处理
+- ✅ Task17: DBSessionStore（SQLite/MySQL 懒初始化，TTL 清理，6个单测PASS）
+- ✅ Task18: 前端 cs-config.ts / cs-mute.ts API 文件
+
+### 待完成任务
+- ⬜ Task16: TokenManager 鉴权配置化（Admin API + 热更新，P2）
+
+### App 端禁言提示（用户反馈 2026-10-31）
+> mjarch App 端被禁言时应有相应提示。
+> platform_admin 后端 MuteUser 已向用户活跃会话写入系统消息（role=bot，内容含禁言原因和到期时间）。
+> App 端需要：
+> 1. 发消息收到 403 时，解析 `msg` 字段展示禁言提示弹窗（如「您已被禁言，禁言将于 XX 结束」）
+> 2. 聊天列表轮询时会收到系统消息（role=bot），展示为不同气泡样式（灰色/系统样式）
+> **此需求超出 CR14 范围，记录到 backlog，mjarch App 改动单独排期。**
 
 ### 已完成任务
 - ✅ Task1: cs_configs 键值表 + 配置服务 + Admin API（7个单测PASS）

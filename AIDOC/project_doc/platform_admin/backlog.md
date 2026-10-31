@@ -104,3 +104,26 @@
 **注意：**
 - 超出 CR14 范围，不列入 CR14 任务清单，CR14 交付后单独排期
 
+
+
+---
+
+## CR14-B2：mjarch App 端禁言提示 UI
+
+**来源**：用户反馈（2026-10-31，CR14 开发中）  
+**优先级**：中  
+**背景**：platform_admin CR14 实现了禁言功能，后端在禁言时向用户活跃会话写入系统消息，并在用户发消息时返回 403 + 禁言提示。App 端需要相应展示。
+
+**需求描述：**
+1. 发消息 API 返回 403 时，解析响应 `msg` 字段，展示禁言提示弹窗（内容：「您已被禁言，禁言将于 XX 结束」或「您已被永久禁言」），不静默失败
+2. 聊天消息列表中，`role=bot` 且 `msg_type=text` 的系统消息（禁言通知）展示为不同气泡样式（灰色系统消息样式，区别于普通 bot 回复）
+3. 可选：在聊天输入框上方展示「您已被禁言」横幅，直到禁言解除
+
+**依赖：**
+- platform_admin CR14 已实现：MuteUser 写系统消息 + UserSendCsMessage 返回 403
+- mjarch App 改动：cs_service.go 发消息错误处理 + 聊天气泡 ViewHolder 样式扩展
+
+**注意：**
+- 超出 CR14 范围，CR14 交付后单独排期
+- 系统消息的 `sender_id=0, role=bot, msg_type=text`，App 端可通过 `sender_id=0 AND content.startsWith("您已被")` 或新增 `msg_type=system` 识别
+
