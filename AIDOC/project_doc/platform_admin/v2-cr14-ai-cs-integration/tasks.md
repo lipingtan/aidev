@@ -59,7 +59,12 @@ CREATE TABLE cs_configs (
 );
 ```
 
-读取时带内存缓存（`sync.Map` 或本地 map + TTL），写入时失效对应 tenant 缓存。
+读取时带内存缓存（`sync.Map` 或本地 map），**TTL = 30 秒**（多 Pod 部署下最大不一致窗口 = 30s，可接受；不使用无 TTL 的永久缓存）。写入时失效对应 tenant 缓存（本 Pod 立即生效，其他 Pod 最多 30s 后自动拉取新值）。
+
+提供类型安全读方法，写入时做基本格式校验：
+- `GetString(tenantID, key, defaultVal) string`
+- `GetBool(tenantID, key, defaultVal) bool` — 内部 `strings.ToLower` 后比较 `"true"`，写入时只允许 `"true"/"false"`
+- `GetInt(tenantID, key, defaultVal) int` — 内部 `strconv.Atoi`，写入时只允许数字字符串
 
 初始配置项（UPSERT 写入默认值，不覆盖已有配置）：
 
@@ -68,10 +73,11 @@ CREATE TABLE cs_configs (
 | `agent.enabled` | `false` | AI 客服总开关 |
 | `agent.base_url` | `http://127.0.0.1:8081` | Agent 服务地址 |
 | `handoff.max_bot_turns` | `10` | 最大 bot 轮次（0=不限） |
-| `handoff.keywords` | `投诉,举报,退款失败` | 转人工关键词 |
+| `handoff.keywords` | `投诉,举报,退款失败` | 转人工关键词（包含匹配） |
 | `handoff.timeout_secs` | `30` | Agent 调用超时秒数 |
 | `handoff.fallback_msg` | `抱歉，智能客服暂时不可用，正在为您转接人工客服` | 兜底消息 |
-| `handoff.no_answer_msg` | `您的问题需要人工处理，正在为您转接，请稍候` | 无法回答时等待提示 |
+| `handoff.no_answer_msg` | `您的问题需要人工处理，正在为您转接，请稍候` | 策略2无法回答时等待提示 |
+| `handoff.max_turns_msg` | `您的问题已由 AI 处理多轮，为确保服务质量，现为您转接人工客服` | 策略3超轮次时转人工提示（与no_answer_msg分开） |
 | `handoff.no_human_msg` | `当前人工客服暂时不在线，您的问题已记录，客服上线后将第一时间回复您` | 无在线人工时提示 |
 
 **文件**：`app/license/models/models.go`（AutoMigrate），新建 `app/license/service/cs_config_service.go`（Get/Set/GetWithDefault）  
@@ -81,12 +87,12 @@ CREATE TABLE cs_configs (
 
 ---
 
-#### PA-5（手工操作，无代码）
-**内容**：在 platform_admin 管理端创建 `agent_bot` 账号，分配 `ai_agent` 角色，赋予以下 4 个权限点：
-- `cs:bot:send_message`
-- `cs:bot:handoff`
-- `cs:query:member_info`
-- `cs:query:orders`
+#### PA-5（含少量数据操作）
+**内容**：在 platform_admin 管理端准备 AI 客服机器人账号及权限：
+1. **迁移脚本**（SQL 或 Go migrate）：在 `permissions` 表 INSERT 4 个权限点：
+   - `cs:bot:send_message`、`cs:bot:handoff`、`cs:query:member_info`、`cs:query:orders`
+2. 在管理端创建 `ai_agent` 角色，绑定以上 4 个权限点
+3. 创建 `agent_bot` 账号，分配 `ai_agent` 角色
 
 **负责人**：—  
 **依赖**：无  
@@ -162,6 +168,7 @@ MCP Server 本身**不维护 token**，无需登录逻辑，完全依赖调用�
 **文件**：新建 `token/manager.go`  
 **规模**：~200 行  
 **依赖**：无（环境变量先行，AG-2 后续扩展）  
+**多 Pod 说明**：每个 Pod 独立维护 token，互不共享。多 Pod 并发刷新时 refresh_token 可能冲突（先刷成功的 Pod 使旧 refresh_token 失效），后刷的 Pod 刷新失败后**自动 fallback 重新登录**恢复，无需分布式锁。文档注明：多 Pod 场景下短暂（秒级）的双 token 并存是正常现象，不影响业务。  
 **验收**：首次工具调用自动登录；token 过期前自动刷新；手动令 token 过期后验证自动重新登录
 
 ---
@@ -170,8 +177,14 @@ MCP Server 本身**不维护 token**，无需登录逻辑，完全依赖调用�
 **内容**：`AgentService`：
 - `agent.enabled = false` 时直接返回，完全跳过
 - 策略 3（超轮次）：读 `cs_configs.handoff.max_bot_turns`，超过则**先写一条通知消息**（取 `handoff.no_answer_msg`）再调 `HandoffToHuman`，不触发 AI
-- 策略 4（关键词）：读 `cs_configs.handoff.keywords`，命中则**先写一条通知消息**（取 `handoff.no_answer_msg`）再调 `HandoffToHuman`，不触发 AI
-- 触发 AI：异步 goroutine 调 `POST {agent.base_url}/api/chat`（非流式），`session_id` 格式为 `cs-{cs_session_id}`（字符串前缀标识来源，Agent 侧用此 ID 维护多轮上下文；bot 切回时延续原 session，不重置）
+- 策略 4（关键词）：读 `cs_configs.handoff.keywords`，命中则**先写一条通知消息**（取 `handoff.no_answer_msg`）再调 `HandoffToHuman`，不触发 AI；匹配规则为**包含匹配**（`strings.Contains`），逗号分隔多个关键词取 OR 关系；关键词需精心选择，避免反义句误触发（如「退款失败」会匹配「退款不会失败」，建议使用更精确的词组）
+- 触发 AI：异步 goroutine 调 `POST {agent.base_url}/api/chat`（非流式），`session_id` 格式为 `cs-{cs_session_id}`（字符串前缀标识来源，Agent 侧用此 ID 维护多轮上下文；bot 切回时延续原 session，不重置）；同时在 `context` 字段传入原始 ID 供 MCP 工具使用：
+  ```json
+  { "session_id": "cs-{id}", "domain": "mjarch", "stream": false,
+    "context": { "cs_session_id": "{id}", "user_id": "{uid}", "tenant_id": "{tid}" } }
+  ```
+  AG-5 的 domain YAML 里 MCP 工具（`send_bot_message` / `handoff_to_human`）的 `session_id` 参数从 `__context.cs_session_id` 取值
+- **goroutine 并发限制**：用带缓冲 channel（信号量）per-tenant 限制并发 goroutine 数，默认上限 **10**（可配 `agent.max_concurrent`）；超限时直接走降级路径（写 `handoff.fallback_msg` + HandoffToHuman），不启动新 goroutine，防止 Agent 挂时 goroutine 泄露
 - 失败降级：写兜底消息（`handoff.fallback_msg`）+ 调 `HandoffToHuman`
 - cs_configs 读取依赖 PA-0 的 `cs_config_service.GetConfig`
 
@@ -186,13 +199,14 @@ MCP Server 本身**不维护 token**，无需登录逻辑，完全依赖调用�
 - 关键词命中：先写通知消息，再 handoff，**不触发 AI**
 - session 切回 bot 后 `session_id` 不变，Agent 多轮上下文延续
 - **bot 通过 MCP `send_bot_message` 写入的消息，不得再次触发 AgentService（防止循环调用）**
+- **goroutine 超限（>10）时直接降级，不阻塞，不启动新 goroutine**
 
 ---
 
 #### AG-5
 **内容**：mjarch domain YAML，配置：
 - `system_prompt_extra`：客服场景说明 + 平台背景
-- `tools`：注册 PA-9 的 4 个 MCP 工具
+- `tools`：注册 PA-9 的 4 个 MCP 工具；**`query_orders` 工具描述里注明默认 `page_size=5`**（返回最近 5 条订单 + 总数，防止大用户订单过多撑爆 LLM context；Agent 如需翻页再传 page 参数）；工具的 `session_id` / `user_id` 参数从 `__context.cs_session_id` / `__context.user_id` 取值
 - `knowledge_base`：占位（空列表，主链路跑通后补充知识库文档）
 
 **文件**：新建 `config/domains/mjarch.yaml`  
@@ -242,7 +256,7 @@ type CsMute struct {
 #### PA-3
 **内容**：service 方法：
 - `CheckMuted(tenantID, userID) (bool, *time.Time, error)`：查询有效禁言，`mute_until IS NULL OR mute_until > now()`
-- `MuteUser(tenantID, userID, durationHours float64, reason string, operatorID int64) error`：upsert（同一用户覆盖旧记录）
+- `MuteUser(tenantID, userID, durationHours float64, reason string, operatorID int64) error`：upsert（同一用户覆盖旧记录）；禁言成功后**向该用户最近一条活跃 cs_session 写入一条系统消息**（`sender_type=system`），内容取 CheckMuted 返回的禁言提示文案，让用户在聊天界面直接看到原因和结束时间
 - `UnmuteUser(tenantID, userID) error`：删除禁言记录
 - `ListMutes(tenantID int64, page, size int) ([]CsMute, int64, error)`
 
@@ -295,6 +309,7 @@ type CsMute struct {
 - 保存按钮
 
 **测试机器人面板**（嵌入区块1内，可折叠，默认折叠）：
+- **面板顶部显示说明文案**：`🔧 以下为调试工具，直连 Agent 服务，不受上方「启用/停用」开关控制，不影响生产会话`（灰色小字，避免用户误以为测试成功=开关有效）
 - 对话气泡列表，样式与客服工作台一致
 - 域选择下拉（调 `GET {base_url}/api/admin/domains` 拉取域列表；该接口已存在于 go-rag-agent，返回 `[{name, display_name, enabled}]`，取 `enabled=true` 的域填充下拉；默认选第一个）
 - 输入框 + 发送；支持多轮（共用临时 session_id `admin-test-{uuid}`）
@@ -304,6 +319,7 @@ type CsMute struct {
 - meta 信息行：`📚 命中 N 条 · score X.XX · 策略: xxx`
 - 工具调用状态行：`⚙️ 正在执行: xxx...`
 - CORS：go-rag-agent 需开放 platform_admin 的 origin（配置项，不写死）
+- **鉴权方案**：go-rag-agent 的 `/api/admin/*` 和 `/api/chat` 在内网部署场景下**不鉴权**（依赖网络隔离）；若需鉴权，platform_admin 管理端通过后端代理 `/api/agent-proxy/*` 转发请求（platform_admin 持有 agent API Key），前端不直连 agent。CR14 P0 阶段选方案①（不鉴权，内网），P2 阶段按需升级为方案②
 
 **区块2「转人工策略」**（原有设计，enabled=false 时整体置灰）：
 - max_bot_turns（数字输入，0=不限）
@@ -318,7 +334,7 @@ type CsMute struct {
 **验收**：
 - 开关关闭时所有策略项置灰，测试面板仍可使用（用于配置阶段预验证）
 - 测试面板多轮对话正常，流式渲染，thinking/meta/工具状态均显示
-- 重置后 session_id 重新生成，上下文清空
+- 重置后 session_id 重新生成，上下文清空；旧 session 不主动删除，依赖 AG-3 的 TTL=1h 自动清理（前端只持有当前 session_id，旧的无法被再次使用）
 
 ---
 
@@ -331,7 +347,10 @@ type CsMute struct {
 
 **规模**：~100 行 Vue  
 **依赖**：PA-4  
-**验收**：禁言操作成功后标识即时显示；解除后标识消失
+**验收**：
+- 禁言操作成功后，当前管理员页面 🔇 标识立即显示
+- 解除禁言时后端通过 WS 广播系统事件（`cs_mute_changed`）；所有已打开该会话的管理端页面在收到事件后 **5 秒内**标识消失
+- hover 显示到期时间（永久禁言显示「永久」）
 
 ---
 
@@ -382,16 +401,19 @@ TokenManager 监听配置变更，下次 token 操作时热更新生效（无需
 ## 依赖图
 
 ```
-PA-5（手工）
+PA-0（cs_configs 表 + 缓存服务）
+    └─→ PA-1（读 agent.enabled 决定新会话 mode）
+    └─→ PA-8（读所有 handoff.* 配置）
+    └─→ PA-10（前端写配置到 cs_configs）
+
+PA-5（迁移脚本 + 手工账号）
     └─→ PA-6
             └─→ PA-9
                     └─→ AG-5（mjarch domain YAML）
-    
+
 AG-1（TokenManager）
     └─→ PA-9 使用（token 注入）
     └─→ AG-2（P2，配置化）
-
-PA-1（agent_type 字段）← Agent 控制菜单开关
 
 PA-2（CsMute model）
     └─→ PA-3（service）
@@ -399,7 +421,7 @@ PA-2（CsMute model）
                     └─→ PA-11（前端禁言入口）
             └─→ PA-7（UserSendCsMessage 禁言检查）
 
-PA-8（AgentService）← Agent 控制菜单开关
+PA-8（AgentService）← PA-0
     └─→ PA-7（UserSendCsMessage 触发）
     └─→ PA-10（前端策略配置）
 

@@ -343,7 +343,8 @@
 
   <h3>平台管理端「AI 客服机器人」区块（新增，客服设置页顶部）</h3>
   <div class="section-note">
-    此区块控制是否启用 AI 客服机器人。<strong>默认关闭</strong>，关闭时 platform_admin 完全不感知机器人存在——新会话直接进人工队列，UserSendCsMessage 不触发 AI，前端不显示任何 bot 相关状态。
+    此区块控制是否启用 AI 客服机器人。<strong>默认关闭</strong>，关闭时 platform_admin 完全不感知机器人存在——新会话直接进人工队列，UserSendCsMessage 不触发 AI，前端不显示任何 bot 相关状态。<br>
+    <strong>多租户说明</strong>：<code>agent.enabled</code> 和 <code>agent.base_url</code> 均为<strong>租户级</strong>配置（cs_configs 表按 tenant_id 隔离），各租户独立开关，互不影响。不同租户可以接入不同的 Agent 服务地址。
   </div>
   <table>
     <thead><tr><th>配置项</th><th>类型</th><th>说明</th><th>默认值</th></tr></thead>
