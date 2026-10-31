@@ -105,12 +105,12 @@
 
 <div class="header">
   <h1>智能客服集成方案</h1>
-  <div class="subtitle">go-rag-agent 接入 platform_admin 客服模块 · 设计草案 v5</div>
+  <div class="subtitle">go-rag-agent 接入 platform_admin 客服模块 · 设计草案 v6</div>
   <div class="meta">
     <span>📅 2026-10-24</span>
     <span>📌 状态：全部问题已确认，设计完整</span>
     <span>🔧 Kiro</span>
-    <span>🔄 v5 — Session永久保存 / 禁言改小时 / 策略2细化</span>
+    <span>🔄 v6 — 流式改造完成（meta/thinking事件 + RAG score修复）</span>
   </div>
 </div>
 
@@ -573,7 +573,82 @@
 
 </div>
 
-<div class="footer">cs-integration-design.html · v5 · 2026-10-24 · 所有问题已确认 · 16项改动清单完整 · 可开始实现</div>
+  <div class="divider"></div>
+
+  <h2 id="sec10"><span class="num">附</span>go-rag-agent 流式输出改造（前置）<span style="font-size:13px;background:#dcfce7;color:#166534;padding:2px 10px;border-radius:10px;margin-left:10px;font-weight:500">✅ 已完成 2026-10-31</span></h2>
+
+  <div class="section-note">
+    ✅ 已完成并验证（2026-10-31）。/api/chat 支持 SSE 多轮流式输出，自带管理页面和业务集成接口均支持。<br>
+    <strong>验证证据（python verify_stream.py）：</strong><br>
+    • 场景1 非流式向后兼容：PASS — response 字段存在<br>
+    • 场景2 纯RAG流式（无工具）：PASS — done=True, token_count=365, 内容正常<br>
+    • 场景3 工具调用流式（多轮）：PASS — done=True, tool_start/tool_end 事件均有，tokens=183，MCP 工具 mcp:orders:lookup_order 正常调用
+  </div>
+
+  <h3>方案：多轮流（业界标准，OpenAI / Claude / Gemini 同款）</h3>
+  <div class="card blue">
+    <p>每轮 LLM 生成都流式推送，工具调用期间推送状态事件，工具返回后新一轮流式生成最终回答：</p>
+    <div class="arch-box" style="font-size:12px"><span class="c3">第1轮流：</span>
+  LLM 流式输出 tokens → 前端实时渲染
+  遇到工具调用 → 推送 tool_start 事件（desc: "正在执行：&lt;工具名&gt;..."）
+  工具执行（同步阻塞，MCP 调用）
+  工具完成 → 推送 tool_end 事件
+  ↓
+<span class="c3">第2轮流：把工具结果喂给 LLM，再次流式输出最终回答</span>
+  ↓
+<span class="c3">循环直到无工具调用 → 推送 [DONE]</span></div>
+  </div>
+
+  <h3>SSE 事件格式</h3>
+  <table>
+    <thead><tr><th>事件类型</th><th>数据示例</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>meta</code></td><td><code>{"type":"meta","content":"{\"rag_docs\":4,\"rag_score\":0.734,\"strategy\":\"rag_answer\"}"}</code></td><td>RAG 检索完成后推送，含命中条数、最高相似度、决策策略（rag_answer / tool_answer / rag_assisted / refuse）；前端展示在思考区块 header</td></tr>
+      <tr><td><code>thinking</code></td><td><code>{"type":"thinking","content":"Let me check..."}</code></td><td>LLM reasoning_content delta（模型开启推理时产生），前端实时追加到思考区块</td></tr>
+      <tr><td><code>token</code></td><td><code>{"type":"token","content":"你好"}</code></td><td>LLM token 片段，前端追加渲染正文</td></tr>
+      <tr><td><code>tool_start</code></td><td><code>{"type":"tool_start","tool":"query_member_info","desc":"正在执行：query_member_info..."}</code></td><td>工具开始，前端显示加载动画</td></tr>
+      <tr><td><code>tool_end</code></td><td><code>{"type":"tool_end","tool":"query_member_info"}</code></td><td>工具完成，前端清除加载</td></tr>
+      <tr><td><code>done</code></td><td><code>data: [DONE]</code></td><td>流结束</td></tr>
+      <tr><td><code>error</code></td><td><code>{"type":"error","message":"..."}</code></td><td>错误事件</td></tr>
+    </tbody>
+  </table>
+
+  <h3>接口变更（向后兼容）</h3>
+  <div class="card green">
+    <pre class="code"><span class="cm">// 非流式（现有不变）</span>
+<span class="cm">// POST /api/chat  → application/json { "response": "..." }</span>
+
+<span class="cm">// 流式：body 加 "stream": true</span>
+<span class="cm">// POST /api/chat  body: { "message":"...", "stream":true, ... }</span>
+<span class="cm">// 响应: text/event-stream</span>
+<span class="str">data: {"type":"meta","content":"{\"rag_docs\":4,\"rag_score\":0.734,\"strategy\":\"rag_answer\"}"}</span>
+<span class="str">data: {"type":"thinking","content":"The user is asking about..."}</span>
+<span class="str">data: {"type":"token","content":"您好，根据"}</span>
+<span class="str">data: {"type":"tool_start","tool":"query_member_info","desc":"正在执行：query_member_info..."}</span>
+<span class="str">data: {"type":"tool_end","tool":"query_member_info"}</span>
+<span class="str">data: {"type":"token","content":"您的会员将于 2027-01-01 到期"}</span>
+<span class="str">data: [DONE]</span></pre>
+  </div>
+
+  <h3>改动清单（go-rag-agent）<span style="font-size:12px;background:#dcfce7;color:#166534;padding:1px 8px;border-radius:8px;margin-left:8px">全部已完成</span></h3>
+  <table>
+    <thead><tr><th>#</th><th>改动项</th><th>文件</th><th>规模</th></tr></thead>
+    <tbody>
+      <tr><td>ST-1 ✅</td><td>LLM Client 新增 <code>StreamChat</code>：发 <code>"stream":true</code>，按行读 SSE，通过 channel 推 <code>StreamChunk</code></td><td><code>llm/client.go</code></td><td><span class="badge done">已完成</span></td></tr>
+      <tr><td>ST-2 ✅</td><td>Agent 新增 <code>ChatStream</code>：多轮流逻辑，工具调用间推 tool_start/tool_end，通过 channel 推 <code>StreamEvent</code></td><td><code>agent/agent.go</code></td><td><span class="badge done">已完成</span></td></tr>
+      <tr><td>ST-3 ✅</td><td>/api/chat handler 检测 <code>stream:true</code>，切换 SSE 响应（<code>Content-Type: text/event-stream</code>，逐事件 flush）</td><td><code>main.go</code></td><td><span class="badge done">已完成</span></td></tr>
+      <tr><td>ST-4 ✅</td><td>前端管理页面用 <code>fetch + ReadableStream</code> 读 SSE，逐字渲染，工具期间显示加载动画（.tool-running 样式）</td><td><code>frontend/index.html</code></td><td><span class="badge done">已完成</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>默认配置更新（已完成）</h3>
+  <div class="config-box">
+    <span class="ck">LLM_BASE_URL</span>=<span class="cv">http://127.0.0.1:8900/v1</span>   <span class="cc"># 本机测试端口</span><br>
+    <span class="ck">LLM_MODEL</span>=<span class="cv">qwen3.8-flash-next-iq3_xxs</span>          <span class="cc"># 本机测试模型</span>
+  </div>
+  <p style="font-size:13px;color:#64748b">已更新 <code>config/config.go</code> 默认值和 <code>start-agent.cmd</code>，生产通过环境变量覆盖。</p>
+
+<div class="footer">cs-integration-design.html · v6 · 2026-10-31 更新：流式改造完成（meta/thinking 事件、DSH风格思考区块、RAG score修复）</div>
 
 </body>
 </html>
