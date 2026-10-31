@@ -78,6 +78,8 @@
 - `plugin.go` 启动时用 **`INSERT IGNORE`**（`INSERT IGNORE INTO cs_configs(tenant_id, key, value) VALUES(...)`）写入 8 个默认配置项——禁止用 `ON DUPLICATE KEY UPDATE`，防止每次重启覆盖已修改的配置
 - `value` 列类型为 TEXT，MySQL 8.x 禁止 TEXT 列有 DEFAULT，`gorm` tag 不加 `default`
 - cs_configs CRUD Admin API：`GET /api/v1/cs/configs`（按 tenant 返回键值 map）、`POST /api/v1/cs/configs`（批量写，调 SetConfig）
+- `GET /api/v1/cs/configs`：`tenant_id` 从 JWT middleware 取（与其他管理端接口一致）；超级管理员（tenant_id=0）调用时需传 query param `?tenant_id=xxx` 指定目标租户，不传则返回 400
+- `POST /api/v1/cs/configs` 批量写：**先在事务里批量 UPSERT 所有 key，全部成功后再逐条失效缓存**；任何一条 DB 写失败则整体回滚，缓存不失效（防止部分更新导致 DB 与缓存不一致）
 
 **Acceptance（验证标准）:**
 - AC: `cs_configs` 表自动创建，唯一索引存在
@@ -272,6 +274,9 @@
 - ST: mock refresh 失败 3 次 → 触发 re-login
 - ST: callctx WithAgentToken → GetAgentToken 返回同值
 - ST: connector/mcp_client 发请求 → 请求 header 含 X-Agent-Token（通过 mock http server 验证）
+- 测试文件: `connector/connector_test.go`（修改）
+- ST: 【回归】已有 connector 测试不因新增 X-Agent-Token header 而失败
+- ST: ctx 含 AgentToken 时，发出的 HTTP 请求 header 中 X-Agent-Token 值正确
 
 ---
 
@@ -334,7 +339,8 @@
 **Acceptance（验证标准）:**
 - AC: go-rag-agent 启动后 `GET /api/admin/domains` 返回列表中含 `mjarch`
 - AC: mjarch domain 工具列表含 send_bot_message / handoff_to_human / query_member_info / query_orders
-- AC: query_orders 工具描述注明默认 `page_size=5`，session_id/user_id 从 `__context` 取值
+- AC: **4 个工具**的 session_id 参数均从 `__context.cs_session_id` 取值，user_id 从 `__context.user_id` 取值（在 YAML 工具描述里明确标注，不硬编码）
+- AC: query_orders 工具描述注明默认 `page_size=5`
 - AC: `go build ./...` 零错误
 
 ---
@@ -452,6 +458,7 @@
 - `POST /admin/cs/sessions/:id/unmute`：调 `UnmuteUser`；成功后 WS 广播 `cs_mute_changed`
 - `GET /admin/cs/mutes`：query params `page, page_size, user_id（可选）`，调 `ListMutes`，返回分页结果
 - `duration_hours` 换算：`mute_until = now + duration_hours * 3600s`，存 UTC
+- `duration_hours < 0` 返回 400（非法参数）；`duration_hours == 0` 视为永久禁言（`mute_until=NULL`）
 - 雪花 ID `user_id` 返回时加 `json:",string"` tag（已在 CsMute model 定义）
 
 **Acceptance（验证标准）:**
@@ -486,7 +493,7 @@
 **Constraints（约束）:**
 - **禁言检查优先**（在存消息之前）：`CheckMuted` → true 时返回 403 + `{"code":403,"msg":"...","mute_until":...}`
 - 永久禁言 msg：`"您已被永久禁言，如有疑问请联系平台"`
-- 有时限禁言 msg：`"您已被禁言，禁言将于 2006-01-02 15:04 结束"`（本地时区格式）
+- 有时限禁言 msg：`"您已被禁言，禁言将于 <时间> 结束"`，时间用 `muteUntil.Local().Format("2006-01-02 15:04")`（Go time.Format 模板串，显示本地时区时间，非字面量）
 - 存消息 + WS 广播后，调 `AgentService.TriggerIfEnabled(session, message)`（异步，不阻塞响应）
 - **`InternalSendBotMessage` 走独立路由，不经过 `UserSendCsMessage`，天然防止循环**
 
