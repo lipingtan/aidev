@@ -12,11 +12,33 @@
 | 指标 | 值 |
 |------|-----|
 | 总任务数 | 18 |
-| 已完成 | 0 |
+| 已完成 | 13 |
 | 进行中 | 0 |
-| 未开始 | 18 |
-| 完成率 | 0/18 (0%) |
-| 当前阶段 | P0: 主链路 |
+| 未开始 | 5 |
+| 完成率 | 13/18 (72%) |
+| 当前阶段 | P1→P2 收尾（Task14/15前端 + P2配置化） |
+
+### 已完成任务
+- ✅ Task1: cs_configs 键值表 + 配置服务 + Admin API（7个单测PASS）
+- ✅ Task2: cr14_ai_agent_permissions.sql 迁移脚本
+- ✅ Task3: InternalSendBotMessage/InternalHandoffToHuman 改 JWT 鉴权
+- ✅ Task4: CsAgent 加 agent_type 字段 + 新会话绑定 bot 逻辑
+- ✅ Task5: mcp-server-platform 独立进程（6个单测PASS）
+- ✅ Task6: TokenManager + callctx.WithAgentToken + AGENT_TOKEN env 注入（6个单测PASS）
+- ✅ Task7: AgentService（策略3/4检测 + 信号量 + 超时降级，4个单测PASS）
+- ✅ Task8: mjarch domain YAML
+- ✅ Task9: go-rag-agent CORS middleware
+- ✅ Task10: CsMute model + AutoMigrate
+- ✅ Task11: CheckMuted/MuteUser/UnmuteUser/ListMutes（7个单测PASS）
+- ✅ Task12: 禁言管理端接口 + 路由注册
+- ✅ Task13: UserSendCsMessage 加禁言检查 + AgentService 触发
+
+### 待完成任务
+- ⬜ Task14: 管理端前端（AI 客服机器人配置 + 测试面板 + 策略配置）
+- ⬜ Task15: 管理端前端（工作台禁言操作 + 🔇 标识）
+- ⬜ Task16: TokenManager 鉴权配置化（Admin API + 热更新）
+- ⬜ Task17: Session 数据库持久化（DBSessionStore）
+- ⬜ Task18: Session 存储管理页配置
 
 ---
 
