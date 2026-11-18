@@ -2,7 +2,7 @@
 
 > 设计文档：[design.html](./design.html)  
 > 规范参考：`go-task-representation.md`、`go-development-workflow.md`  
-> 最后更新：2026-10-31  
+> 最后更新：2026-11-18（核对代码后修订：去重过期区块、补核记录、Task 6/18 机制更正、TODO 销账）  
 > 前置已完成：go-rag-agent 流式输出改造（ST-1~ST-4，2026-10-31 验证通过）
 
 ---
@@ -24,7 +24,7 @@
 - ✅ Task3: InternalSendBotMessage/InternalHandoffToHuman 改 JWT 鉴权
 - ✅ Task4: CsAgent 加 agent_type 字段 + 新会话绑定 bot 逻辑
 - ✅ Task5: mcp-server-platform 独立进程（6个单测PASS）
-- ✅ Task6: TokenManager + callctx.WithAgentToken + AGENT_TOKEN env 注入（6个单测PASS）
+- ✅ Task6: TokenManager（懒初始化 + 后台刷新 + AGENT_TOKEN 环境变量发布，9个单测PASS；注入机制见 Task 6 节更新说明）
 - ✅ Task7: AgentService（策略3/4检测 + 信号量 + 超时降级，4个单测PASS）
 - ✅ Task8: mjarch domain YAML
 - ✅ Task9: go-rag-agent CORS middleware
@@ -36,29 +36,7 @@
 - ✅ Task15: CustomerService.vue 新增禁言按钮 + 🔇 标识 + WS 禁言变更事件处理
 - ✅ Task16: admin_api.go GET/PUT /api/admin/auth-config + session-config；main.go 注入 TokenManager；admin.html 配置页面
 - ✅ Task17: DBSessionStore（SQLite/MySQL 懒初始化，TTL 清理，6个单测PASS）
-- ✅ Task18: 前端 cs-config.ts / cs-mute.ts API 文件
-
-### 已完成任务
-- ✅ Task1: cs_configs 键值表 + 配置服务 + Admin API（7个单测PASS）
-- ✅ Task2: cr14_ai_agent_permissions.sql 迁移脚本
-- ✅ Task3: InternalSendBotMessage/InternalHandoffToHuman 改 JWT 鉴权
-- ✅ Task4: CsAgent 加 agent_type 字段 + 新会话绑定 bot 逻辑
-- ✅ Task5: mcp-server-platform 独立进程（6个单测PASS）
-- ✅ Task6: TokenManager + callctx.WithAgentToken + AGENT_TOKEN env 注入（6个单测PASS）
-- ✅ Task7: AgentService（策略3/4检测 + 信号量 + 超时降级，4个单测PASS）
-- ✅ Task8: mjarch domain YAML
-- ✅ Task9: go-rag-agent CORS middleware
-- ✅ Task10: CsMute model + AutoMigrate
-- ✅ Task11: CheckMuted/MuteUser/UnmuteUser/ListMutes（7个单测PASS）
-- ✅ Task12: 禁言管理端接口 + 路由注册
-- ✅ Task13: UserSendCsMessage 加禁言检查 + AgentService 触发
-- ✅ Task14: CsAgents.vue 新增「AI 客服机器人」配置卡片 + 测试面板 + 策略配置卡片
-- ✅ Task15: CustomerService.vue 新增禁言按钮 + 🔇 标识 + WS 禁言变更事件处理
-- ✅ Task17: DBSessionStore（SQLite/MySQL 懒初始化，TTL 清理，6个单测PASS）
-- ✅ Task18: 前端 cs-config.ts / cs-mute.ts API 文件
-
-### 待完成任务
-- ⬜ Task16: TokenManager 鉴权配置化（Admin API + 热更新，P2）
+- ✅ Task18: Session 存储管理页配置（GET/PUT /api/admin/session-config + admin.html 区块；实现为 SwitchableSessionStore 热切换，优于设计的"重启生效"）
 
 ### App 端禁言提示（用户反馈 2026-10-31）
 > mjarch App 端被禁言时应有相应提示。
@@ -68,27 +46,13 @@
 > 2. 聊天列表轮询时会收到系统消息（role=bot），展示为不同气泡样式（灰色/系统样式）
 > **此需求超出 CR14 范围，记录到 backlog，mjarch App 改动单独排期。**
 
-### 已完成任务
-- ✅ Task1: cs_configs 键值表 + 配置服务 + Admin API（7个单测PASS）
-- ✅ Task2: cr14_ai_agent_permissions.sql 迁移脚本
-- ✅ Task3: InternalSendBotMessage/InternalHandoffToHuman 改 JWT 鉴权
-- ✅ Task4: CsAgent 加 agent_type 字段 + 新会话绑定 bot 逻辑
-- ✅ Task5: mcp-server-platform 独立进程（6个单测PASS）
-- ✅ Task6: TokenManager + callctx.WithAgentToken + AGENT_TOKEN env 注入（6个单测PASS）
-- ✅ Task7: AgentService（策略3/4检测 + 信号量 + 超时降级，4个单测PASS）
-- ✅ Task8: mjarch domain YAML
-- ✅ Task9: go-rag-agent CORS middleware
-- ✅ Task10: CsMute model + AutoMigrate
-- ✅ Task11: CheckMuted/MuteUser/UnmuteUser/ListMutes（7个单测PASS）
-- ✅ Task12: 禁言管理端接口 + 路由注册
-- ✅ Task13: UserSendCsMessage 加禁言检查 + AgentService 触发
-
-### 待完成任务
-- ⬜ Task14: 管理端前端（AI 客服机器人配置 + 测试面板 + 策略配置）
-- ⬜ Task15: 管理端前端（工作台禁言操作 + 🔇 标识）
-- ⬜ Task16: TokenManager 鉴权配置化（Admin API + 热更新）
-- ⬜ Task17: Session 数据库持久化（DBSessionStore）
-- ⬜ Task18: Session 存储管理页配置
+### 补核记录（2026-11-18，代码对照核查后）
+- ✅ 补 `app/license/apis/customer_service_api_test.go`：12 个 API 层单测（禁言 403 文案 / 参数校验 / 永久+时限禁言 / mutes user_id string / bot-message / bot-handoff），全 PASS——补上 Task 3/12/13 自测栏缺口
+- ✅ 补 `app/license/models/models_test.go`：4 个 CR14 表级单测（CsMute/CsConfig 唯一索引、MuteUntil=NULL），全 PASS——补上 Task 10 自测缺口
+- 🗑️ 删死代码：apis `checkInternalToken`（Task 3 改造后遗留）；go-rag-agent `callctx.WithAgentToken/GetAgentToken`（Task 6 旧机制遗留、全库无调用方）
+- 📝 勘误：cs_configs CRUD 实际路由为 `/api/v1/admin/license/cs/configs`（设计原文 `/api/v1/cs/configs`），超管经 `?tenant_id=` 指定目标租户；CsConfig 唯一索引实现名 `uk_cs_config_key`（设计写 `uk_cs_configs`）
+- 📝 前端 API 文件 `cs-config.ts` / `cs-mute.ts` 属 Task 14/15 交付物（此前进度表误挂在 Task 18 名下，已更正）
+- 📝 复核运行证据：platform_admin build/vet EXIT=0 + license 31 测 PASS；go-rag-agent build EXIT=0 + token/session/callctx 19 测 PASS；mcp-gateway build/vet EXIT=0 + 16 测 PASS
 
 ---
 
@@ -271,6 +235,12 @@
 
 ### Task 5: platform_admin MCP Server（独立进程 :9001） ⬜
 
+> **⚠️ 已被取代（2026-11-10，见 TODO-2）**：本任务实现的 `mcp-server-platform` 是手写 REST（非标准 MCP），
+> 且暴露 `send_bot_message` 会导致回复重复写库，已弃用（目录内有 `DEPRECATED.md`）。
+> 现由标准 MCP 网关 `test13poc_aiagent/mcp-gateway/`（官方 go-sdk，Streamable HTTP，:9001/mcp）提供
+> `mcp:platform:query_member_info` / `mcp:platform:query_orders` 两个只读工具；用户身份由 agent 的 `__context` 注入。
+> 以下为原始设计记录，仅供参考。
+
 **复杂度**: 高
 
 **设计来源:** design.html §7 platform_admin MCP Server；Token 注入机制
@@ -309,6 +279,12 @@
 ---
 
 ### Task 6: TokenManager（懒初始化 + 后台自动刷新） ⬜
+
+> **机制更新（2026-11-18 勘误）**：最终实现未走设计的 `callctx.WithAgentToken` + `connector/mcp_client.go` 发
+> `X-Agent-Token` header 链路，而是 TokenManager 登录后 `os.Setenv("AGENT_TOKEN")` 发布，
+> HTTPAdapter 的请求头模板 `${AGENT_TOKEN}` 取值（配合 go-rag-agent 域配置的环境变量替换机制，刷新后自动生效）。
+> mcp-gateway 链路更是无需该 header（网关以专用账号自行登录上游）。
+> `callctx.WithAgentToken/GetAgentToken` 因无调用方已删除。功能验收（懒初始化/提前刷新/失败重登）不变，单测 9 个（多于设计的 6 个）。
 
 **复杂度**: 高
 
@@ -747,7 +723,7 @@
 
 **Constraints（约束）:**
 - 6 个配置项：`store_type(sqlite|mysql)`, `sqlite_path`, `mysql_dsn`（加密存储）, `pool_max_open`, `pool_max_idle`, `ttl_days`
-- 配置变更后重启生效（不支持热切换，管理页面提示「修改后需重启服务」）
+- ~~配置变更后重启生效（不支持热切换，管理页面提示「修改后需重启服务」）~~ **实现升级**：`SwitchableSessionStore` 保存即热切换（含 DB→内存/内存→DB 双向），admin.html 文案同步为「保存后立即热切换生效」（2026-11-18 按代码勘误）
 - `mysql_dsn` 不明文回传
 
 **Acceptance（验证标准）:**
@@ -827,3 +803,74 @@ Task 18（Session 管理页）← 依赖 Task 17
 | go-rag-agent 后端 | Task5/6/8（~620行） | Task9（~10行） | Task16/17（~400行） | ~1030行 |
 | go-rag-agent 前端 | — | — | Task16/18（~230行 HTML） | ~230行 |
 | **合计** | **~1180行** | **~510行** | **~630行** | **~2320行** |
+
+---
+
+## 高优先级 TODO（Post-CR14，需尽快处理）
+
+### TODO-1: CsConfigService 缓存 TTL 导致 agent.enabled 开关不即时生效 ✅ 已修复（2026-11-03）
+
+**发现时间:** 2026-11-03
+
+**现象:**
+管理端在「AI 客服机器人」配置页修改 `agent.enabled` 为 `true` 后保存，
+立刻发消息仍然触发 `agent.enabled=false` 日志，机器人没有响应。
+需要等待最长 30 秒缓存 TTL 过期后才生效。
+
+**根因（已确认）:**
+`adminTenantID(c)` 从管理员 JWT 的 `authCtx.TenantID` 取租户 ID，fallback=1。
+如果管理员账号绑定的 `tenant_id` 与 C端用户的 `tenant_id` 不一致（如管理员 `tenant_id=1`，
+C端用户 `tenant_id=2098073401381367808`），则：
+- 写端：`SetBatch(1, kvs)` → 失效 cache key = `1:agent.enabled`，DB 写到 `tenant_id=1` 的行
+- 读端：`GetBool(2098073401381367808, ...)` → cache key = `2098073401381367808:agent.enabled` → cache miss → 读 DB `tenant_id=2098073401381367808` 的行
+
+两者是**不同的 DB 行 + 不同的 cache key**，毫无关联。
+实测证据：DB 中 `tenant_id=1` 的 `agent.enabled=false`（未改），`tenant_id=2098073401381367808` 的 `agent.enabled=true`（已改）。
+管理员登录后用 `tenant_id=1` 写配置，实际写的是 `tenant_id=1` 的行，与 C端用户的 `tenant_id=2098073401381367808` 的行无关。
+
+**修复方向（修正）:**
+- **根本修**：前端管理端保存配置时，明确传 `?tenant_id=2098073401381367808`（C端租户ID），
+  而不是依赖管理员 JWT 里的 `tenant_id`。或者在 `CsAgents.vue` 保存配置时，
+  前端传当前选中的租户 ID（已有租户选择器），由后端用该 ID 而非 JWT 里的 ID。
+- **排查点**：确认 `CsAgents.vue` 前端调用 `POST /api/v1/cs/configs` 时有没有传 `?tenant_id=xxx`。
+
+---
+
+### TODO-2: mcp-gateway 接入 agent，并清理 mjarch.yaml 中失效的 :9001 工具 ✅ 已完成（2026-11-09 记录，2026-11-13 五项全部完成）
+
+**背景:**
+- 现状：机器人回复是 platform_admin 的 `callAgent` 读 agent `/api/chat` 返回的 `response` 后进程内写库
+  （`csSvc.SendMessage`），**不走 MCP**。设计里的 `mcp-server-platform`（:9001）是手写 REST（非标准 MCP），
+  进程未运行，`mjarch.yaml` 中 4 个工具（send_bot_message / handoff_to_human / query_member_info / query_orders）
+  指向它，LLM 一旦调用必然失败。
+- 已完成：新建标准 MCP 网关 `test13poc_aiagent/mcp-gateway/`（官方 go-sdk，Streamable HTTP，配置驱动，独立进程 :9001）。
+  12 组测试 + 6 项变异验证 + 用 agent 自带 `connector.MCPClient` 对真实 platform_admin 的端到端均通过。
+  当前**未接入 agent，网关未常驻**。
+
+**待办（按顺序）:**
+1. ~~在 go-rag-agent 注册网关~~ ✅ 已完成（2026-11-13，提交 `5badf2f`：`data/mcp_servers.json` 已含 `{"name":"platform","endpoint":"http://localhost:9001/mcp"}`）
+2. ~~真实对话验证~~ ✅ 已完成（2026-11-13 端到端，4 项验收全 PASS，见下方验收记录）
+3. ~~清理 `config/domains/mjarch.yaml` 的 `tools:` 段~~ ✅ 已完成（提交 `5badf2f`，4 个旧工具定义已删，system prompt 同步更新）
+4. ~~弃用旧 `mcp-server-platform`~~ ✅ 已完成（2026-11-13 整目录删除，含 DEPRECATED.md；git 历史可找回。本文件 Task 5 描述的 :9001 实现已由 mcp-gateway 取代）
+5. ~~网关常驻与启动~~ ✅ 已完成（启动脚本 `D:\data\run\mcp_gateway_start.cmd`，含自动编译 + 从 `go-rag-agent/data/auth_config.json` 读取上游账号；监听已收紧 `127.0.0.1:9001`）
+
+**验收标准（2026-11-13 实测全 PASS）:**
+- [x] agent 工具列表含 `mcp:platform:*` 两个工具，且 mjarch.yaml 不再引用 `:9001` 的旧路径
+- [x] 登录用户经机器人查到自己的会员信息；LLM 伪造他人 user_id 无效（网关日志只出现注入的 ID；agent 层 `__context` 硬防护 + 网关 inject 绑定双重拦截）
+- [x] 匿名用户调用被拒绝，网关日志显示未访问上游
+- [x] 机器人每条回复在 `cs_messages` 中只有一条（无重复写入）
+
+**验证环境备注（2026-11-13）:**
+- 本地链路：platform_admin(:8081, settings-test8081.yml) → mcp-gateway(:9001, 上游 base_url 需指 8081) → go-rag-agent(:8082) → LLM 8080
+- 测试用域名映射 `mjarch.local` → 租户 2098073401381367808（`ResolveTenantByHost` 按域名解析，直连 IP 会 fallback 租户 1，而租户 1 无 bot CsAgent——生产行为正常，非 bug）
+- 网关安全收紧：`gateway.yaml` listen 从 `:9001` 改 `127.0.0.1:9001`（裸调网关可伪造 `__context` 的风险已消除网络暴露面；后续可加客户端鉴权）
+
+**风险与注意:**
+- 上游账号：本地测试/启动脚本用的是 `agent_bot`（ai_agent 角色），已比最初 admin 收紧；上线前按 ai_agent 角色的只读权限核对一遍（license:cs、license:orders 只读）。
+- ~~`GET /api/v1/admin/license/orders`（`GetAllOrders`）**没有租户隔离**，靠 `user_id` 过滤 + 网关 `owner_check` 兜底~~
+  **已修复**（2026-11-18 核对确认）：handler 已用 `adminTenantID(c)` 注入租户过滤（`license.go` `GetAllOrders`），service 层 `OrderAdminQuery.TenantID > 0` 时加 `tenant_id` 条件。
+- 订单列表项含激活码明文（`code` / `activation_code`），网关已用字段白名单屏蔽，新增工具时务必同样配 `fields`。
+- 工具全局共享（11-01 `b97557d` 确定的设计，不分域）：暴露的工具对所有域的机器人可见，保持只读、最小集合。
+- agent 对工具返回有 2000 字节截断（`maxToolResponseBytes`），网关 `max_bytes` 已设 1800。
+- 现有 `mcp-server`（订单，:9000）里写死了 `Bearer test-token-123`，另行处理。
+- 测试订单数据缺失（租户 0 条订单），订单字段内容的真实数据验证待补。
