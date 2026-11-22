@@ -46,16 +46,16 @@
 
 ### 1.4 接口增量（向后兼容）
 
-- 管理端 `GET /prices` 行内增量：`sold_count`（占位口径已售）；响应 items 由 `PriceConfig` 变为嵌入体 `PriceRow{PriceConfig, sold_count}`，JSON 字段拍平，老前端无感；
+- 管理端 `GET /prices` 行内增量：`sold_count`（占位口径已售=限购口径）、`pending_count`（待支付占用）、`paid_count`（已成交 paid+activated）；响应 items 由 `PriceConfig` 变为嵌入体 `PriceRow{PriceConfig, …}`，JSON 字段拍平，老前端无感；
 - 管理端 `POST/PUT /prices` 入参增量：`max_total_purchases?`、`max_per_user_purchases?`（**指针语义：不传=不改**；服务端校验 -1/≥1）；
 - C 端 `GET /public/license/price`（公开列表）每项增量：`max_total_purchases`、`max_per_user_purchases`、`sold_out`（老 App 忽略新字段照常工作；购买被拦时服务端中文文案经 App Toast 透传）。
 
 ### 1.5 管理界面（Prices.vue）
 
 - 编辑/新增表单：`el-input-number(min=-1)` 两项，文案"-1 = 不限；售满自动售罄，改大即刻恢复"；空值提交归一为 -1，0 客户端先拒（服务端兜底）；
-- 列表新增列"已售/限购"：`总量 已售/上限`（-1 显示"不限"）+ 达限红色 **售罄** 标签 + 第二行"每人 X"；
-- **行内"改限购"弹窗**（决策③）：显示当前已售（含待支付占位），只改两个上限，保存走 PUT /prices/:id（带整行必填字段）；
-- 移动端卡片同步展示"已售/限购 + 改限购"。
+- 列表新增列"成交/占用/限购"：**成交**（绿，paid+activated）/ **占用**（橙，待支付下单，30 分钟超时自动释放）/ 限购上限（-1 显示"不限"）+ 达限红色 **售罄** 标签 + 第二行"每人 X"；
+- **行内"改限购"弹窗**（决策③）：显示成交/占用两个数，只改两个上限，保存走 PUT /prices/:id（带整行必填字段）；
+- 移动端卡片同步展示"成交/占用/限购 + 改限购"。
 
 ### 1.6 实现落点与证据
 
