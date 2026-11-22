@@ -57,3 +57,25 @@
 **依赖**：go-rag-agent 微信登录态（agent 登录页已有）+ iLink 收发消息能力；
 pa 侧复用 CR14 客服会话/转人工/禁言全套。
 **状态**：TODO——按质量门规则 3，写码前需先出完整设计（数据模型/字典/交互）给用户确认。
+
+## CR16.5 退款增强（2026-11-22 追加，已实现 6983c74）
+
+**用户拍板**：已激活订单可退（无时间窗）；金额可自定义（≤剩余）；可退多次直到
+原单金额退完；退满才作废激活码(status3)+回收权益（1a：按整单天数扣回，扣穿钳到
+当前）；部分退款视为补偿不回收权益。
+**追加硬要求**：所有操作发起的和接收的报文都要有明细流水可查、能互相关联，供审计对账。
+
+| ID | 任务 | 验收 | 状态 |
+|----|------|------|------|
+| T10 | 多次部分退款 + 已激活可退 | 状态门禁{1,2,3}；额度=原单−(SUCCESS+PROCESSING 占用)；退满才置4并处置码/权益 | ✅ refund_test.go 5 组用例全绿 |
+| T11 | 退款全链路报文审计 | refund_records 三段报文（发起/响应原文/回调原始+解密）；payment_transactions.out_refund_no 回标；payment_callbacks 补记 REFUND 回调（验签失败也入账）；关联链 订单号↔商户退款单号↔微信退款单号 | ✅ 代码+单测断言 |
+| T12 | Member360 退款 UI | 金额输入(默认/max=剩余,0.01 下限)+已激活提示；「报文明细」弹窗 | ✅ pnpm build，待线上点验 |
+
+**审计关联设计**：`orders.order_no` ↔ `refund_records.refund_no`（=发给微信的
+out_refund_no，同时回标到 `payment_transactions.out_refund_no` 列）↔
+`refund_records.refund_id`（微信退款单号）；回调原文入 `payment_callbacks`
+(callback_type=REFUND, headers+验签+处理结果)，解密明文并入 `refund_records.callback_body`。
+**顺带修复**：适配器原先自造退款单号（与记录表对不上）；回调按订单号全量覆盖记录
+（多次退款会互相踩）；ABNORMAL 渠道响应误记 PROCESSING；SUCCESS 记录防迟到 CLOSED 降级。
+**遗留**：PROCESSING 后渠道回调 ABNORMAL 时款未退但订单未置终态（金额口径按记录走，
+无需人工回滚权益——只有 SUCCESS 累计退满才回收）；退款按钮入口目前仅 Member360 页。
