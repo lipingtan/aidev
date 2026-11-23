@@ -19,7 +19,13 @@
 - `onResume` 登录态静默刷新套餐（无 loading 闪烁、失败不清列表）——登录/下单/支付回来即反映最新名额
 - 证据：assembleMjarchDebug exit=0（仅存量 deprecation 警告），apk mjarchdebug1.4.25.apk 09:59
 
+## 补充（用户追加）：总名额剩余显示
+- 规则：`max_total_purchases>0` 时卡片显示"限量 N 份，仅剩 M 份"（与单人限购提示逗号拼接）；**-1 不限=服务端不下发 `total_remaining`，App 自然不显示**；售罄仍显"限量 N 份，已抢光"(灰+按钮禁用)
+- 服务端 pa `6b67cb2`：`total_remaining` = 上限-占位(pending+paid+activated)，负数钳0，omitempty；TestSoldCountSoldOutAndRecover 扩展断言（满=0/10占4=6/不限=nil）PASS
+- App `263c5b6`：PriceInfo.totalRemaining(Integer null=不限) + payment_total_remain_format + adapter 拼装；BUILD OK + 装机 Success
+- 真机证据（2026-11-23 10:20/10:27，cr15b_purchase_list.png / cr15b_list_v2.png）：登录态"每人限购 1 次，已购 0 次"透出（证明线上已部署 6211949）；年卡下单 ¥0.01(ORD202611231022394158) 未支付退出后 已购回到 0（名额释放正确）；三个不限套餐均无剩余行 ✓
+
 ## 待办
-1. CI 部署 pa `branch=feature/cr15b-limit-display`（或先并 main）
-2. 手机接回（当前 adb devices 为空）→ adb install -r → 真机四场景截图：限量售罄置灰 / 登录限购已购 N 次 / 达限置灰"已达限购" / 未登录显示公共规则
+1. ~~CI 部署~~ 6211949 已由用户部署；`6b67cb2`(total_remaining) 需再发一次 branch=feature/cr15b-limit-display
+2. 管理端把某套餐设 max_total_purchases（如 5）→ 真机截图"限量 5 份，仅剩 5 份"与下单后递减、改上限恢复（售罄态此前已有单测+管理端验证）
 3. 顺带回归：CS 页与游戏列表（公开组新增中间件不应影响匿名接口）、支付/退款回调
